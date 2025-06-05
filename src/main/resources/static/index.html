@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudreve</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏切换按钮 -->
+        <button class="sidebar-toggle" id="sidebarToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        <!-- 左侧导航栏 -->
+        <div class="sidebar" id="sidebar">
+            <div class="logo">
+                <i class="fas fa-cloud"></i>
+                <span class="header-title">Cloudreve</span>
+            </div>
+            <nav>
+                <ul class="nav-group">
+                    <li class="active"><a href="#"><i class="fas fa-home"></i> 我的文件</a></li>
+                    <li><a href="#"><i class="fas fa-film"></i> 视频</a></li>
+                    <li><a href="#"><i class="fas fa-music"></i> 音乐</a></li>
+                    <li><a href="#"><i class="fas fa-file-alt"></i> 文档</a></li>
+                    <li><a href="#"><i class="fas fa-share-nodes"></i> 互发共享</a></li>
+                    <li><a href="#"><i class="fas fa-trash"></i> 回收站</a></li>
+                </ul>
+                <div class="nav-divider"></div>
+                <div class="nav-title">更多</div>
+                <ul class="nav-group">
+                    <li><a href="#"><i class="fas fa-share-alt"></i> 我的分享</a></li>
+                    <li><a href="#"><i class="fas fa-link"></i> 连接与挂载</a></li>
+                    <li><a href="#"><i class="fas fa-tasks"></i> 后台任务</a></li>
+                    <li><a href="#"><i class="fas fa-cloud-download-alt"></i> 离线下载</a></li>
+                    <li><a href="#"><i class="fas fa-tools"></i> 管理面板</a></li>
+                </ul>
+            </nav>
+            <div class="storage-info card">
+                <div class="storage-title">存储空间</div>
+                <div class="storage-progress">
+                    <div class="progress-bar">
+                        <div class="progress"></div>
+                    </div>
+                    <div class="storage-text">
+                        <span>948.6 MB / 1.0 TB</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 主要内容区域 -->
+        <div class="main-content">
+            <!-- 顶部栏 -->
+            <div class="header-bar">
+                <div class="header-left">
+                    <button class="btn btn-primary"><i class="fas fa-plus"></i> 新建</button>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="按下 / 开始搜索">
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="icon-btn" title="刷新"><i class="fas fa-rotate-right"></i></button>
+                    <button class="icon-btn" title="视图"><i class="fas fa-th-large"></i></button>
+                    <button class="icon-btn" title="排序"><i class="fas fa-sort"></i></button>
+                    <button class="icon-btn" title="设置"><i class="fas fa-cog"></i></button>
+                    <button class="icon-btn" title="主题"><i class="fas fa-moon"></i></button>
+                    <div class="avatar"><span>I</span></div>
+                </div>
+            </div>
+            <!-- 路径导航样式 -->
+            <div class="path-bar">
+                <span class="header-path"><i class="fas fa-folder"></i> 我的文件</span>
+            </div>
+            <!-- 文件列表为空时的提示 -->
+            <div class="file-list grid-view empty-file-list">
+                <div class="empty-file-icon">
+                    <i class="fas fa-box-open"></i>
+                </div>
+                <div class="empty-file-title">拖拽文件至此</div>
+                <div class="empty-file-description">或点击左上方"创建"按钮添加文件</div>
+            </div>
+            <!-- 添加隐藏的文件输入元素 -->
+            <input type="file" id="fileInput" style="display: none;" multiple>
+        </div>
+    </div>
+    <script src="js/main.js"></script>
+</body>
+</html>
