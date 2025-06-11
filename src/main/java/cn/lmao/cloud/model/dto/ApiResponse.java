@@ -1,7 +1,6 @@
 package cn.lmao.cloud.model.dto;
 
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
-import cn.lmao.cloud.util.JsonUtil;
 import lombok.Getter;
 
 /**
