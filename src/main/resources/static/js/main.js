@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 上传文件函数
     async function uploadFiles(files) {
+        localStorage.setItem('token', 'Bearer eyJhbGciOiJIUzM4NCJ9.eyJ1c2VybmFtZSI6InRlc3QiLCJpYXQiOjE3NDk2NDkwOTMsImV4cCI6MTc0OTY2MzQ5M30.6nkootDckL9qj7nO1LFg2hhudNF9-DDf9M6tP7fSzwdEN6cUT_0YdilfzYzqd91G');
         const formData = new FormData();
         for (const file of files) {
             formData.append('file', file); // 后端接口的参数名是 'file'
@@ -71,15 +72,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // 假设后端上传接口是 /apis/files/upload
-            const response = await fetch('/apis/files/upload', {
+            const response = await fetch('/files/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'Authorization': localStorage.getItem('token')
+                }
             });
 
-            const result = await response.text(); // 根据后端返回类型可能需要调整
+            const result = await response.json(); // 根据后端返回类型可能需要调整
 
             if (response.ok) {
-                console.log('上传成功:', result);
+                console.log(result.msg, result);
                 // TODO: 上传成功后刷新文件列表
             } else {
                 console.error('上传失败:', result);

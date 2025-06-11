@@ -12,7 +12,7 @@ spring:
   # 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver  # JDBC 驱动类名
-    url: jdbc:mysql://localhost:3306/cloud?useSSL=false&serverTimezone=Asia/Tokyo  # 数据库连接 URL
+    url: jdbc:mysql://localhost:3306/cloud?useSSL=false&serverTimezone=Asia/Tokyo&allowPublicKeyRetrieval=true  # 数据库连接 URL
     username: root  # 数据库用户名
     password: 123456  # 数据库密码，包含特殊字符需使用引号包裹 :contentReference[oaicite:0]{index=0}
     hikari:
@@ -68,8 +68,8 @@ server:
       force: true  # 强制使用指定编码
     # 文件上传配置
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 10MB
+      max-request-size: 50MB
 
 # JWT配置
 jwt:
@@ -130,5 +130,6 @@ springdoc:
   default-produces-media-type: application/json
 
 # 自定义应用配置
-app:
-  upload-dir: ./uploads # 文件上传保存目录，可以配置为绝对路径，如 /path/to/your/upload/directory
+file:
+  upload:
+    path: /upload # 文件上传保存目录，可以配置为绝对路径，如 /path/to/your/upload/directory

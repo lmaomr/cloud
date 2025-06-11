@@ -7,6 +7,9 @@ import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
+
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -17,18 +20,18 @@ import java.util.Map;
  * 用于处理JWT令牌的生成、验证和解析
  */
 @Component
-public class JwtUtils {
+public class JwtUtil {
     private final SecretKey key;
     private final long expiration;
     private static final String TOKEN_PREFIX = "Bearer ";
-    private final Logger log = LogUtils.getLogger();
+    private final Logger log = LogUtil.getLogger();
 
     /**
      * 构造函数
      * @param secretKey JWT密钥
      * @param expiration 过期时间（毫秒）
      */
-    public JwtUtils(
+    public JwtUtil(
             @Value("${jwt.secret}") String secretKey,
             @Value("${jwt.expiration}") long expiration) {
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
@@ -66,7 +69,23 @@ public class JwtUtils {
      * @param token JWT令牌
      * @return 用户名
      */
-    public String getUsernameFromToken(String token) {
+    public String getUsernameFromHeader(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith(TOKEN_PREFIX)) {
+            log.warn("无效的Authorization头格式");
+            throw new JwtException(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
+        }
+
+        String token = extractToken(authHeader);
+        if (token == null) {
+            log.warn("无效的Authorization头格式");
+            throw new JwtException(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
+        }
+
+        if (!validateToken(token)) {
+            log.warn("无效的Authorization头格式");
+            throw new JwtException(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
+        }
+
         log.debug("开始从令牌中解析用户名");
         String username = Jwts.parserBuilder()
                 .setSigningKey(key)

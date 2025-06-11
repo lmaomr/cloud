@@ -10,13 +10,13 @@ public class CustomException extends RuntimeException {
     private final String msg;
 
     public CustomException(ExceptionCodeMsg exceptionCodeMsg) {
-        super();  // 传递消息给父类
+        super(exceptionCodeMsg.getMsg());  // 传递消息给父类
         this.code = exceptionCodeMsg.getCode();
         this.msg = exceptionCodeMsg.getMsg();
     }
 
     public CustomException(int code, String msg) {
-        super();
+        super(msg);
         this.code = code;
         this.msg = msg;
     }

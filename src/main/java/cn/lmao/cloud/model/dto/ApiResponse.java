@@ -1,14 +1,16 @@
 package cn.lmao.cloud.model.dto;
 
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
+import cn.lmao.cloud.util.JsonUtil;
 import lombok.Getter;
 
 /**
  * 统一API响应封装类
+ * 
  * @param <T> 响应数据类型
  */
 @Getter
-public class Response<T> {
+public class ApiResponse<T> {
     private static final int DEFAULT_SUCCESS_CODE = 200;
     private static final String DEFAULT_SUCCESS_MSG = "success";
 
@@ -17,7 +19,7 @@ public class Response<T> {
     private final T data;
 
     // 私有构造器
-    private Response(int code, String msg, T data) {
+    private ApiResponse(int code, String msg, T data) {
         this.code = code;
         this.msg = msg;
         this.data = data;
@@ -43,8 +45,8 @@ public class Response<T> {
             return this;
         }
 
-        public Response<T> build() {
-            return new Response<>(code, msg, data);
+        public ApiResponse<T> build() {
+            return new ApiResponse<>(code, msg, data);
         }
     }
 
@@ -52,28 +54,28 @@ public class Response<T> {
         return new Builder<>();
     }
 
-    public static <T> Response<T> exception(ExceptionCodeMsg e) {
-        return new Response<>(e.getCode(), e.getMsg(), null);
+    public static <T> ApiResponse<T> exception(ExceptionCodeMsg e) {
+        return new ApiResponse<>(e.getCode(), e.getMsg(), null);
     }
 
-    public static <T> Response<T> success() {
-        return new Response<>(DEFAULT_SUCCESS_CODE, DEFAULT_SUCCESS_MSG, null);
+    public static <T> ApiResponse<T> success() {
+        return new ApiResponse<>(DEFAULT_SUCCESS_CODE, DEFAULT_SUCCESS_MSG, null);
     }
 
-    public static <T> Response<T> success(T data) {
-        return new Response<>(DEFAULT_SUCCESS_CODE, DEFAULT_SUCCESS_MSG, data);
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(DEFAULT_SUCCESS_CODE, DEFAULT_SUCCESS_MSG, data);
     }
 
-    public static <T> Response<T> success(String msg, T data) {
-        return new Response<>(DEFAULT_SUCCESS_CODE, msg, data);
+    public static <T> ApiResponse<T> success(String msg, T data) {
+        return new ApiResponse<>(DEFAULT_SUCCESS_CODE, msg, data);
     }
 
-    public static <T> Response<T> error(int code, String msg) {
-        return new Response<>(code, msg, null);
+    public static <T> ApiResponse<T> error(int code, String msg) {
+        return new ApiResponse<>(code, msg, null);
     }
 
-    public <U> Response<U> map(java.util.function.Function<? super T, ? extends U> mapper) {
-        return new Response<>(code, msg, mapper.apply(data));
+    public <U> ApiResponse<U> map(java.util.function.Function<? super T, ? extends U> mapper) {
+        return new ApiResponse<>(code, msg, mapper.apply(data));
     }
 
 }

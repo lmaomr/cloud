@@ -17,13 +17,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * 3. 结构化日志输出
  * 4. 安全审计日志
  */
-public final class LogUtils {
+public final class LogUtil {
     private static final Map<String, Logger> LOGGER_CACHE = new ConcurrentHashMap<>();
     private static final String TRACE_ID_KEY = "traceId";
     private static final String AUDIT_FLAG = "[AUDIT]";
 
     // 私有构造器防止实例化
-    private LogUtils() {}
+    private LogUtil() {}
 
     /**
      * 获取Logger实例（带缓存）
@@ -110,8 +110,8 @@ public final class LogUtils {
     public static void audit(String operation, Object data) {
         String traceId = MDC.get(TRACE_ID_KEY);
         try {
-            getLogger().info("{} {} - Operation: {}, Data: {}", AUDIT_FLAG, traceId, operation, JsonUtils.toJson(data));
-        } catch (JsonUtils.JsonException e) {
+            getLogger().info("{} {} - Operation: {}, Data: {}", AUDIT_FLAG, traceId, operation, JsonUtil.toJson(data));
+        } catch (JsonUtil.JsonException e) {
             getLogger().error("Failed to serialize audit data: {}", e.getMessage());
         }
     }
@@ -122,7 +122,7 @@ public final class LogUtils {
     public static void bizLog(String eventType, Map<String, Object> fields) {
         fields.putIfAbsent("traceId", MDC.get(TRACE_ID_KEY));
         fields.putIfAbsent("timestamp", System.currentTimeMillis());
-        getLogger().info("📊 [BIZ] {} - {}", eventType, JsonUtils.toJson(fields));
+        getLogger().info("📊 [BIZ] {} - {}", eventType, JsonUtil.toJson(fields));
     }
 
 }

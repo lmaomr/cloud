@@ -11,7 +11,7 @@ import java.util.Map;
 /**
  * 完整的JSON工具类（线程安全）
  */
-public class JsonUtils {
+public class JsonUtil {
     private static final ObjectMapper mapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

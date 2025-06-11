@@ -7,6 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 @Entity
 @NoArgsConstructor
@@ -14,6 +17,31 @@ import java.time.LocalDateTime;
 @Data
 @Table(name = "file")
 public class File {
+
+    private static final Map<String, Set<String>> FILE_TYPE_EXTENSIONS = new HashMap<>();
+    
+    static {
+        // 图片类型
+        FILE_TYPE_EXTENSIONS.put("image", Set.of(".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"));
+        // 视频类型
+        FILE_TYPE_EXTENSIONS.put("video", Set.of(".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv"));
+        // 音频类型
+        FILE_TYPE_EXTENSIONS.put("audio", Set.of(".mp3", ".wav", ".aac", ".m4a", ".ogg", ".flac"));
+        // 文档类型
+        FILE_TYPE_EXTENSIONS.put("document", Set.of(".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"));
+        // PDF类型
+        FILE_TYPE_EXTENSIONS.put("pdf", Set.of(".pdf", ".epub", ".mobi", ".azw3"));
+        // 文本类型
+        FILE_TYPE_EXTENSIONS.put("text", Set.of(".txt", ".log", ".ini", ".conf", ".cfg", ".properties"));
+        // 压缩包类型
+        FILE_TYPE_EXTENSIONS.put("archive", Set.of(".zip", ".rar", ".7z", ".tar", ".gz", ".bz2"));
+        // 可执行文件类型
+        FILE_TYPE_EXTENSIONS.put("executable", Set.of(".exe", ".msi", ".dmg", ".pkg"));
+        // 代码文件类型
+        FILE_TYPE_EXTENSIONS.put("code", Set.of(".html", ".css", ".js", ".json", ".xml", ".yaml", ".yml"));
+        // Markdown类型
+        FILE_TYPE_EXTENSIONS.put("markdown", Set.of(".md", ".markdown", ".mdx"));
+    }
 
     @Id
     @Column(name = "file_id")
@@ -26,8 +54,8 @@ public class File {
     @Column(name = "file_path", nullable = false)
     private String path;
 
-    @Column(name = "file_hash", nullable = false)
-    private Long hash;
+    @Column(name = "file_hash", nullable = false, length = 64)
+    private String hash;
 
     @Column(name = "file_size", nullable = false)
     private Long size;
@@ -46,5 +74,21 @@ public class File {
     @PrePersist
     protected void onCreate() {
         createTime = LocalDateTime.now();
+        //在这里添加自动识别文件类型
+        if (type == null || type.isEmpty()) {
+            String extension = name.substring(name.lastIndexOf(".")).toLowerCase();
+            type = FILE_TYPE_EXTENSIONS.entrySet().stream()
+                    .filter(entry -> entry.getValue().contains(extension))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse("other");
+        }
+    }
+
+    public File(File file) {
+        this.name = file.getName();
+        this.path = file.getPath();
+        this.hash = file.getHash();
+        this.size = file.getSize();
     }
 }

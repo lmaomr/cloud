@@ -5,7 +5,7 @@ import cn.lmao.cloud.model.entity.Cloud;
 import cn.lmao.cloud.model.entity.User;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import cn.lmao.cloud.repository.CloudRepository;
-import cn.lmao.cloud.util.LogUtils;
+import cn.lmao.cloud.util.LogUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 public class CloudService {
 
     private final CloudRepository cloudRepository;
-    private final Logger log = LogUtils.getLogger();
+    private final Logger log = LogUtil.getLogger();
 
     /**
      * 根据用户ID获取云盘信息
@@ -64,4 +64,22 @@ public class CloudService {
         cloudRepository.deleteById(userId);
         log.info("成功注销用户ID[{}]的云盘", userId);
     }
+
+    /**
+     * 更新云盘容量
+     * @param cloudId 云盘ID
+     * @param fileSize 文件大小
+     * @param isAdd 是否增加容量
+     */
+    public void updateCloudCapacity(Long cloudId, Long fileSize, boolean isAdd) {
+        Cloud cloud = cloudRepository.findById(cloudId)
+                .orElseThrow(() -> new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND));
+        if (isAdd) {
+            cloud.setUsedCapacity(cloud.getUsedCapacity() + fileSize);
+        } else {
+            cloud.setUsedCapacity(cloud.getUsedCapacity() - fileSize);
+        }
+        cloudRepository.save(cloud);
+    }
+    
 }

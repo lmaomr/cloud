@@ -1,6 +1,6 @@
 package cn.lmao.cloud.config;
 
-import cn.lmao.cloud.util.LogUtils;
+import cn.lmao.cloud.util.LogUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,11 +23,11 @@ public class TraceIdFilter extends OncePerRequestFilter {
         try {
             // 从请求头中获取TraceID，如果没有则生成新的
             String traceId = request.getHeader("X-Trace-ID");
-            LogUtils.initRequestContext(traceId);
+            LogUtil.initRequestContext(traceId);
             filterChain.doFilter(request, response);
         } finally {
             // 请求结束时清除TraceID
-            LogUtils.clearRequestContext();
+            LogUtil.clearRequestContext();
         }
     }
 } 

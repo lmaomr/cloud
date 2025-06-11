@@ -12,6 +12,7 @@ public enum ExceptionCodeMsg {
     ACCOUNT_LOCKED(401, "账号已被锁定"),
     TOKEN_EXPIRED(401, "令牌已过期"),
     TOKEN_INVALID(401, "无效的令牌"),
+    TOKEN_FORMAT_ERROR(401, "无效的Authorization头格式"),
     ACCESS_DENIED(403, "无权访问该资源"),
 
     /* ========== 请求参数异常 (4xx) ========== */
@@ -21,8 +22,9 @@ public enum ExceptionCodeMsg {
     PARAM_METHOD_NOT_FOUND(400, "不支持该请求方法"),
     PARAM_TYPE_MISMATCH(400, "参数类型不匹配"),
     REQUEST_BODY_INVALID(400, "请求体解析失败"),
-    FILE_UPLOAD_FAILED(400, "文件上传失败"),
-
+    FILE_UPLOAD_FAILED(400, "文件上传失败, 请检查文件大小和类型"),
+    FILE_SIZE_FORMAT_ERROR(400, "文件大小格式错误"),
+    
     /* ========== 系统异常 (5xx) ========== */
     INTERNAL_ERROR(500, "服务器内部错误"),
     DATABASE_ERROR(501, "数据库操作异常"),
@@ -56,7 +58,11 @@ public enum ExceptionCodeMsg {
     FILE_SIZE_EXCEEDED(10201, "文件大小超过限制"),
     STORAGE_QUOTA_EXHAUSTED(10202, "存储空间不足"),
     FILE_TYPE_NOT_ALLOWED(10203, "不支持的文件类型"),
-    FILE_UPLOAD_CONFLICT(10204, "文件已存在，请勿重复上传"),
+    FILE_DIR_CREATE_FAIL(10204, "文件路径创建失败"),
+    FILE_UPLOAD_CONFLICT(10205, "文件已存在，请勿重复上传"),
+    FILE_EMPTY(10206, "上传的文件为空"),
+    FILE_UPLOAD_FAIL(10207, "文件上传失败"),
+    FILE_PATH_INVALID(10208, "文件路径非法"),
     CLOUD_NOT_FOUND(10211, "云盘不存在或已被删除"),
     CLOUD_ALREADY_EXISTS(10212, "云盘名称已存在"),
     CLOUD_QUOTA_EXCEEDED(10213, "云盘容量配额不足"),

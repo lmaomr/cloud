@@ -1,10 +1,11 @@
 package cn.lmao.cloud.services;
 
 import cn.lmao.cloud.exception.CustomException;
+import cn.lmao.cloud.model.entity.Cloud;
 import cn.lmao.cloud.model.entity.User;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import cn.lmao.cloud.repository.UserRepository;
-import cn.lmao.cloud.util.LogUtils;
+import cn.lmao.cloud.util.LogUtil;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -28,7 +29,7 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
 
-    private final Logger log = LogUtils.getLogger();
+    private final Logger log = LogUtil.getLogger();
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -92,6 +93,14 @@ public class UserService implements UserDetailsService {
             log.info("成功获取邮箱[{}]的用户信息", email);
         }
         return user;
+    }
+
+    public Cloud getCloud(Long userId) {
+        User user = getUserById(userId);
+        if (user == null) {
+            throw new CustomException(ExceptionCodeMsg.USER_NOT_FOUND);
+        }
+        return user.getCloud();
     }
 
     /**

@@ -15,6 +15,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import cn.lmao.cloud.exception.CustomException;
+import cn.lmao.cloud.model.dto.ApiResponse;
+import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -26,93 +31,104 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // 公共路径常量
-    private static final String[] PUBLIC_URLS = {
-            "/apis/auth/**",
-            "*/**",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html"
-    };
+        // 公共路径常量
+        private static final String[] PUBLIC_URLS = {
+                        "/apis/auth/**",
+                        "*/**",
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html"
+        };
 
-    /**
-     * 安全过滤器链配置
-     * @param http HttpSecurity 对象
-     * @param jwtAuthenticationFilter JWT认证过滤器
-     * @param traceIdFilter TraceID过滤器
-     * @return 配置好的 SecurityFilterChain
-     * @throws Exception 配置异常
-     */
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, 
-            JwtAuthenticationFilter jwtAuthenticationFilter,
-            TraceIdFilter traceIdFilter) throws Exception {
-        
-        http
-            // 禁用CSRF保护（因为使用JWT无状态认证）
-            .csrf(csrf -> csrf.disable())
-            
-            // 配置CORS
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            
-            // 配置会话管理为无状态（STATELESS）
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            
-            // 配置请求授权规则
-            .authorizeHttpRequests(auth -> auth
-                // 允许公共路径无需认证
-                .requestMatchers(PUBLIC_URLS).permitAll()
-                // 其他所有请求需要认证
-                .anyRequest().authenticated()
-            )
-            
-            // 添加TraceID过滤器（最先执行）
-            .addFilterBefore(traceIdFilter, UsernamePasswordAuthenticationFilter.class)
-            // 添加JWT认证过滤器
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        
-        return http.build();
-    }
+        /**
+         * 安全过滤器链配置
+         * 
+         * @param http                    HttpSecurity 对象
+         * @param jwtAuthenticationFilter JWT认证过滤器
+         * @param traceIdFilter           TraceID过滤器
+         * @return 配置好的 SecurityFilterChain
+         * @throws Exception 配置异常
+         */
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                        JwtAuthenticationFilter jwtAuthenticationFilter,
+                        TraceIdFilter traceIdFilter) throws Exception {
 
-    /**
-     * 密码编码器配置
-     * @return BCryptPasswordEncoder 实例
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        // 使用BCrypt强哈希算法加密密码
-        return new BCryptPasswordEncoder();
-    }
+                http
+                                // 禁用CSRF保护（因为使用JWT无状态认证）
+                                .csrf(csrf -> csrf.disable())
 
-    /**
-     * 认证管理器配置
-     * @param authConfig 认证配置
-     * @return 认证管理器实例
-     * @throws Exception 配置异常
-     */
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
+                                // 配置CORS
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-    /**
-     * CORS配置源
-     * @return CorsConfigurationSource 实例
-     */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // 允许所有来源
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS")); // 允许的HTTP方法
-        configuration.setAllowedHeaders(List.of("*")); // 允许所有头
-        configuration.setExposedHeaders(List.of("Authorization")); // 暴露的响应头
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // 应用到所有路径
-        return source;
-    }
+                                // 配置会话管理为无状态（STATELESS）
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                                // 配置请求授权规则
+                                .authorizeHttpRequests(auth -> auth
+                                                // 允许公共路径无需认证
+                                                .requestMatchers(PUBLIC_URLS).permitAll()
+                                                // 其他所有请求需要认证
+                                                .anyRequest().authenticated())
+
+                                // .exceptionHandling(exception -> exception
+                                // .authenticationEntryPoint((request, response, authException) -> {
+                                // response.setContentType("application/json"); // 设置响应类型为JSON
+                                // response.setCharacterEncoding("UTF-8"); // 设置字符编码为UTF-8
+                                // response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 设置HTTP状态码为401
+                                // response.getWriter().write( // 写入响应内容
+                                // ApiResponse.exception(ExceptionCodeMsg.TOKEN_FORMAT_ERROR).toString());
+                                // }))
+
+                                // 添加TraceID过滤器（最先执行）
+                                .addFilterBefore(traceIdFilter, UsernamePasswordAuthenticationFilter.class)
+                                // 添加JWT认证过滤器
+                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+                return http.build();
+        }
+
+        /**
+         * 密码编码器配置
+         * 
+         * @return BCryptPasswordEncoder 实例
+         */
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                // 使用BCrypt强哈希算法加密密码
+                return new BCryptPasswordEncoder();
+        }
+
+        /**
+         * 认证管理器配置
+         * 
+         * @param authConfig 认证配置
+         * @return 认证管理器实例
+         * @throws Exception 配置异常
+         */
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration authConfig) throws Exception {
+                return authConfig.getAuthenticationManager();
+        }
+
+        /**
+         * CORS配置源
+         * 
+         * @return CorsConfigurationSource 实例
+         */
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                configuration.setAllowedOrigins(List.of("*")); // 允许所有来源
+                configuration.setAllowedMethods(Arrays.asList(
+                                "GET", "POST", "PUT", "DELETE", "OPTIONS")); // 允许的HTTP方法
+                configuration.setAllowedHeaders(List.of("*")); // 允许所有头
+                configuration.setExposedHeaders(List.of("Authorization")); // 暴露的响应头
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration); // 应用到所有路径
+                return source;
+        }
 }
