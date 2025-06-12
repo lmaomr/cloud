@@ -64,7 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 上传文件函数
     async function uploadFiles(files) {
-        localStorage.setItem('token', 'Bearer eyJhbGciOiJIUzM4NCJ9.eyJ1c2VybmFtZSI6InRlc3QiLCJpYXQiOjE3NDk2NDkwOTMsImV4cCI6MTc0OTY2MzQ5M30.6nkootDckL9qj7nO1LFg2hhudNF9-DDf9M6tP7fSzwdEN6cUT_0YdilfzYzqd91G');
+        localStorage.setItem('token', 'Bearer eyJhbGciOiJIUzM4NCJ9.eyJ1c2VybmFtZSI6ImxtYW8iLCJpYXQiOjE3NDk3MDE1OTIsImV4cCI6MTc0OTcxNTk5Mn0.GUTFpwU64WwD3MA3u7F7AZU5uO7P6opd-2oUIZc2ioAgCfeTx4l-NqeEfmSApnR0');
+        const requestId = crypto.randomUUID();
         const formData = new FormData();
         for (const file of files) {
             formData.append('file', file); // 后端接口的参数名是 'file'
@@ -76,7 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'Authorization': localStorage.getItem('token')
+                    'Authorization': localStorage.getItem('token'),
+                    'X-Request-ID': requestId// 添加请求ID
                 }
             });
 

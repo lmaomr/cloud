@@ -109,7 +109,7 @@ public class FileUploadUtil {
     private void saveFileToTarget(MultipartFile file, Path targetPath) {
         // 2. 使用临时文件+原子操作模式
         Path normalizedPath = targetPath.normalize();
-        Path tempPath = normalizedPath.getParent().resolve(normalizedPath.getFileName() + ".tmp");
+        Path tempPath = normalizedPath.getParent().resolve("/temp/" + normalizedPath.getFileName() + ".tmp");
         try (InputStream is = file.getInputStream()) {
             // 2.1 先写入临时文件
             Files.copy(is, tempPath);

@@ -66,24 +66,19 @@ public class JwtUtil {
 
     /**
      * 从令牌中获取用户名
-     * @param token JWT令牌
+     * @param authHeader JWT令牌
      * @return 用户名
      */
     public String getUsernameFromHeader(String authHeader) {
         if (authHeader == null || !authHeader.startsWith(TOKEN_PREFIX)) {
-            log.warn("无效的Authorization头格式");
+            log.warn(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
             throw new JwtException(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
         }
 
         String token = extractToken(authHeader);
-        if (token == null) {
-            log.warn("无效的Authorization头格式");
-            throw new JwtException(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
-        }
 
         if (!validateToken(token)) {
-            log.warn("无效的Authorization头格式");
-            throw new JwtException(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
+            throw new JwtException(ExceptionCodeMsg.TOKEN_INVALID.getMsg());
         }
 
         log.debug("开始从令牌中解析用户名");
@@ -106,8 +101,8 @@ public class JwtUtil {
     public String extractToken(String authHeader) {
         log.debug("开始从Authorization头中提取令牌");
         if (authHeader == null || !authHeader.startsWith(TOKEN_PREFIX)) {
-            log.warn("无效的Authorization头格式");
-            throw new JwtException("无效的Authorization头");
+            log.warn(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
+            throw new JwtException(ExceptionCodeMsg.TOKEN_FORMAT_ERROR.getMsg());
         }
         String token = authHeader.substring(TOKEN_PREFIX.length());
         log.debug("成功从Authorization头中提取令牌");

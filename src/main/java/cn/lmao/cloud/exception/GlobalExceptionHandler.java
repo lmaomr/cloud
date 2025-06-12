@@ -59,7 +59,6 @@ public class GlobalExceptionHandler {
                 : ExceptionCodeMsg.AUTH_FAIL);
     }
 
-
     @ExceptionHandler(MultipartException.class)
     public <T> ApiResponse<T> handleMultipartException(MultipartException e) {
         log.error("文件上传异常: {}", e.getMessage());

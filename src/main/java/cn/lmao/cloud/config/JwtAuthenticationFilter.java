@@ -1,6 +1,5 @@
 package cn.lmao.cloud.config;
 
-import cn.lmao.cloud.exception.CustomException;
 import cn.lmao.cloud.model.dto.ApiResponse;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import cn.lmao.cloud.util.JsonUtil;
@@ -13,7 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +22,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
+import java.util.HashSet;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -36,9 +37,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
+    // 添加一个 ThreadLocal 来存储已验证的请求
+    private static final Set<String> requestIds = new HashSet<>();
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws IOException, ServletException {
+        // 获取请求的唯一标识
+        String requestId = request.getHeader("X-Request-ID");
+        if (requestId == null) {
+            requestId = MDC.get("traceId");
+            response.setHeader("X-Request-ID", requestId);
+        }
+
+        // 检查这个请求是否已经验证过
+        if (requestIds.contains(requestId)) {
+            // 如果已经验证过，直接放行
+            log.info("已验证过的requestId:{}", requestId);
+            filterChain.doFilter(request, response);
+            return;
+        }
         try {
             // 1. 获取并验证 JWT token
             String authHeader = request.getHeader("Authorization");
@@ -51,7 +69,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
             // 4. 继续执行过滤器链
@@ -63,6 +80,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write(JsonUtil.toJson(ApiResponse.exception(ExceptionCodeMsg.TOKEN_FORMAT_ERROR)));
             // 注意：这里没有调用 filterChain.doFilter，因为已经返回了错误响应
+        }finally {
+            // 记录请求ID
+            requestIds.add(requestId);
         }
     }
 }

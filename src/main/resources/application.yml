@@ -68,8 +68,8 @@ server:
       force: true  # 强制使用指定编码
     # 文件上传配置
     multipart:
-      max-file-size: 10MB
-      max-request-size: 50MB
+      max-file-size: 100MB        # 单个文件大小限制
+      max-request-size: 100MB     # 总请求大小限制
 
 # JWT配置
 jwt:
@@ -132,4 +132,4 @@ springdoc:
 # 自定义应用配置
 file:
   upload:
-    path: /upload # 文件上传保存目录，可以配置为绝对路径，如 /path/to/your/upload/directory
+    path: D:/Cloud/upload # 文件上传保存目录，可以配置为绝对路径，如 /path/to/your/upload/directory
