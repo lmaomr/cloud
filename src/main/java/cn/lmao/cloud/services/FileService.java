@@ -57,7 +57,7 @@ public class FileService {
 
             if (cloud == null) {
                 throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
-            }
+            }   
 
             // 2. 检查云盘空间是否足够
             if (cloud.getUsedCapacity() + file.getSize() > cloud.getTotalCapacity()) {

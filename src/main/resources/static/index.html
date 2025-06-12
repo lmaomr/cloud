@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudreve</title>
+    <title>云存储 | Cloudreve</title>
     <link rel="stylesheet" href="css/index.css">
     <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <!-- 侧边栏切换按钮 -->
-        <button class="sidebar-toggle" id="sidebarToggle">
-            <i class="fas fa-bars"></i>
-        </button>
         <!-- 左侧导航栏 -->
         <div class="sidebar" id="sidebar">
             <div class="logo">
@@ -49,43 +45,161 @@
                     </div>
                 </div>
             </div>
+            <!-- 添加用户信息区域 -->
+            <div class="user-info-area">
+                <div class="avatar"><span>l</span></div>
+                <div class="user-details">
+                    <div class="username">用户名</div>
+                    <div class="user-role">普通用户</div>
+                </div>
+            </div>
         </div>
         <!-- 主要内容区域 -->
         <div class="main-content">
             <!-- 顶部栏 -->
             <div class="header-bar">
                 <div class="header-left">
-                    <button class="btn btn-primary"><i class="fas fa-plus"></i> 新建</button>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" id="createBtn"><i class="fas fa-plus"></i> 新建</button>
+                    </div>
                     <div class="search-box">
                         <i class="fas fa-search"></i>
                         <input type="text" placeholder="按下 / 开始搜索">
                     </div>
                 </div>
                 <div class="header-right">
-                    <button class="icon-btn" title="刷新"><i class="fas fa-rotate-right"></i></button>
-                    <button class="icon-btn" title="视图"><i class="fas fa-th-large"></i></button>
-                    <button class="icon-btn" title="排序"><i class="fas fa-sort"></i></button>
+                    <button class="icon-btn" title="刷新" id="refreshBtn"><i class="fas fa-rotate-right"></i></button>
+                    <div class="view-toggle">
+                        <button class="icon-btn view-btn active" data-view="grid" title="网格视图"><i class="fas fa-th-large"></i></button>
+                        <button class="icon-btn view-btn" data-view="list" title="列表视图"><i class="fas fa-list"></i></button>
+                    </div>
+                    <div class="dropdown">
+                        <button class="icon-btn" title="排序"><i class="fas fa-sort"></i></button>
+                        <div class="dropdown-menu">
+                            <a href="#" data-sort="name-asc">按名称升序</a>
+                            <a href="#" data-sort="name-desc">按名称降序</a>
+                            <a href="#" data-sort="date-asc">按日期升序</a>
+                            <a href="#" data-sort="date-desc">按日期降序</a>
+                            <a href="#" data-sort="size-asc">按大小升序</a>
+                            <a href="#" data-sort="size-desc">按大小降序</a>
+                        </div>
+                    </div>
                     <button class="icon-btn" title="设置"><i class="fas fa-cog"></i></button>
-                    <button class="icon-btn" title="主题"><i class="fas fa-moon"></i></button>
-                    <div class="avatar"><span>I</span></div>
+                    <button class="icon-btn theme-toggle" title="切换主题"><i class="fas fa-moon"></i></button>
                 </div>
             </div>
             <!-- 路径导航样式 -->
             <div class="path-bar">
-                <span class="header-path"><i class="fas fa-folder"></i> 我的文件</span>
-            </div>
-            <!-- 文件列表为空时的提示 -->
-            <div class="file-list grid-view empty-file-list">
-                <div class="empty-file-icon">
-                    <i class="fas fa-box-open"></i>
+                <div class="breadcrumb">
+                    <span class="path-item"><i class="fas fa-home"></i> 首页</span>
+                    <i class="fas fa-chevron-right path-separator"></i>
+                    <span class="path-item current">我的文件</span>
                 </div>
-                <div class="empty-file-title">拖拽文件至此</div>
-                <div class="empty-file-description">或点击左上方"创建"按钮添加文件</div>
             </div>
+            
+            <!-- 文件操作工具栏 -->
+            <div class="file-actions-toolbar" id="fileActionsToolbar" style="display: none;">
+                <div class="selected-count">已选择 <span id="selectedCount">0</span> 个项目</div>
+                <div class="toolbar-actions">
+                    <button class="toolbar-btn" title="下载"><i class="fas fa-download"></i></button>
+                    <button class="toolbar-btn" title="分享"><i class="fas fa-share-alt"></i></button>
+                    <button class="toolbar-btn" title="移动"><i class="fas fa-arrows-alt"></i></button>
+                    <button class="toolbar-btn" title="重命名"><i class="fas fa-edit"></i></button>
+                    <button class="toolbar-btn danger" title="删除"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            
+            <!-- 文件列表容器 -->
+            <div class="file-container">
+                <!-- 文件列表为空时的提示 -->
+                <div class="file-list grid-view empty-file-list" id="emptyFileList">
+                    <div class="empty-file-icon">
+                        <i class="fas fa-box-open"></i>
+                    </div>
+                    <div class="empty-file-title">拖拽文件至此</div>
+                    <div class="empty-file-description">或点击左上方"新建"按钮添加文件</div>
+                </div>
+                
+                <!-- 实际文件列表 (默认隐藏) -->
+                <div class="file-list grid-view" id="fileList" style="display: none;">
+                    <!-- 文件夹示例 -->
+                    <div class="file-item folder">
+                        <div class="file-checkbox">
+                            <input type="checkbox" class="item-checkbox">
+                        </div>
+                        <div class="file-content">
+                            <div class="file-icon">
+                                <i class="fas fa-folder"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">文档资料</div>
+                                <div class="file-meta">修改于 2023-06-15</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <i class="fas fa-download" data-action="download" title="下载"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- 文件示例 -->
+                    <div class="file-item file">
+                        <div class="file-checkbox">
+                            <input type="checkbox" class="item-checkbox">
+                        </div>
+                        <div class="file-content">
+                            <div class="file-icon">
+                                <i class="fas fa-file-pdf"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">项目报告.pdf</div>
+                                <div class="file-meta">2.5 MB • 修改于 2023-06-10</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <i class="fas fa-download" data-action="download" title="下载"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 上传进度条 (默认隐藏) -->
+            <div class="upload-progress" id="uploadProgress" style="display: none;">
+                <div class="upload-header">
+                    <div class="upload-title"><i class="fas fa-upload"></i> 正在上传文件</div>
+                    <button class="upload-close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="upload-items" id="uploadItems"></div>
+            </div>
+            
+            <!-- 新建菜单 (默认隐藏) -->
+            <div class="create-menu" id="createMenu" style="display: none;">
+                <div class="create-menu-item" data-action="folder">
+                    <i class="fas fa-folder"></i> 新建文件夹
+                </div>
+                <div class="create-menu-item" data-action="text">
+                    <i class="fas fa-file-alt"></i> 新建文本文档
+                </div>
+                <div class="create-menu-item" data-action="upload">
+                    <i class="fas fa-upload"></i> 上传文件
+                </div>
+                <div class="create-menu-item" data-action="upload-folder">
+                    <i class="fas fa-folder-plus"></i> 上传文件夹
+                </div>
+            </div>
+            
             <!-- 添加隐藏的文件输入元素 -->
             <input type="file" id="fileInput" style="display: none;" multiple>
+            <input type="file" id="folderInput" style="display: none;" webkitdirectory directory multiple>
         </div>
     </div>
+    
+    <!-- 消息通知组件 -->
+    <div class="toast-container" id="toastContainer"></div>
+    
     <script src="js/main.js"></script>
 </body>
 </html>

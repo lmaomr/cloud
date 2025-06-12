@@ -14,8 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
-import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -27,10 +25,10 @@ public class FileUploadUtil {
     @Value("${file.upload.path}")
     private String uploadRootDir;
 
-    @Value("${server.servlet.multipart.max-file-size}")
+    @Value("${spring.servlet.multipart.max-file-size}")
     private String maxFileSize;
 
-    @Value("${server.servlet.multipart.max-request-size}")
+    @Value("${spring.servlet.multipart.max-request-size}")
     public String maxRequestSize;
 
     /**
@@ -64,7 +62,8 @@ public class FileUploadUtil {
 
     // --- 安全关键方法 ---
     private String sanitizeFileName(String originalName) {
-        if (originalName == null) return "";
+        if (originalName == null)
+            return "";
 
         // 移除路径遍历字符和非法字符
         String safeName = INVALID_PATH_CHARS.matcher(originalName).replaceAll("");
@@ -107,35 +106,11 @@ public class FileUploadUtil {
     }
 
     private void saveFileToTarget(MultipartFile file, Path targetPath) {
-        // 2. 使用临时文件+原子操作模式
-        Path normalizedPath = targetPath.normalize();
-        Path tempPath = normalizedPath.getParent().resolve("/temp/" + normalizedPath.getFileName() + ".tmp");
         try (InputStream is = file.getInputStream()) {
-            // 2.1 先写入临时文件
-            Files.copy(is, tempPath);
-
-            // 2.2 验证文件内容（示例：简单大小验证）
-            if (Files.size(tempPath) > FileSizeUtil.parseSize(maxFileSize)) { 
-                throw new CustomException(ExceptionCodeMsg.FILE_SIZE_EXCEEDED);
-            }
-
-            // 2.3 原子性替换目标文件
-            Files.move(tempPath, normalizedPath, StandardCopyOption.ATOMIC_MOVE);
-
-            // 2.4 设置安全权限（Linux/Unix系统）
-            try {
-                Files.setPosixFilePermissions(normalizedPath,
-                        Set.of(PosixFilePermission.OWNER_READ,
-                                PosixFilePermission.OWNER_WRITE));
-            } catch (UnsupportedOperationException ignored) {
-                // Windows系统忽略权限设置
-            }
+            System.out.println("maxFileSize: " + maxFileSize);
+            System.out.println("maxRequestSize: " + maxRequestSize);
+            Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            // 3. 失败时清理临时文件
-            try {
-                Files.deleteIfExists(tempPath);
-            } catch (IOException ignored) {
-            }
             throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
         }
     }

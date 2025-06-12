@@ -29,6 +29,12 @@ public class User {
     @Column(name = "user_email" ,nullable = false)
     private String email;
 
+    @Column(name = "niken_name", nullable = false)
+    private String nikenName;
+
+    @Column(name = "user_role", nullable = false)
+    private String role;
+
     @Column(name = "create_time", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(0)")
     private LocalDateTime createTime;
 

@@ -1,135 +1,54 @@
-# 应用程序基本配置
 spring:
   application:
-    name: cloud  # 应用名称，可在日志和监控中显示
-
+    name: cloud
   profiles:
-    active: dev  # 当前激活的配置文件，可根据环境切换为 dev、test、prod 等
-
-  main:
-    banner-mode: "console"  # 控制台显示 Spring Boot 启动横幅，可设为 off、console、log
-
-  # 数据源配置
+    active: dev
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver  # JDBC 驱动类名
-    url: jdbc:mysql://localhost:3306/cloud?useSSL=false&serverTimezone=Asia/Tokyo&allowPublicKeyRetrieval=true  # 数据库连接 URL
-    username: root  # 数据库用户名
-    password: 123456  # 数据库密码，包含特殊字符需使用引号包裹 :contentReference[oaicite:0]{index=0}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/cloud?useSSL=false&serverTimezone=Asia/Tokyo&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
     hikari:
-      maximum-pool-size: 10  # 最大连接池大小
-      minimum-idle: 5  # 最小空闲连接数
-      idle-timeout: 600000  # 空闲连接超时时间（毫秒）
-      max-lifetime: 1800000  # 连接最大存活时间（毫秒）
-      connection-timeout: 30000  # 获取连接超时时间（毫秒）
-      pool-name: HikariCP  # 连接池名称
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
 
-  # JPA 配置
   jpa:
     open-in-view: false
-    show-sql: false  # 是否显示 SQL 语句
+    show-sql: false
     hibernate:
-      ddl-auto: update  # 自动建表策略，可选值：none、validate、update、create、create-drop
+      ddl-auto: update
     properties:
       hibernate:
-        format_sql: true  # 格式化 SQL 输出
+        format_sql: true
 
-  # Thymeleaf 模板引擎配置
   thymeleaf:
-    cache: false  # 开发环境关闭缓存，便于调试
-    prefix: classpath:/templates/  # 模板文件位置
-    suffix: .html  # 模板文件后缀
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
 
-  # 国际化配置
-#  messages:
-#    basename: i18n/messages  # 国际化资源文件基础名
-#    encoding: UTF-8  # 资源文件编码
-
-  # 邮件发送配置（如需启用，请取消注释）
-  # mail:
-  #   host: smtp.example.com
-  #   port: 587
-  #   username: your_email@example.com
-  #   password: your_password
-  #   properties:
-  #     mail:
-  #       smtp:
-  #         auth: true
-  #         starttls:
-  #           enable: true
-
-# 服务器配置
-server:
-  port: 8082  # 应用监听端口
+  server:
+    port: 8082
+    
   servlet:
-    context-path: /  # 应用上下文路径
-    encoding:
-      charset: UTF-8  # 请求编码
-      enabled: true  # 启用编码设置
-      force: true  # 强制使用指定编码
-    # 文件上传配置
     multipart:
-      max-file-size: 100MB        # 单个文件大小限制
-      max-request-size: 100MB     # 总请求大小限制
+      max-file-size: 100MB
+      max-request-size: 100MB
 
-# JWT配置
 jwt:
   secret: 8Zz5tw0Ionm3XPZZfN0NOml3z9FMfmpgXwovR9fp6ryDIoGRM8EPHAB6iHsc0fb
-  expiration: 14400000  # 6小时
-
-# 日志配置
-#logging:
-#  level:
-#    root: INFO  # 根日志级别
-#    org.springframework.web: DEBUG  # 指定包的日志级别
-#  file:
-#    name: logs/blog-application.log  # 日志文件路径
-
-# 自定义配置示例
-#custom:
-#  feature:
-#    enabled: true  # 自定义功能开关
-#    name: 示例功能  # 自定义功能名称
-
-# 多环境配置示例（可根据需要添加）
-# ---
-# spring:
-#   config:
-#     activate:
-#       on-profile: prod
-#   datasource:
-#     url: jdbc:mysql://prod-db-server:3306/prod_db
-#     username: prod_user
-#     password: 'prod_password'
-#   jpa:
-#     hibernate:
-#       ddl-auto: validate
-#   thymeleaf:
-#     cache: true
-#   logging:
-#     level:
-#       root: WARN
-#     file:
-#       name: logs/prod-application.log
+  expiration: 14400000
 
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
-    operationsSorter: method
-    tagsSorter: alpha
-    tryItOutEnabled: true
-    filter: true
-    disable-swagger-default-url: true
     doc-expansion: none
-    default-models-expand-depth: -1
   api-docs:
     path: /v3/api-docs
     enabled: true
   packages-to-scan: cn.lmao.cloud.controller
   paths-to-match: /apis/**
-  default-consumes-media-type: application/json
-  default-produces-media-type: application/json
 
-# 自定义应用配置
 file:
   upload:
-    path: D:/Cloud/upload # 文件上传保存目录，可以配置为绝对路径，如 /path/to/your/upload/directory
+    path: D:/Cloud/upload

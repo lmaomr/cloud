@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -59,6 +60,14 @@ public class GlobalExceptionHandler {
                 : ExceptionCodeMsg.AUTH_FAIL);
     }
 
+    // 处理文件上传大小超限异常
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public <T> ApiResponse<T> handleMaxSizeException(MaxUploadSizeExceededException e) {
+        log.error("文件大小超过限制: {}", e.getMessage());
+        return ApiResponse.exception(ExceptionCodeMsg.FILE_SIZE_EXCEEDED);
+    }
+
+    // 处理其他文件上传异常
     @ExceptionHandler(MultipartException.class)
     public <T> ApiResponse<T> handleMultipartException(MultipartException e) {
         log.error("文件上传异常: {}", e.getMessage());

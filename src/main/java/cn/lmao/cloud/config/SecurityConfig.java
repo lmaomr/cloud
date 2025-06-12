@@ -15,11 +15,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import cn.lmao.cloud.exception.CustomException;
-import cn.lmao.cloud.model.dto.ApiResponse;
-import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
-import jakarta.servlet.http.HttpServletResponse;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -55,36 +50,36 @@ public class SecurityConfig {
                         TraceIdFilter traceIdFilter) throws Exception {
 
                 http
-                                // 禁用CSRF保护（因为使用JWT无状态认证）
-                                .csrf(csrf -> csrf.disable())
+                // 禁用CSRF保护（因为使用JWT无状态认证）
+                .csrf(csrf -> csrf.disable())
 
-                                // 配置CORS
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // 配置CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                                // 配置会话管理为无状态（STATELESS）
-                                .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // 配置会话管理为无状态（STATELESS）
+                .sessionManagement(session -> session
+                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                                // 配置请求授权规则
-                                .authorizeHttpRequests(auth -> auth
-                                                // 允许公共路径无需认证
-                                                .requestMatchers(PUBLIC_URLS).permitAll()
-                                                // 其他所有请求需要认证
-                                                .anyRequest().authenticated())
+                // 配置请求授权规则
+                .authorizeHttpRequests(auth -> auth
+                                // 允许公共路径无需认证
+                                .requestMatchers(PUBLIC_URLS).permitAll()
+                                // 其他所有请求需要认证
+                                .anyRequest().authenticated())
 
-                                // .exceptionHandling(exception -> exception
-                                // .authenticationEntryPoint((request, response, authException) -> {
-                                // response.setContentType("application/json"); // 设置响应类型为JSON
-                                // response.setCharacterEncoding("UTF-8"); // 设置字符编码为UTF-8
-                                // response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 设置HTTP状态码为401
-                                // response.getWriter().write( // 写入响应内容
-                                // ApiResponse.exception(ExceptionCodeMsg.TOKEN_FORMAT_ERROR).toString());
-                                // }))
+                // .exceptionHandling(exception -> exception
+                // .authenticationEntryPoint((request, response, authException) -> {
+                // response.setContentType("application/json"); // 设置响应类型为JSON
+                // response.setCharacterEncoding("UTF-8"); // 设置字符编码为UTF-8
+                // response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 设置HTTP状态码为401
+                // response.getWriter().write( // 写入响应内容
+                // ApiResponse.exception(ExceptionCodeMsg.TOKEN_FORMAT_ERROR).toString());
+                // }))
 
-                                // 添加TraceID过滤器（最先执行）
-                                .addFilterBefore(traceIdFilter, UsernamePasswordAuthenticationFilter.class)
-                                // 添加JWT认证过滤器
-                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // 添加TraceID过滤器（最先执行）
+                .addFilterBefore(traceIdFilter, UsernamePasswordAuthenticationFilter.class)
+                // 添加JWT认证过滤器
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
                 return http.build();
         }
