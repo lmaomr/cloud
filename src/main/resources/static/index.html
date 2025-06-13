@@ -3,11 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Cloudreve - 简单、高效、安全的云存储服务">
+    <meta name="theme-color" content="#1976d2">
     <title>云存储 | Cloudreve</title>
+    <link rel="stylesheet" href="css/themes.css">
     <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/list-view.css">
+    <link rel="preconnect" href="https://cdn.bootcdn.net">
     <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="js/main.js" as="script">
+    <link rel="preload" href="css/index.css" as="style">
 </head>
 <body>
+    <!-- 页面加载指示器 - 顶部横条 -->
+    <div class="page-loader" id="pageLoader"></div>
+
     <div class="container">
         <!-- 左侧导航栏 -->
         <div class="sidebar" id="sidebar">
@@ -17,27 +31,27 @@
             </div>
             <nav>
                 <ul class="nav-group">
-                    <li class="active"><a href="#"><i class="fas fa-home"></i> 我的文件</a></li>
-                    <li><a href="#"><i class="fas fa-film"></i> 视频</a></li>
-                    <li><a href="#"><i class="fas fa-music"></i> 音乐</a></li>
-                    <li><a href="#"><i class="fas fa-file-alt"></i> 文档</a></li>
-                    <li><a href="#"><i class="fas fa-share-nodes"></i> 互发共享</a></li>
-                    <li><a href="#"><i class="fas fa-trash"></i> 回收站</a></li>
+                    <li class="active" data-section="my-files"><a href="javascript:void(0);" aria-label="我的文件"><i class="fas fa-home"></i> <span>我的文件</span></a></li>
+                    <li data-section="videos"><a href="javascript:void(0);" aria-label="视频"><i class="fas fa-film"></i> <span>视频</span></a></li>
+                    <li data-section="music"><a href="javascript:void(0);" aria-label="音乐"><i class="fas fa-music"></i> <span>音乐</span></a></li>
+                    <li data-section="documents"><a href="javascript:void(0);" aria-label="文档"><i class="fas fa-file-alt"></i> <span>文档</span></a></li>
+                    <li data-section="shared"><a href="javascript:void(0);" aria-label="互发共享"><i class="fas fa-share-nodes"></i> <span>互发共享</span></a></li>
+                    <li data-section="trash"><a href="javascript:void(0);" aria-label="回收站"><i class="fas fa-trash"></i> <span>回收站</span></a></li>
                 </ul>
                 <div class="nav-divider"></div>
                 <div class="nav-title">更多</div>
                 <ul class="nav-group">
-                    <li><a href="#"><i class="fas fa-share-alt"></i> 我的分享</a></li>
-                    <li><a href="#"><i class="fas fa-link"></i> 连接与挂载</a></li>
-                    <li><a href="#"><i class="fas fa-tasks"></i> 后台任务</a></li>
-                    <li><a href="#"><i class="fas fa-cloud-download-alt"></i> 离线下载</a></li>
-                    <li><a href="#"><i class="fas fa-tools"></i> 管理面板</a></li>
+                    <li data-section="my-shares"><a href="javascript:void(0);" aria-label="我的分享"><i class="fas fa-share-alt"></i> <span>我的分享</span></a></li>
+                    <li data-section="connections"><a href="javascript:void(0);" aria-label="连接与挂载"><i class="fas fa-link"></i> <span>连接与挂载</span></a></li>
+                    <li data-section="tasks"><a href="javascript:void(0);" aria-label="后台任务"><i class="fas fa-tasks"></i> <span>后台任务</span></a></li>
+                    <li data-section="offline-download"><a href="javascript:void(0);" aria-label="离线下载"><i class="fas fa-cloud-download-alt"></i> <span>离线下载</span></a></li>
+                    <li data-section="admin-panel"><a href="javascript:void(0);" aria-label="管理面板"><i class="fas fa-tools"></i> <span>管理面板</span></a></li>
                 </ul>
             </nav>
             <div class="storage-info card">
                 <div class="storage-title">存储空间</div>
                 <div class="storage-progress">
-                    <div class="progress-bar">
+                    <div class="progress-bar" role="progressbar" aria-valuenow="94.8" aria-valuemin="0" aria-valuemax="100">
                         <div class="progress"></div>
                     </div>
                     <div class="storage-text">
@@ -45,8 +59,8 @@
                     </div>
                 </div>
             </div>
-            <!-- 添加用户信息区域 -->
-            <div class="user-info-area">
+            <!-- 桌面版用户信息区域 - 只在大屏幕显示 -->
+            <div class="user-info-area desktop-only">
                 <div class="avatar"><span>l</span></div>
                 <div class="user-details">
                     <div class="username">用户名</div>
@@ -59,38 +73,47 @@
             <!-- 顶部栏 -->
             <div class="header-bar">
                 <div class="header-left">
+                    <!-- 侧边栏切换按钮 -->
+                    <button class="icon-btn sidebar-toggle" id="sidebarToggle" title="菜单" aria-label="切换菜单">
+                        <i class="fas fa-bars"></i>
+                    </button>
                     <div class="action-buttons">
-                        <button class="btn btn-primary" id="createBtn"><i class="fas fa-plus"></i> 新建</button>
+                        <button class="btn btn-primary" id="createBtn" aria-label="新建"><i class="fas fa-plus"></i> 新建</button>
                     </div>
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" placeholder="按下 / 开始搜索">
+                        <input type="text" placeholder="按下 / 开始搜索" aria-label="搜索文件">
                     </div>
                 </div>
                 <div class="header-right">
-                    <button class="icon-btn" title="刷新" id="refreshBtn"><i class="fas fa-rotate-right"></i></button>
+                    <button class="icon-btn" title="刷新" id="refreshBtn" aria-label="刷新"><i class="fas fa-rotate-right"></i></button>
                     <div class="view-toggle">
-                        <button class="icon-btn view-btn active" data-view="grid" title="网格视图"><i class="fas fa-th-large"></i></button>
-                        <button class="icon-btn view-btn" data-view="list" title="列表视图"><i class="fas fa-list"></i></button>
+                        <button class="icon-btn view-btn active" data-view="grid" title="网格视图" aria-label="网格视图"><i class="fas fa-th-large"></i></button>
+                        <button class="icon-btn view-btn" data-view="list" title="列表视图" aria-label="列表视图"><i class="fas fa-list"></i></button>
                     </div>
                     <div class="dropdown">
-                        <button class="icon-btn" title="排序"><i class="fas fa-sort"></i></button>
+                        <button class="icon-btn" title="排序" aria-label="排序选项"><i class="fas fa-sort"></i></button>
                         <div class="dropdown-menu">
-                            <a href="#" data-sort="name-asc">按名称升序</a>
-                            <a href="#" data-sort="name-desc">按名称降序</a>
-                            <a href="#" data-sort="date-asc">按日期升序</a>
-                            <a href="#" data-sort="date-desc">按日期降序</a>
-                            <a href="#" data-sort="size-asc">按大小升序</a>
-                            <a href="#" data-sort="size-desc">按大小降序</a>
+                            <a href="javascript:void(0);" data-sort="name-asc">按名称升序</a>
+                            <a href="javascript:void(0);" data-sort="name-desc">按名称降序</a>
+                            <a href="javascript:void(0);" data-sort="date-asc">按日期升序</a>
+                            <a href="javascript:void(0);" data-sort="date-desc">按日期降序</a>
+                            <a href="javascript:void(0);" data-sort="size-asc">按大小升序</a>
+                            <a href="javascript:void(0);" data-sort="size-desc">按大小降序</a>
                         </div>
                     </div>
-                    <button class="icon-btn" title="设置"><i class="fas fa-cog"></i></button>
-                    <button class="icon-btn theme-toggle" title="切换主题"><i class="fas fa-moon"></i></button>
+                    <button class="icon-btn" title="设置" aria-label="设置"><i class="fas fa-cog"></i></button>
+                    <button class="icon-btn theme-toggle" title="切换主题" aria-label="切换明暗主题"><i class="fas fa-moon"></i></button>
+                    
+                    <!-- 移动端用户信息区域 - 只在小屏幕显示 -->
+                    <div class="user-info-area mobile-only">
+                        <div class="avatar"><span>l</span></div>
+                    </div>
                 </div>
             </div>
             <!-- 路径导航样式 -->
             <div class="path-bar">
-                <div class="breadcrumb">
+                <div class="breadcrumb" aria-label="路径导航">
                     <span class="path-item"><i class="fas fa-home"></i> 首页</span>
                     <i class="fas fa-chevron-right path-separator"></i>
                     <span class="path-item current">我的文件</span>
@@ -98,14 +121,14 @@
             </div>
             
             <!-- 文件操作工具栏 -->
-            <div class="file-actions-toolbar" id="fileActionsToolbar" style="display: none;">
+            <div class="file-actions-toolbar" id="fileActionsToolbar" style="display: none;" aria-live="polite">
                 <div class="selected-count">已选择 <span id="selectedCount">0</span> 个项目</div>
                 <div class="toolbar-actions">
-                    <button class="toolbar-btn" title="下载"><i class="fas fa-download"></i></button>
-                    <button class="toolbar-btn" title="分享"><i class="fas fa-share-alt"></i></button>
-                    <button class="toolbar-btn" title="移动"><i class="fas fa-arrows-alt"></i></button>
-                    <button class="toolbar-btn" title="重命名"><i class="fas fa-edit"></i></button>
-                    <button class="toolbar-btn danger" title="删除"><i class="fas fa-trash"></i></button>
+                    <button class="toolbar-btn" title="下载" aria-label="下载所选文件"><i class="fas fa-download"></i></button>
+                    <button class="toolbar-btn" title="分享" aria-label="分享所选文件"><i class="fas fa-share-alt"></i></button>
+                    <button class="toolbar-btn" title="移动" aria-label="移动所选文件"><i class="fas fa-arrows-alt"></i></button>
+                    <button class="toolbar-btn" title="重命名" aria-label="重命名所选文件"><i class="fas fa-edit"></i></button>
+                    <button class="toolbar-btn danger" title="删除" aria-label="删除所选文件"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
             
@@ -121,11 +144,11 @@
                 </div>
                 
                 <!-- 实际文件列表 (默认隐藏) -->
-                <div class="file-list grid-view" id="fileList" style="display: none;">
+                <div class="file-list grid-view" id="fileList" style="display: none;" aria-label="文件列表">
                     <!-- 文件夹示例 -->
-                    <div class="file-item folder">
+                    <div class="file-item folder" tabindex="0" role="button" aria-label="文件夹: 文档资料">
                         <div class="file-checkbox">
-                            <input type="checkbox" class="item-checkbox">
+                            <input type="checkbox" class="item-checkbox" aria-label="选择文档资料">
                         </div>
                         <div class="file-content">
                             <div class="file-icon">
@@ -137,16 +160,16 @@
                             </div>
                         </div>
                         <div class="file-actions">
-                            <i class="fas fa-download" data-action="download" title="下载"></i>
-                            <i class="fas fa-share-alt" data-action="share" title="分享"></i>
-                            <i class="fas fa-trash" data-action="delete" title="删除"></i>
+                            <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载文档资料"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享文档资料"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除文档资料"></i>
                         </div>
                     </div>
                     
                     <!-- 文件示例 -->
-                    <div class="file-item file">
+                    <div class="file-item file" tabindex="0" role="button" aria-label="文件: 项目报告.pdf">
                         <div class="file-checkbox">
-                            <input type="checkbox" class="item-checkbox">
+                            <input type="checkbox" class="item-checkbox" aria-label="选择项目报告.pdf">
                         </div>
                         <div class="file-content">
                             <div class="file-icon">
@@ -158,35 +181,35 @@
                             </div>
                         </div>
                         <div class="file-actions">
-                            <i class="fas fa-download" data-action="download" title="下载"></i>
-                            <i class="fas fa-share-alt" data-action="share" title="分享"></i>
-                            <i class="fas fa-trash" data-action="delete" title="删除"></i>
+                            <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载项目报告.pdf"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享项目报告.pdf"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除项目报告.pdf"></i>
                         </div>
                     </div>
                 </div>
             </div>
             
             <!-- 上传进度条 (默认隐藏) -->
-            <div class="upload-progress" id="uploadProgress" style="display: none;">
+            <div class="upload-progress" id="uploadProgress" style="display: none;" aria-live="polite">
                 <div class="upload-header">
                     <div class="upload-title"><i class="fas fa-upload"></i> 正在上传文件</div>
-                    <button class="upload-close"><i class="fas fa-times"></i></button>
+                    <button class="upload-close" aria-label="关闭上传进度"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="upload-items" id="uploadItems"></div>
             </div>
             
             <!-- 新建菜单 (默认隐藏) -->
-            <div class="create-menu" id="createMenu" style="display: none;">
-                <div class="create-menu-item" data-action="folder">
+            <div class="create-menu" id="createMenu" style="display: none;" role="menu">
+                <div class="create-menu-item" data-action="folder" role="menuitem" tabindex="0">
                     <i class="fas fa-folder"></i> 新建文件夹
                 </div>
-                <div class="create-menu-item" data-action="text">
+                <div class="create-menu-item" data-action="text" role="menuitem" tabindex="0">
                     <i class="fas fa-file-alt"></i> 新建文本文档
                 </div>
-                <div class="create-menu-item" data-action="upload">
+                <div class="create-menu-item" data-action="upload" role="menuitem" tabindex="0">
                     <i class="fas fa-upload"></i> 上传文件
                 </div>
-                <div class="create-menu-item" data-action="upload-folder">
+                <div class="create-menu-item" data-action="upload-folder" role="menuitem" tabindex="0">
                     <i class="fas fa-folder-plus"></i> 上传文件夹
                 </div>
             </div>
@@ -198,8 +221,9 @@
     </div>
     
     <!-- 消息通知组件 -->
-    <div class="toast-container" id="toastContainer"></div>
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
     
-    <script src="js/main.js"></script>
+    <!-- 加载脚本 -->
+    <script src="js/main.js" defer></script>
 </body>
 </html>

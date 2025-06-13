@@ -1,0 +1,335 @@
+/* 响应式布局优化 */
+
+/* 通用响应式辅助类 */
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: flex;
+}
+
+/* 大屏幕设备 - 桌面和大型平板 (1200px 以上) */
+@media (min-width: 1200px) {
+  .sidebar {
+    width: 260px;
+  }
+  
+  .main-content {
+    margin-left: 260px;
+  }
+  
+  .file-list.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+/* 中等屏幕设备 - 平板和小型笔记本 (992px-1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .sidebar {
+    width: 240px;
+  }
+  
+  .main-content {
+    margin-left: 240px;
+  }
+  
+  .file-list.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+/* 小屏幕设备 - 平板 (768px-991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .sidebar {
+    width: 220px;
+  }
+  
+  .main-content {
+    margin-left: 220px;
+  }
+  
+  .file-list.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+  
+  .file-name {
+    font-size: 0.9rem;
+  }
+  
+  .file-meta {
+    font-size: 0.75rem;
+  }
+}
+
+/* 移动设备 - 手机和小型平板 (768px 以下) */
+@media (max-width: 767px) {
+  .mobile-only {
+    display: flex;
+  }
+  
+  .desktop-only {
+    display: none;
+  }
+  
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    width: 280px;
+    z-index: 1100;
+    transition: transform 0.3s ease;
+    box-shadow: none;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .sidebar nav {
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: 20px;
+  }
+  
+  .sidebar.active {
+    transform: translateX(280px);
+    box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: 12px;
+  }
+  
+  .header-bar {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+  }
+  
+  .header-left {
+    flex: 1;
+    margin-right: 8px;
+  }
+  
+  .search-box {
+    width: 40px;
+    overflow: hidden;
+    transition: width 0.3s ease;
+  }
+  
+  .search-box.expanded {
+    width: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 8px 12px;
+    background-color: var(--header-bg);
+    z-index: 10;
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+  
+  .search-box input {
+    width: 0;
+    padding-left: 0;
+    transition: width 0.3s ease, padding 0.3s ease;
+  }
+  
+  .search-box.expanded input {
+    width: calc(100% - 40px);
+    padding-left: 8px;
+  }
+  
+  .action-buttons {
+    margin-right: 8px;
+  }
+  
+  .btn {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .file-list.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  
+  .file-item {
+    padding: 8px;
+  }
+  
+  .file-name {
+    font-size: 0.85rem;
+    max-width: 120px;
+  }
+  
+  .file-meta {
+    font-size: 0.7rem;
+  }
+  
+  .path-bar {
+    padding: 8px 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .file-actions-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .toolbar-actions {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .upload-progress {
+    width: calc(100% - 24px);
+    max-width: none;
+    bottom: 12px;
+    left: 12px;
+  }
+}
+
+/* 超小屏幕设备 - 小型手机 (480px 以下) */
+@media (max-width: 479px) {
+  .file-list.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  
+  .file-item {
+    padding: 6px;
+  }
+  
+  .file-name {
+    font-size: 0.8rem;
+    max-width: 100px;
+  }
+  
+  .file-meta {
+    font-size: 0.65rem;
+  }
+  
+  .header-right .icon-btn:not(.sidebar-toggle):not(.theme-toggle) {
+    display: none;
+  }
+  
+  .view-toggle {
+    margin-right: 0;
+  }
+  
+  .btn {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .btn i {
+    margin-right: 4px;
+  }
+  
+  .action-buttons {
+    margin-right: 4px;
+  }
+  
+  .file-icon i {
+    font-size: 2.5rem;
+  }
+  
+  .file-actions i {
+    padding: 4px;
+    font-size: 0.9rem;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .sidebar, .header-bar, .path-bar, .file-actions-toolbar, .create-menu, .toast-container {
+    display: none !important;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: 0;
+  }
+  
+  .file-list {
+    display: block;
+  }
+  
+  .file-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 10px;
+  }
+  
+  .file-actions {
+    display: none;
+  }
+  
+  .file-checkbox {
+    display: none;
+  }
+}
+
+/* 高密度显示器优化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .file-icon i {
+    text-rendering: optimizeLegibility;
+  }
+  
+  body {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* 降低动画效果 - 对于用户选择减少动画的情况 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 深色模式检测 - 如果用户系统设置为深色模式，自动应用深色主题 */
+@media (prefers-color-scheme: dark) {
+  body:not(.light-mode) {
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --sidebar-bg: #1e1e1e;
+    --header-bg: #1e1e1e;
+    --text-color: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --border-color: #333333;
+    --divider-color: #2c2c2c;
+  }
+  
+  body:not(.light-mode) .theme-toggle i {
+    content: "\f185";
+  }
+}
+
+/* 横屏模式优化 - 移动设备横屏时的布局 */
+@media (max-width: 767px) and (orientation: landscape) {
+  .file-list.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+  
+  .header-bar {
+    padding: 6px 12px;
+  }
+  
+  .sidebar {
+    top: 0;
+    height: 100%;
+  }
+} 

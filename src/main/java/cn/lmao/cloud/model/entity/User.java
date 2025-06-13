@@ -47,6 +47,8 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
+        //设置默认角色
+        this.role = Role.USER.name();
         createTime = LocalDateTime.now();
         updateTime = createTime;
     }
@@ -54,6 +56,16 @@ public class User {
     @PreUpdate
     protected void onUpdate() {
         updateTime = LocalDateTime.now();
+    }
+
+    //设置角色枚举
+    public enum Role {
+        //管理员
+        ADMIN,
+        //用户
+        USER,
+        //游客
+        GUEST
     }
 
 }

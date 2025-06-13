@@ -1,0 +1,204 @@
+/* 列表视图优化样式 */
+
+/* 列表视图容器 */
+.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* 增加项目之间的间距 */
+  padding: 12px 16px;
+}
+
+/* 列表视图中的文件项 */
+.list-view .file-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  position: relative;
+  height: 56px; /* 固定高度，使所有项目保持一致 */
+}
+
+/* 列表视图中的复选框容器 */
+.list-view .file-checkbox {
+  position: relative;
+  left: 0;
+  top: 0;
+  transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+}
+
+/* 列表视图中的复选框 */
+.list-view .item-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* 列表视图中的文件内容 */
+.list-view .file-content {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-gap: 16px;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* 列表视图中的文件图标 */
+.list-view .file-icon {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+/* 列表视图中的文件信息 */
+.list-view .file-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* 列表视图中的文件名 */
+.list-view .file-name {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 列表视图中的文件元信息 */
+.list-view .file-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 列表视图中的文件操作按钮 */
+.list-view .file-actions {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* 列表视图中悬停时显示操作按钮 */
+.list-view .file-item:hover .file-actions {
+  opacity: 1;
+}
+
+/* 列表视图中的操作图标 */
+.list-view .file-actions i {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+/* 列表视图中的操作图标悬停效果 */
+.list-view .file-actions i:hover {
+  background-color: var(--hover-bg);
+  color: var(--primary-color);
+}
+
+/* 列表视图中选中的文件项 */
+.list-view .file-item.selected {
+  background-color: var(--selected-bg);
+  border-left: 3px solid var(--primary-color);
+  padding-left: 13px; /* 补偿边框宽度 */
+}
+
+/* 列表视图中的删除按钮悬停效果 */
+.list-view .file-actions i[data-action="delete"]:hover {
+  color: var(--danger-color);
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .list-view .file-item {
+    padding: 10px 12px;
+    height: 50px;
+  }
+  
+  .list-view .file-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+  
+  .list-view .file-content {
+    grid-gap: 10px;
+  }
+  
+  .list-view .file-name {
+    font-size: 13px;
+  }
+  
+  .list-view .file-meta {
+    font-size: 11px;
+  }
+  
+  .list-view .file-actions i {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* 小屏幕设备进一步优化 */
+@media (max-width: 480px) {
+  .list-view {
+    padding: 8px;
+    gap: 6px;
+  }
+  
+  .list-view .file-item {
+    padding: 8px;
+    height: 46px;
+  }
+  
+  .list-view .file-content {
+    grid-gap: 8px;
+  }
+  
+  /* 在小屏幕上隐藏部分操作按钮 */
+  .list-view .file-actions i:not([data-action="download"]):not([data-action="delete"]) {
+    display: none;
+  }
+}
+
+/* 暗色模式适配 */
+body.dark-mode .list-view .file-item:hover {
+  background-color: var(--hover-bg);
+}
+
+body.dark-mode .list-view .file-actions i:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .list-view .file-actions i[data-action="delete"]:hover {
+  background-color: rgba(244, 67, 54, 0.2);
+} 

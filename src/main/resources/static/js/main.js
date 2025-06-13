@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadItems = document.getElementById('uploadItems');
     const toastContainer = document.getElementById('toastContainer');
     const themeToggle = document.querySelector('.theme-toggle');
+    const pageLoader = document.getElementById('pageLoader');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const navItems = document.querySelectorAll('.nav-group li');
+    const searchBox = document.querySelector('.search-box');
+    const searchInput = searchBox ? searchBox.querySelector('input') : null;
     
     // 状态变量
     let selectedFiles = [];
@@ -24,6 +29,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSort = 'name-asc';
     let darkMode = localStorage.getItem('darkMode') === 'true';
     let isDragging = false; // 添加拖拽状态跟踪
+    let currentSection = 'my-files'; // 当前选中的导航项
+    let isSearchExpanded = false; // 跟踪搜索框是否展开
     
     // 初始化函数
     function init() {
@@ -33,6 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
             themeToggle.querySelector('i').classList.replace('fa-moon', 'fa-sun');
         }
         
+        // 模拟页面加载
+        setTimeout(hidePageLoader, 800);
+        
         // 加载文件列表（示例）
         loadFiles();
         
@@ -41,6 +51,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 创建模态框
         createModals();
+    }
+    
+    // 隐藏页面加载指示器
+    function hidePageLoader() {
+        if (pageLoader) {
+            pageLoader.classList.add('hidden');
+            setTimeout(() => {
+                pageLoader.style.display = 'none';
+            }, 500);
+        }
     }
     
     // 绑定事件监听器
@@ -75,8 +95,25 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // 文件项选择
-        document.addEventListener('click', handleFileItemClick);
+        // 文件项选择 - 使用事件委托处理点击事件
+        document.addEventListener('click', function(e) {
+            handleFileItemClick(e);
+        });
+        
+        // 文件项复选框点击处理
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('item-checkbox')) {
+                const fileItem = e.target.closest('.file-item');
+                if (fileItem) {
+                    if (e.target.checked) {
+                        selectFile(fileItem);
+                    } else {
+                        deselectFile(fileItem);
+                    }
+                    updateToolbar();
+                }
+            }
+        });
         
         // 文件操作按钮
         document.addEventListener('click', handleFileAction);
@@ -102,6 +139,79 @@ document.addEventListener('DOMContentLoaded', function() {
                 createMenu.style.display = 'none';
             }
         });
+        
+        // 侧边栏切换按钮 - 移动端
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+        }
+        
+        // 点击页面其他区域关闭侧边栏 - 移动端
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
+                if (!e.target.closest('.sidebar') && !e.target.closest('#sidebarToggle')) {
+                    sidebar.classList.remove('active');
+                }
+            }
+        });
+        
+        // 导航项点击事件 - 修复导航项点击问题
+        navItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const section = this.dataset.section;
+                if (section) {
+                    // 确保在移动设备上点击导航项后关闭侧边栏
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('active');
+                    }
+                    setActiveNavItem(section);
+                    loadSectionContent(section);
+                }
+            });
+        });
+        
+        // 搜索框点击事件 - 修复移动端搜索功能
+        if (searchBox) {
+            // 搜索图标点击事件
+            const searchIcon = searchBox.querySelector('i');
+            if (searchIcon) {
+                searchIcon.addEventListener('click', function(e) {
+                    toggleSearchBox();
+                });
+            }
+            
+            // 搜索输入框事件
+            if (searchInput) {
+                // 点击输入框时展开
+                searchInput.addEventListener('click', function(e) {
+                    if (window.innerWidth <= 768 && !isSearchExpanded) {
+                        toggleSearchBox();
+                    }
+                });
+                
+                // 输入时处理搜索
+                searchInput.addEventListener('keyup', function(e) {
+                    if (e.key === 'Enter') {
+                        handleSearch(this.value);
+                    }
+                });
+                
+                // 失去焦点时处理
+                searchInput.addEventListener('blur', function(e) {
+                    // 如果是移动设备且没有输入内容，则收起搜索框
+                    if (window.innerWidth <= 768 && isSearchExpanded && !this.value) {
+                        setTimeout(() => {
+                            // 延迟执行，以便可以先处理点击事件
+                            if (!document.activeElement.closest('.search-box')) {
+                                toggleSearchBox(false);
+                            }
+                        }, 200);
+                    }
+                });
+            }
+        }
         
         // 拖放上传 - 使用全局事件处理
         const dropZone = document.querySelector('.file-container');
@@ -156,12 +266,277 @@ document.addEventListener('DOMContentLoaded', function() {
             // 按下 / 键聚焦搜索框
             if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
-                const searchInput = document.querySelector('.search-box input');
                 if (searchInput) {
                     searchInput.focus();
+                    if (window.innerWidth <= 768 && !isSearchExpanded) {
+                        toggleSearchBox(true);
+                    }
                 }
             }
+            
+            // 按下 Esc 键关闭搜索框
+            if (e.key === 'Escape' && isSearchExpanded) {
+                toggleSearchBox(false);
+            }
         });
+        
+        // 窗口大小变化时处理响应式布局
+        window.addEventListener('resize', handleResize);
+    }
+    
+    // 处理窗口大小变化
+    function handleResize() {
+        if (window.innerWidth > 768) {
+            sidebar.classList.remove('active');
+            // 如果是大屏幕，确保搜索框正常显示
+            if (searchBox && isSearchExpanded) {
+                searchBox.classList.remove('expanded');
+                isSearchExpanded = false;
+            }
+        }
+    }
+    
+    // 切换搜索框状态
+    function toggleSearchBox(forceState) {
+        if (!searchBox) return;
+        
+        // 如果提供了强制状态，则使用它
+        if (forceState !== undefined) {
+            isSearchExpanded = forceState;
+        } else {
+            // 否则切换状态
+            isSearchExpanded = !isSearchExpanded;
+        }
+        
+        if (isSearchExpanded) {
+            searchBox.classList.add('expanded');
+            searchInput.focus();
+        } else {
+            searchBox.classList.remove('expanded');
+        }
+    }
+    
+    // 处理搜索
+    function handleSearch(query) {
+        if (!query) return;
+        
+        console.log('搜索:', query);
+        showToast('info', '搜索', `正在搜索: ${query}`);
+        
+        // 这里应该实现实际的搜索逻辑
+        // 模拟搜索结果
+        setTimeout(() => {
+            showToast('success', '搜索完成', `找到与 "${query}" 相关的结果`);
+        }, 1000);
+    }
+    
+    // 设置激活的导航项
+    function setActiveNavItem(section) {
+        currentSection = section;
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            if (item.dataset.section === section) {
+                item.classList.add('active');
+            }
+        });
+    }
+    
+    // 加载不同部分的内容
+    function loadSectionContent(section) {
+        // 更新面包屑导航
+        updateBreadcrumb(section);
+        
+        // 模拟加载内容
+        showPageLoader();
+        
+        setTimeout(() => {
+            // 这里可以根据不同的section加载不同的内容
+            // 目前只是示例，实际应用中可以通过AJAX请求获取数据
+            switch(section) {
+                case 'my-files':
+                    loadFiles();
+                    break;
+                case 'videos':
+                    loadCategoryFiles('video');
+                    break;
+                case 'music':
+                    loadCategoryFiles('audio');
+                    break;
+                case 'documents':
+                    loadCategoryFiles('document');
+                    break;
+                case 'shared':
+                    loadSharedFiles();
+                    break;
+                case 'trash':
+                    loadTrashFiles();
+                    break;
+                default:
+                    showSectionUnderDevelopment(section);
+            }
+            
+            hidePageLoader();
+        }, 800);
+    }
+    
+    // 显示页面加载指示器
+    function showPageLoader() {
+        if (pageLoader) {
+            pageLoader.style.display = 'flex';
+            pageLoader.classList.remove('hidden');
+        }
+    }
+    
+    // 更新面包屑导航
+    function updateBreadcrumb(section) {
+        const breadcrumb = document.querySelector('.breadcrumb');
+        if (breadcrumb) {
+            let sectionName = '';
+            
+            // 根据section获取对应的显示名称
+            navItems.forEach(item => {
+                if (item.dataset.section === section) {
+                    sectionName = item.textContent.trim();
+                }
+            });
+            
+            if (sectionName) {
+                breadcrumb.innerHTML = `
+                    <span class="path-item"><i class="fas fa-home"></i> 首页</span>
+                    <i class="fas fa-chevron-right path-separator"></i>
+                    <span class="path-item current">${sectionName}</span>
+                `;
+            }
+        }
+    }
+    
+    // 显示开发中的部分
+    function showSectionUnderDevelopment(section) {
+        fileList.style.display = 'none';
+        emptyFileList.style.display = 'flex';
+        
+        let sectionName = '';
+        navItems.forEach(item => {
+            if (item.dataset.section === section) {
+                sectionName = item.textContent.trim();
+            }
+        });
+        
+        emptyFileList.innerHTML = `
+            <div class="empty-file-icon">
+                <i class="fas fa-code"></i>
+            </div>
+            <div class="empty-file-title">${sectionName}功能开发中</div>
+            <div class="empty-file-description">此功能正在开发中，敬请期待</div>
+        `;
+    }
+    
+    // 加载特定类别的文件
+    function loadCategoryFiles(category) {
+        // 这里可以通过AJAX请求获取特定类别的文件
+        // 目前只是示例
+        fileList.style.display = 'grid';
+        emptyFileList.style.display = 'none';
+        
+        // 根据不同类别显示不同的图标
+        let icon;
+        let title;
+        
+        switch(category) {
+            case 'video':
+                icon = 'fa-film';
+                title = '视频文件';
+                break;
+            case 'audio':
+                icon = 'fa-music';
+                title = '音乐文件';
+                break;
+            case 'document':
+                icon = 'fa-file-alt';
+                title = '文档文件';
+                break;
+            default:
+                icon = 'fa-file';
+                title = '文件';
+        }
+        
+        // 示例：显示一个示例文件
+        fileList.innerHTML = `
+            <div class="file-item file">
+                <div class="file-checkbox">
+                    <input type="checkbox" class="item-checkbox">
+                </div>
+                <div class="file-content">
+                    <div class="file-icon">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">示例${title}</div>
+                        <div class="file-meta">1.5 MB • 修改于 2023-07-10</div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <i class="fas fa-download" data-action="download" title="下载"></i>
+                    <i class="fas fa-share-alt" data-action="share" title="分享"></i>
+                    <i class="fas fa-trash" data-action="delete" title="删除"></i>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 加载共享文件
+    function loadSharedFiles() {
+        fileList.style.display = 'grid';
+        emptyFileList.style.display = 'none';
+        
+        fileList.innerHTML = `
+            <div class="file-item file">
+                <div class="file-checkbox">
+                    <input type="checkbox" class="item-checkbox">
+                </div>
+                <div class="file-content">
+                    <div class="file-icon">
+                        <i class="fas fa-share-alt"></i>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">共享文件示例</div>
+                        <div class="file-meta">共享于 2023-07-15</div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <i class="fas fa-download" data-action="download" title="下载"></i>
+                    <i class="fas fa-link" data-action="copy-link" title="复制链接"></i>
+                    <i class="fas fa-trash" data-action="delete" title="删除"></i>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 加载回收站文件
+    function loadTrashFiles() {
+        fileList.style.display = 'grid';
+        emptyFileList.style.display = 'none';
+        
+        fileList.innerHTML = `
+            <div class="file-item file">
+                <div class="file-checkbox">
+                    <input type="checkbox" class="item-checkbox">
+                </div>
+                <div class="file-content">
+                    <div class="file-icon">
+                        <i class="fas fa-file"></i>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">已删除文件示例</div>
+                        <div class="file-meta">删除于 2023-07-20 • 7天后彻底删除</div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <i class="fas fa-undo" data-action="restore" title="恢复"></i>
+                    <i class="fas fa-trash-alt" data-action="delete-permanent" title="彻底删除"></i>
+                </div>
+            </div>
+        `;
     }
     
     // 检查元素是否是指定父元素的子元素
@@ -658,7 +1033,117 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (hasFiles) {
             // 显示文件列表，隐藏空状态
-            if (fileList) fileList.style.display = 'grid';
+            if (fileList) {
+                fileList.style.display = 'grid';
+                
+                // 添加示例文件
+                fileList.innerHTML = `
+                    <!-- 文件夹示例 -->
+                    <div class="file-item folder" tabindex="0" role="button" aria-label="文件夹: 文档资料">
+                        <div class="file-checkbox">
+                            <input type="checkbox" class="item-checkbox" aria-label="选择文档资料">
+                        </div>
+                        <div class="file-content">
+                            <div class="file-icon">
+                                <i class="fas fa-folder"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">文档资料</div>
+                                <div class="file-meta">修改于 2023-06-15</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载文档资料"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享文档资料"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除文档资料"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- PDF文件示例 -->
+                    <div class="file-item file" tabindex="0" role="button" aria-label="文件: 项目报告.pdf">
+                        <div class="file-checkbox">
+                            <input type="checkbox" class="item-checkbox" aria-label="选择项目报告.pdf">
+                        </div>
+                        <div class="file-content">
+                            <div class="file-icon">
+                                <i class="fas fa-file-pdf"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">项目报告.pdf</div>
+                                <div class="file-meta">2.5 MB • 修改于 2023-06-10</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载项目报告.pdf"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享项目报告.pdf"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除项目报告.pdf"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Word文件示例 -->
+                    <div class="file-item file" tabindex="0" role="button" aria-label="文件: 会议记录.docx">
+                        <div class="file-checkbox">
+                            <input type="checkbox" class="item-checkbox" aria-label="选择会议记录.docx">
+                        </div>
+                        <div class="file-content">
+                            <div class="file-icon">
+                                <i class="fas fa-file-word"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">会议记录.docx</div>
+                                <div class="file-meta">1.2 MB • 修改于 2023-06-22</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载会议记录.docx"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享会议记录.docx"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除会议记录.docx"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Excel文件示例 -->
+                    <div class="file-item file" tabindex="0" role="button" aria-label="文件: 财务报表.xlsx">
+                        <div class="file-checkbox">
+                            <input type="checkbox" class="item-checkbox" aria-label="选择财务报表.xlsx">
+                        </div>
+                        <div class="file-content">
+                            <div class="file-icon">
+                                <i class="fas fa-file-excel"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">财务报表.xlsx</div>
+                                <div class="file-meta">3.7 MB • 修改于 2023-07-05</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载财务报表.xlsx"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享财务报表.xlsx"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除财务报表.xlsx"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- 图片文件示例 -->
+                    <div class="file-item file" tabindex="0" role="button" aria-label="文件: 产品设计图.png">
+                        <div class="file-checkbox">
+                            <input type="checkbox" class="item-checkbox" aria-label="选择产品设计图.png">
+                        </div>
+                        <div class="file-content">
+                            <div class="file-icon">
+                                <i class="fas fa-file-image"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">产品设计图.png</div>
+                                <div class="file-meta">4.3 MB • 修改于 2023-07-12</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载产品设计图.png"></i>
+                            <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享产品设计图.png"></i>
+                            <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除产品设计图.png"></i>
+                        </div>
+                    </div>
+                `;
+            }
             if (emptyFileList) emptyFileList.style.display = 'none';
         } else {
             // 显示空状态，隐藏文件列表
@@ -693,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileItem = e.target.closest('.file-item');
         if (!fileItem) return;
         
-        // 如果点击的是文件操作按钮，不处理选择逻辑
+        // 如果点击的是文件操作按钮或复选框，不处理选择逻辑
         if (e.target.closest('.file-actions') || e.target.closest('.file-checkbox')) {
             return;
         }

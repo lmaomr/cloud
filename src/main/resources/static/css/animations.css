@@ -1,0 +1,198 @@
+/* 动画和过渡效果 */
+
+/* 淡入淡出动画 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* 滑入动画 */
+@keyframes slideInRight {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 脉冲动画 - 用于提示用户注意某个元素 */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 旋转动画 - 用于加载指示器 */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 应用动画的类 */
+.fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.fade-out {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s ease forwards;
+}
+
+.slide-in-up {
+  animation: slideInUp 0.3s ease forwards;
+}
+
+.pulse {
+  animation: pulse 1.5s infinite;
+}
+
+.rotate {
+  animation: rotate 1s linear infinite;
+}
+
+/* 文件项目的悬停效果 */
+.file-item {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.file-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 按钮的悬停效果 */
+.btn, .icon-btn, .toolbar-btn {
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover, .icon-btn:hover, .toolbar-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* 侧边栏项目的过渡效果 */
+.nav-group li {
+  transition: background-color 0.2s ease, color 0.2s ease, padding-left 0.2s ease;
+}
+
+.nav-group li:hover {
+  padding-left: 22px;
+}
+
+/* 主题切换过渡 */
+body, .sidebar, .main-content, .header-bar, .file-item, .card, .dropdown-menu, .create-menu, .toast {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 上传进度条动画 */
+.upload-progress-inner {
+  transition: width 0.3s linear;
+  background: linear-gradient(90deg, var(--primary-color) 0%, #64b5f6 100%);
+  background-size: 200% 100%;
+  animation: gradient-move 2s linear infinite;
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
+/* 文件操作工具栏的出现动画 */
+.file-actions-toolbar {
+  transform-origin: top center;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.file-actions-toolbar.show {
+  animation: slideInUp 0.3s ease forwards;
+}
+
+/* 下拉菜单的动画 */
+.dropdown-menu {
+  transform-origin: top right;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  transform: scale(0.95);
+  opacity: 0;
+}
+
+.dropdown:hover .dropdown-menu {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* 骨架屏加载效果 */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+/* 页面切换动画 */
+.page-transition {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.page-transition.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 文件拖放区域动画 */
+.drag-over {
+  animation: pulse 1.5s infinite;
+}
+
+/* 消息通知动画 */
+.toast {
+  animation: slideInRight 0.3s ease forwards;
+}
+
+.toast.hide {
+  animation: fadeOut 0.3s ease forwards;
+} 

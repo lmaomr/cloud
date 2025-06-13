@@ -1,0 +1,285 @@
+/* 主题样式 - 亮色和暗色模式 */
+
+/* 亮色主题变量 */
+:root {
+  /* 主色调 */
+  --primary-color: #1976d2;
+  --primary-hover: #1565c0;
+  --primary-light: #bbdefb;
+  --primary-dark: #0d47a1;
+  
+  /* 背景色 */
+  --bg-color: #f5f6fa;
+  --card-bg: #ffffff;
+  --sidebar-bg: #ffffff;
+  --header-bg: #ffffff;
+  
+  /* 文本颜色 */
+  --text-color: #2b3e51;
+  --text-secondary: #8a8f99;
+  --text-muted: #a0a0a0;
+  
+  /* 边框和分割线 */
+  --border-color: #e5e6eb;
+  --divider-color: #ececec;
+  
+  /* 状态颜色 */
+  --danger-color: #f44336;
+  --warning-color: #ff9800;
+  --success-color: #4caf50;
+  --info-color: #2196f3;
+  
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 8px rgba(0,0,0,0.1);
+  
+  /* 交互状态 */
+  --hover-bg: #f0f7ff;
+  --active-bg: #eaf3ff;
+  --selected-bg: #e3f2fd;
+  
+  /* 进度条 */
+  --progress-bg: #f0f0f0;
+  --progress-color: linear-gradient(90deg, #42a5f5 0%, var(--primary-color) 100%);
+}
+
+/* 暗色主题变量 */
+body.dark-mode {
+  /* 主色调 - 暗色模式下稍微调亮主色调 */
+  --primary-color: #2196f3;
+  --primary-hover: #1e88e5;
+  --primary-light: #0d47a1;
+  --primary-dark: #bbdefb;
+  
+  /* 背景色 */
+  --bg-color: #121212;
+  --card-bg: #1e1e1e;
+  --sidebar-bg: #1e1e1e;
+  --header-bg: #1e1e1e;
+  
+  /* 文本颜色 */
+  --text-color: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  
+  /* 边框和分割线 */
+  --border-color: #333333;
+  --divider-color: #2c2c2c;
+  
+  /* 阴影 - 暗色模式下阴影更明显 */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-md: 0 2px 6px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+  
+  /* 交互状态 */
+  --hover-bg: #2c2c2c;
+  --active-bg: #333333;
+  --selected-bg: #0d47a1;
+  
+  /* 进度条 */
+  --progress-bg: #333333;
+}
+
+/* 亮色主题具体样式 */
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.sidebar {
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+}
+
+.header-bar {
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card, .file-item, .dropdown-menu, .create-menu, .modal {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+.nav-divider {
+  background-color: var(--divider-color);
+}
+
+.nav-group li.active, .nav-group li:hover {
+  background-color: var(--active-bg);
+}
+
+.nav-group li.active {
+  border-left: 3px solid var(--primary-color);
+}
+
+.progress-bar {
+  background-color: var(--progress-bg);
+}
+
+.progress {
+  background: var(--progress-color);
+}
+
+/* 文件选择状态样式增强 */
+.file-item.selected {
+  background-color: var(--selected-bg) !important;
+  border: 2px solid var(--primary-color) !important;
+  box-shadow: 0 0 0 1px var(--primary-color) !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* 确保复选框在选中时更明显 */
+.item-checkbox:checked {
+  accent-color: var(--primary-color);
+  transform: scale(1.2);
+}
+
+/* 文件复选框区域增大点击区域 */
+.file-checkbox {
+  padding: 8px;
+  cursor: pointer;
+}
+
+/* 暗色主题特定样式覆盖 */
+body.dark-mode .sidebar,
+body.dark-mode .header-bar,
+body.dark-mode .card,
+body.dark-mode .file-item,
+body.dark-mode .dropdown-menu,
+body.dark-mode .create-menu,
+body.dark-mode .modal {
+  box-shadow: var(--shadow-md);
+}
+
+body.dark-mode .icon-btn,
+body.dark-mode .btn {
+  box-shadow: var(--shadow-sm);
+}
+
+body.dark-mode .file-icon i {
+  color: var(--primary-color);
+}
+
+body.dark-mode .file-item:hover {
+  background-color: var(--hover-bg);
+}
+
+body.dark-mode .file-item.selected {
+  background-color: var(--selected-bg);
+  border-color: var(--primary-color);
+}
+
+/* 主题切换图标 */
+body.dark-mode .theme-toggle i {
+  color: #ffd54f;
+}
+
+/* 输入框样式 */
+body.dark-mode input[type="text"],
+body.dark-mode input[type="password"],
+body.dark-mode input[type="email"],
+body.dark-mode textarea {
+  background-color: #252525;
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+body.dark-mode input[type="text"]:focus,
+body.dark-mode input[type="password"]:focus,
+body.dark-mode input[type="email"]:focus,
+body.dark-mode textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+/* 滚动条样式 */
+body.dark-mode ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body.dark-mode ::-webkit-scrollbar-track {
+  background: #252525;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: #555555;
+  border-radius: 4px;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #666666;
+}
+
+/* 按钮样式增强 */
+.btn-primary {
+  background: linear-gradient(45deg, var(--primary-color), var(--primary-hover));
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(45deg, var(--primary-hover), var(--primary-dark));
+  box-shadow: var(--shadow-md);
+}
+
+/* 文件图标颜色 */
+.file-icon i.fa-file-pdf {
+  color: #f44336;
+}
+
+.file-icon i.fa-file-word {
+  color: #2196f3;
+}
+
+.file-icon i.fa-file-excel {
+  color: #4caf50;
+}
+
+.file-icon i.fa-file-powerpoint {
+  color: #ff9800;
+}
+
+.file-icon i.fa-file-image {
+  color: #9c27b0;
+}
+
+.file-icon i.fa-file-video {
+  color: #e91e63;
+}
+
+.file-icon i.fa-file-audio {
+  color: #00bcd4;
+}
+
+.file-icon i.fa-file-archive {
+  color: #795548;
+}
+
+.file-icon i.fa-file-code {
+  color: #607d8b;
+}
+
+.file-icon i.fa-folder {
+  color: #ffc107;
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: more) {
+  :root {
+    --text-color: #000000;
+    --text-secondary: #333333;
+    --border-color: #000000;
+    --primary-color: #0000cc;
+  }
+  
+  body.dark-mode {
+    --text-color: #ffffff;
+    --text-secondary: #cccccc;
+    --border-color: #ffffff;
+    --primary-color: #66b3ff;
+  }
+} 
