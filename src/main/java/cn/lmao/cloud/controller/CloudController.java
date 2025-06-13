@@ -10,11 +10,12 @@ import cn.lmao.cloud.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/cloud")
+@RequestMapping("/api/cloud")
 public class CloudController {
 
     private final CloudService cloudService;
@@ -27,7 +28,7 @@ public class CloudController {
      * @return 用户云盘信息
      */
     @GetMapping("/user")
-    public ApiResponse<Cloud> getUserCloud(String username) {
+    public ApiResponse<Cloud> getUserCloud(@RequestParam String username) {
         User user = userService.getUserByName(username);
         if (user == null) {
             return ApiResponse.exception(ExceptionCodeMsg.EMPTY_USERNAME);

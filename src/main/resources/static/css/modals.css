@@ -1,0 +1,342 @@
+/* 模态框样式 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    width: 100%;
+    max-width: 450px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.modal-overlay.show .modal {
+    transform: translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-title i {
+    color: var(--primary-color);
+    font-size: 20px;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: var(--hover-bg);
+}
+
+.modal-close i {
+    font-size: 18px;
+    color: var(--text-secondary);
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* 表单组 */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 15px;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.form-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+/* 按钮样式 */
+.btn-submit {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-submit:hover {
+    background-color: var(--primary-dark);
+}
+
+.btn-cancel {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-cancel:hover {
+    background-color: var(--hover-bg);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #d32f2f;
+}
+
+/* 弹窗类型特定样式 */
+
+/* 删除确认弹窗 */
+.delete-modal .modal-icon {
+    color: var(--danger-color);
+    font-size: 48px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.delete-modal .modal-message {
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+.delete-modal .file-preview {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background-color: var(--hover-bg);
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.delete-modal .file-preview-icon {
+    margin-right: 12px;
+    font-size: 24px;
+    color: var(--text-secondary);
+}
+
+.delete-modal .file-preview-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 移动文件弹窗 */
+.move-modal .folder-tree {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 20px;
+}
+
+.move-modal .folder-item {
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.move-modal .folder-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.move-modal .folder-item.selected {
+    background-color: rgba(25, 118, 210, 0.1);
+}
+
+.move-modal .folder-icon {
+    margin-right: 8px;
+    color: #ffc107;
+}
+
+/* 重命名弹窗 */
+.rename-modal .form-group {
+    margin-bottom: 0;
+}
+
+/* 分享弹窗 */
+.share-modal .share-link {
+    display: flex;
+    margin-bottom: 16px;
+}
+
+.share-modal .share-link-input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px 0 0 6px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+}
+
+.share-modal .share-copy-btn {
+    border: 1px solid var(--border-color);
+    border-left: none;
+    background-color: var(--secondary-color);
+    padding: 0 16px;
+    border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-modal .share-copy-btn:hover {
+    background-color: var(--hover-bg);
+}
+
+.share-modal .share-options {
+    margin-top: 20px;
+}
+
+.share-modal .share-option-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.share-modal .share-option-item:last-child {
+    margin-bottom: 0;
+}
+
+.share-modal .share-option-label {
+    margin-left: 8px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .modal {
+        max-width: 90%;
+        width: 100%;
+    }
+    
+    .modal-title {
+        font-size: 16px;
+    }
+    
+    .modal-body {
+        padding: 16px;
+    }
+    
+    .modal-footer {
+        padding: 12px 16px;
+    }
+}
+
+/* 暗色模式适配 */
+body.dark-mode .modal {
+    background-color: var(--card-bg);
+}
+
+body.dark-mode .modal-header,
+body.dark-mode .modal-footer {
+    border-color: var(--border-color);
+}
+
+body.dark-mode .form-input {
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .share-modal .share-link-input {
+    background-color: var(--input-bg);
+} 

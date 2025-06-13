@@ -74,10 +74,8 @@
   
   .sidebar {
     position: fixed;
-    left: -280px;
     width: 280px;
     z-index: 1100;
-    transition: transform 0.3s ease;
     box-shadow: none;
     height: 100%;
     overflow-y: auto;
@@ -85,6 +83,8 @@
     padding-bottom: 20px;
     display: flex;
     flex-direction: column;
+    /* 移动端默认隐藏 */
+    transform: translateX(-100%);
   }
   
   .sidebar nav {
@@ -93,8 +93,9 @@
     padding-bottom: 20px;
   }
   
+  /* 移动端侧边栏激活状态 - 显示侧边栏 */
   .sidebar.active {
-    transform: translateX(280px);
+    transform: translateX(0);
     box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
   }
   

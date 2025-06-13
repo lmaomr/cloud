@@ -28,8 +28,12 @@ public class SecurityConfig {
 
         // 公共路径常量
         private static final String[] PUBLIC_URLS = {
-                        "/auth/**",
-                        "*/**",
+                        "/api/auth/**",
+                        "/login.html",
+                        "/index.html",
+                        "/js/**",
+                        "/css/**",
+                        "/image/**",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html"
@@ -116,11 +120,13 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.setAllowedOrigins(List.of("*")); // 允许所有来源
+                // 允许所有来源，明确包括IP地址访问
+                configuration.setAllowedOriginPatterns(List.of("*"));
                 configuration.setAllowedMethods(Arrays.asList(
                                 "GET", "POST", "PUT", "DELETE", "OPTIONS")); // 允许的HTTP方法
                 configuration.setAllowedHeaders(List.of("*")); // 允许所有头
                 configuration.setExposedHeaders(List.of("Authorization")); // 暴露的响应头
+                configuration.setAllowCredentials(true); // 允许携带凭证
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
                 source.registerCorsConfiguration("/**", configuration); // 应用到所有路径

@@ -93,6 +93,12 @@ body {
     transition: transform var(--transition-speed) ease;
     left: 0;
     top: 0;
+    transform: translateX(0); /* 默认显示 */
+}
+
+/* 侧边栏激活状态 - 适用于电脑端和移动端 */
+.sidebar.active {
+    transform: translateX(-100%); /* 隐藏侧边栏 */
 }
 
 /* 侧边栏切换按钮 */
@@ -309,15 +315,14 @@ nav {
 
 /* 主内容区域样式 */
 .main-content {
-    flex: 1;
-    padding: 16px;
     margin-left: 240px;
-    min-height: 100vh;
-    transition: margin var(--transition-speed) ease;
-    position: relative;
-    width: calc(100% - 240px);
+    flex: 1;
+    padding: 20px;
     display: flex;
     flex-direction: column;
+    transition: margin-left var(--transition-speed) ease;
+    min-height: 100vh;
+    max-width: 100%;
 }
 
 /* 顶部栏样式 */
@@ -585,6 +590,11 @@ nav {
 .toolbar-btn.danger:hover {
     background: rgba(244, 67, 54, 0.1);
     color: var(--danger-color);
+}
+
+/* 文件列表为空时的提示 */
+.fa-box-open, .fa-exclamation-triangle {
+    font-size: 35px;
 }
 
 /* 文件列表容器 */
@@ -1562,4 +1572,18 @@ body.dark-mode .file-actions i:hover {
 
 body.dark-mode .file-actions i[data-action="delete"]:hover {
     color: var(--danger-color);
-} 
+}
+
+/* 登出按钮样式 */
+.logout-btn {
+    margin-left: 8px;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+
+.logout-btn:hover {
+    color: var(--danger-color);
+}
+
+/* 使用checkbox控制侧边栏 */
+ 

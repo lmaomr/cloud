@@ -5,7 +5,6 @@ import cn.lmao.cloud.model.dto.FileUploadResponse;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import cn.lmao.cloud.services.FileService;
 import cn.lmao.cloud.services.UserService;
-import cn.lmao.cloud.util.JwtUtil;
 import cn.lmao.cloud.util.LogUtil;
 import lombok.RequiredArgsConstructor;
 
@@ -18,12 +17,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 @RestController
-@RequestMapping("/files")
+@RequestMapping("/api/file")
 @RequiredArgsConstructor
 public class FileController {
 
     private final FileService fileService;
-    private final JwtUtil jwtUtil;
     private final UserService userService;
     private final Logger log = LogUtil.getLogger();
 
