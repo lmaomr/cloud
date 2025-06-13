@@ -31,6 +31,16 @@ export const FileManager = {
   currentPath: '/',
   
   /**
+   * 当前文件列表缓存
+   */
+  currentFiles: [],
+  
+  /**
+   * 是否处于搜索模式
+   */
+  isSearchMode: false,
+  
+  /**
    * 初始化文件管理器
    */
   init() {
@@ -116,6 +126,13 @@ export const FileManager = {
         this.handleSectionChange(e.detail.section);
       }
     });
+    
+    // 监听搜索事件
+    document.addEventListener('search:perform', (e) => {
+      if (e.detail && e.detail.query) {
+        this.searchFiles(e.detail.query);
+      }
+    });
   },
   
   /**
@@ -189,58 +206,51 @@ export const FileManager = {
       const response = await CloudAPI.getFileList(this.currentPath, this.currentSort);
       const files = response.data || [];
       
+      // 缓存当前文件列表
+      this.currentFiles = files;
+      
       // 隐藏加载指示器
       UI.Loader.hideContentLoader();
       
       // 显示文件列表
-      if (this.fileList) {
-        this.fileList.style.display = 'grid';
-        this.fileList.innerHTML = ''; // 清空现有内容
-        
-        if (files.length > 0) {
-          // 添加文件和文件夹
-          files.forEach(file => {
-            const fileItem = this.createFileItem(file);
-            this.fileList.appendChild(fileItem);
-          });
-          
-          if (this.emptyFileList) this.emptyFileList.style.display = 'none';
-        } else {
-          // 显示空状态
-          if (this.fileList) this.fileList.style.display = 'none';
-          if (this.emptyFileList) this.emptyFileList.style.display = 'flex';
-        }
-      }
+      this.renderFiles(files);
+      
+      // 更新面包屑导航
+      this.updateBreadcrumb();
     } catch (error) {
       console.error('加载文件列表失败:', error);
-      
-      // 隐藏加载指示器
+      UI.Toast.show('error', '加载失败', error.message || '无法加载文件列表');
       UI.Loader.hideContentLoader();
-      
-      // 检查是否是认证错误
-      if (error.status === 401 || error.code === 401) {
-        // 清除认证令牌
-        CloudAPI.clearAuthToken();
-        
-        // 跳转到登录页面
-        window.location.href = 'login.html';
-        return;
+    }
+  },
+  
+  /**
+   * 渲染文件列表
+   * @param {Array} files - 文件数组
+   */
+  renderFiles(files) {
+    if (!this.fileList) return;
+    
+    this.fileList.style.display = 'grid';
+    this.fileList.innerHTML = ''; // 清空现有内容
+    
+    if (files.length > 0) {
+      // 有文件，隐藏空状态
+      if (this.emptyFileList) {
+        this.emptyFileList.style.display = 'none';
       }
       
-      UI.Toast.show('error', '加载失败', error.message || '无法加载文件列表');
-      
-      // 显示空状态
-      if (this.fileList) this.fileList.style.display = 'none';
+      // 创建文件项
+      files.forEach(file => {
+        const fileItem = this.createFileItem(file);
+        this.fileList.appendChild(fileItem);
+      });
+    } else {
+      // 没有文件，显示空状态
       if (this.emptyFileList) {
         this.emptyFileList.style.display = 'flex';
-        this.emptyFileList.innerHTML = `
-          <div class="empty-file-icon">
-            <i class="fas fa-exclamation-triangle"></i>
-          </div>
-          <div class="empty-file-title">加载失败</div>
-          <div class="empty-file-description">无法加载文件列表，请稍后再试</div>
-        `;
       }
+      this.fileList.style.display = 'none';
     }
   },
   
@@ -248,15 +258,19 @@ export const FileManager = {
    * 刷新文件列表
    */
   async refreshFiles() {
-    UI.Toast.show('info', '刷新中', '正在刷新文件列表...');
-    
-    try {
-      await this.loadFiles();
-      UI.Toast.show('success', '刷新完成', '文件列表已更新');
-    } catch (error) {
-      console.error('刷新文件列表失败:', error);
-      UI.Toast.show('error', '刷新失败', error.message || '无法刷新文件列表');
+    // 如果处于搜索模式，先退出
+    if (this.isSearchMode) {
+      this.exitSearchMode();
     }
+    
+    // 清除选择
+    this.clearFileSelection();
+    
+    // 重新加载文件
+    await this.loadFiles();
+    
+    // 显示刷新提示
+    UI.Toast.show('success', '已刷新', '文件列表已更新');
   },
   
   /**
@@ -590,35 +604,38 @@ export const FileManager = {
    * 更新面包屑导航
    */
   updateBreadcrumb() {
+    // 如果处于搜索模式，不更新
+    if (this.isSearchMode) return;
+    
+    // 如果有保存的原始面包屑，恢复它
+    if (this._originalBreadcrumb) {
+      const breadcrumb = document.querySelector('.breadcrumb');
+      if (breadcrumb) {
+        breadcrumb.innerHTML = this._originalBreadcrumb;
+        this._originalBreadcrumb = null;
+      }
+      return;
+    }
+    
+    // 原有的面包屑更新逻辑
     const breadcrumb = document.querySelector('.breadcrumb');
     if (!breadcrumb) return;
     
     // 清空面包屑
     breadcrumb.innerHTML = '';
     
-    // 添加根目录
+    // 添加首页
     const homeItem = document.createElement('span');
     homeItem.className = 'path-item';
     homeItem.innerHTML = '<i class="fas fa-home"></i> 首页';
     homeItem.addEventListener('click', () => {
       this.currentPath = '/';
-      this.updateBreadcrumb();
       this.loadFiles();
     });
     breadcrumb.appendChild(homeItem);
     
-    // 如果是根目录，直接返回
+    // 如果在根目录，不需要添加更多路径项
     if (this.currentPath === '/') {
-      const currentItem = document.createElement('span');
-      currentItem.className = 'path-item current';
-      currentItem.textContent = '我的文件';
-      
-      // 添加分隔符
-      const separator = document.createElement('i');
-      separator.className = 'fas fa-chevron-right path-separator';
-      breadcrumb.appendChild(separator);
-      
-      breadcrumb.appendChild(currentItem);
       return;
     }
     
@@ -626,30 +643,30 @@ export const FileManager = {
     const pathParts = this.currentPath.split('/').filter(Boolean);
     let currentPath = '';
     
-    // 添加路径项
+    // 添加每个路径部分
     pathParts.forEach((part, index) => {
       // 添加分隔符
       const separator = document.createElement('i');
       separator.className = 'fas fa-chevron-right path-separator';
       breadcrumb.appendChild(separator);
       
-      // 构建当前路径
+      // 更新当前路径
       currentPath += '/' + part;
       
       // 创建路径项
       const pathItem = document.createElement('span');
-      pathItem.className = 'path-item' + (index === pathParts.length - 1 ? ' current' : '');
+      pathItem.className = 'path-item';
+      if (index === pathParts.length - 1) {
+        pathItem.classList.add('current');
+      }
       pathItem.textContent = part;
       
-      // 非当前路径项添加点击事件
-      if (index < pathParts.length - 1) {
-        const path = currentPath;
-        pathItem.addEventListener('click', () => {
-          this.currentPath = path;
-          this.updateBreadcrumb();
-          this.loadFiles();
-        });
-      }
+      // 绑定点击事件
+      const path = currentPath; // 创建闭包以保存当前路径
+      pathItem.addEventListener('click', () => {
+        this.currentPath = path;
+        this.loadFiles();
+      });
       
       breadcrumb.appendChild(pathItem);
     });
@@ -778,6 +795,380 @@ export const FileManager = {
       }
     }
     return null;
+  },
+  
+  /**
+   * 搜索文件
+   * @param {string} query - 搜索关键词
+   */
+  searchFiles(query) {
+    if (!query) {
+      // 如果搜索词为空，退出搜索模式
+      if (this.isSearchMode) {
+        this.exitSearchMode();
+      }
+      return;
+    }
+    
+    console.log('搜索文件:', query);
+    
+    // 进入搜索模式
+    this.isSearchMode = true;
+    
+    // 清除选择
+    this.clearFileSelection();
+    
+    // 在当前文件列表中搜索
+    const searchResults = this.currentFiles.filter(file => 
+      file.name.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    // 渲染搜索结果
+    this.renderFiles(searchResults);
+    
+    // 更新面包屑导航，添加搜索指示
+    this.updateBreadcrumbForSearch(query);
+    
+    // 显示搜索结果提示
+    if (searchResults.length > 0) {
+      UI.Toast.show('info', '搜索结果', `找到 ${searchResults.length} 个匹配项`);
+    } else {
+      UI.Toast.show('warning', '搜索结果', '没有找到匹配项');
+    }
+  },
+  
+  /**
+   * 退出搜索模式
+   */
+  exitSearchMode() {
+    if (!this.isSearchMode) return;
+    
+    this.isSearchMode = false;
+    
+    // 重新加载当前目录文件
+    this.renderFiles(this.currentFiles);
+    
+    // 更新面包屑导航
+    this.updateBreadcrumb();
+  },
+  
+  /**
+   * 更新搜索模式下的面包屑导航
+   * @param {string} query - 搜索关键词
+   */
+  updateBreadcrumbForSearch(query) {
+    const breadcrumb = document.querySelector('.breadcrumb');
+    if (!breadcrumb) return;
+    
+    // 保存原始路径的面包屑
+    if (!this._originalBreadcrumb) {
+      this._originalBreadcrumb = breadcrumb.innerHTML;
+    }
+    
+    // 创建搜索面包屑
+    breadcrumb.innerHTML = `
+      <span class="path-item"><i class="fas fa-home"></i> 首页</span>
+      <i class="fas fa-chevron-right path-separator"></i>
+      <span class="path-item">搜索结果: "${query}"</span>
+      <button class="btn-link exit-search" title="退出搜索">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    
+    // 绑定退出搜索按钮事件
+    const exitSearchBtn = breadcrumb.querySelector('.exit-search');
+    if (exitSearchBtn) {
+      exitSearchBtn.addEventListener('click', () => this.exitSearchMode());
+    }
+  },
+  
+  /**
+   * 批量下载文件
+   * @param {Array<string>} fileNames - 文件名数组
+   */
+  async downloadFiles(fileNames) {
+    if (!fileNames || fileNames.length === 0) {
+      UI.Toast.show('warning', '未选择文件', '请先选择要下载的文件');
+      return;
+    }
+    
+    UI.Toast.show('info', '准备下载', `正在准备下载 ${fileNames.length} 个文件...`);
+    
+    try {
+      // 这里可以实现实际的批量下载逻辑
+      // 例如创建一个ZIP文件或者逐个下载
+      
+      // 模拟下载过程
+      setTimeout(() => {
+        UI.Toast.show('success', '开始下载', `正在下载 ${fileNames.length} 个文件`);
+      }, 1000);
+    } catch (error) {
+      console.error('批量下载文件失败:', error);
+      UI.Toast.show('error', '下载失败', error.message || '无法下载选中的文件');
+    }
+  },
+  
+  /**
+   * 分享文件
+   * @param {string} fileName - 文件名
+   */
+  shareFile(fileName) {
+    try {
+      UI.Toast.show('info', '准备分享', `正在生成分享链接: ${fileName}...`);
+      
+      // 模拟分享过程
+      setTimeout(() => {
+        const shareLink = `https://cloud.example.com/share/${Math.random().toString(36).substring(2, 10)}`;
+        
+        // 显示分享链接
+        UI.Modal.show('shareModal', '<i class="fas fa-share-alt"></i> 分享文件', `
+          <div class="form-group">
+            <label for="shareLink" class="form-label">分享链接</label>
+            <div class="input-group">
+              <input type="text" id="shareLink" class="form-input" value="${shareLink}" readonly>
+              <button class="btn btn-primary copy-btn" data-clipboard-target="#shareLink">复制</button>
+            </div>
+            <div class="form-hint">此链接有效期为7天</div>
+          </div>
+        `, {
+          confirmText: '完成',
+          cancelText: '取消',
+          showClose: true
+        });
+        
+        // 聚焦到输入框并选中文本
+        setTimeout(() => {
+          const input = document.getElementById('shareLink');
+          if (input) {
+            input.focus();
+            input.select();
+          }
+        }, 100);
+      }, 800);
+    } catch (error) {
+      console.error('分享文件失败:', error);
+      UI.Toast.show('error', '分享失败', error.message || '无法分享文件');
+    }
+  },
+  
+  /**
+   * 批量分享文件
+   * @param {Array<string>} fileNames - 文件名数组
+   */
+  shareFiles(fileNames) {
+    if (!fileNames || fileNames.length === 0) {
+      UI.Toast.show('warning', '未选择文件', '请先选择要分享的文件');
+      return;
+    }
+    
+    if (fileNames.length === 1) {
+      // 如果只有一个文件，调用单文件分享
+      this.shareFile(fileNames[0]);
+      return;
+    }
+    
+    UI.Toast.show('info', '准备分享', `正在生成批量分享链接...`);
+    
+    // 模拟分享过程
+    setTimeout(() => {
+      const shareLink = `https://cloud.example.com/share/${Math.random().toString(36).substring(2, 10)}`;
+      
+      // 显示分享链接
+      UI.Modal.show('shareModal', '<i class="fas fa-share-alt"></i> 批量分享文件', `
+        <div class="form-group">
+          <label for="shareLink" class="form-label">分享链接 (${fileNames.length}个文件)</label>
+          <div class="input-group">
+            <input type="text" id="shareLink" class="form-input" value="${shareLink}" readonly>
+            <button class="btn btn-primary copy-btn" data-clipboard-target="#shareLink">复制</button>
+          </div>
+          <div class="form-hint">此链接有效期为7天</div>
+        </div>
+      `, {
+        confirmText: '完成',
+        cancelText: '取消',
+        showClose: true
+      });
+      
+      // 聚焦到输入框并选中文本
+      setTimeout(() => {
+        const input = document.getElementById('shareLink');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 100);
+    }, 800);
+  },
+  
+  /**
+   * 移动文件
+   * @param {Array<string>} fileNames - 文件名数组
+   */
+  moveFiles(fileNames) {
+    if (!fileNames || fileNames.length === 0) {
+      UI.Toast.show('warning', '未选择文件', '请先选择要移动的文件');
+      return;
+    }
+    
+    // 显示移动文件对话框
+    UI.Modal.show('moveModal', '<i class="fas fa-arrows-alt"></i> 移动文件', `
+      <div class="form-group">
+        <label for="targetPath" class="form-label">目标路径</label>
+        <select id="targetPath" class="form-input">
+          <option value="/">根目录</option>
+          <option value="/文档">文档</option>
+          <option value="/图片">图片</option>
+          <option value="/视频">视频</option>
+          <option value="/音乐">音乐</option>
+        </select>
+      </div>
+      <div class="selected-files">
+        <div class="form-label">已选择 ${fileNames.length} 个文件</div>
+        <div class="file-list-preview">
+          ${fileNames.map(name => `<div class="file-item-preview">${name}</div>`).join('')}
+        </div>
+      </div>
+    `, {
+      confirmText: '移动',
+      cancelText: '取消',
+      onConfirm: () => {
+        const targetPath = document.getElementById('targetPath').value;
+        
+        // 显示移动进度
+        UI.Toast.show('info', '移动中', `正在移动 ${fileNames.length} 个文件到 ${targetPath}...`);
+        
+        // 模拟移动过程
+        setTimeout(() => {
+          // 刷新文件列表
+          this.refreshFiles();
+          
+          // 显示移动成功提示
+          UI.Toast.show('success', '移动成功', `已将 ${fileNames.length} 个文件移动到 ${targetPath}`);
+          
+          // 关闭对话框
+          UI.Modal.close('moveModal');
+        }, 1000);
+      }
+    });
+  },
+  
+  /**
+   * 重命名文件
+   * @param {string} fileName - 文件名
+   */
+  renameFile(fileName) {
+    const fileItem = this.findFileItemByName(fileName);
+    if (!fileItem) {
+      UI.Toast.show('error', '重命名失败', `找不到文件: ${fileName}`);
+      return;
+    }
+    
+    const isFolder = fileItem.classList.contains('folder');
+    const fileType = isFolder ? '' : fileName.substring(fileName.lastIndexOf('.'));
+    const baseName = isFolder ? fileName : fileName.substring(0, fileName.lastIndexOf('.'));
+    
+    // 显示重命名对话框
+    UI.Modal.show('renameModal', `<i class="fas fa-edit"></i> 重命名${isFolder ? '文件夹' : '文件'}`, `
+      <div class="form-group">
+        <label for="newFileName" class="form-label">新名称</label>
+        <input type="text" id="newFileName" class="form-input" value="${baseName}">
+        ${!isFolder ? `<div class="form-hint">文件扩展名 ${fileType} 将保持不变</div>` : ''}
+      </div>
+    `, {
+      confirmText: '重命名',
+      cancelText: '取消',
+      onConfirm: () => {
+        const newBaseName = document.getElementById('newFileName').value.trim();
+        if (!newBaseName) {
+          UI.Toast.show('warning', '重命名失败', '名称不能为空');
+          return;
+        }
+        
+        const newFileName = isFolder ? newBaseName : newBaseName + fileType;
+        
+        // 显示重命名进度
+        UI.Toast.show('info', '重命名中', `正在将 ${fileName} 重命名为 ${newFileName}...`);
+        
+        // 模拟重命名过程
+        setTimeout(() => {
+          // 刷新文件列表
+          this.refreshFiles();
+          
+          // 显示重命名成功提示
+          UI.Toast.show('success', '重命名成功', `已将 ${fileName} 重命名为 ${newFileName}`);
+          
+          // 关闭对话框
+          UI.Modal.close('renameModal');
+        }, 800);
+      }
+    });
+    
+    // 聚焦到输入框并选中文本
+    setTimeout(() => {
+      const input = document.getElementById('newFileName');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 100);
+  },
+  
+  /**
+   * 删除文件
+   * @param {string} fileName - 文件名
+   */
+  deleteFile(fileName) {
+    // 显示确认对话框
+    UI.Modal.confirm(
+      '<i class="fas fa-trash"></i> 确认删除',
+      `确定要将 "${fileName}" 移动到回收站吗？`,
+      () => {
+        // 显示删除进度
+        UI.Toast.show('info', '删除中', `正在将 ${fileName} 移动到回收站...`);
+        
+        // 模拟删除过程
+        setTimeout(() => {
+          // 刷新文件列表
+          this.refreshFiles();
+          
+          // 显示删除成功提示
+          UI.Toast.show('success', '删除成功', `已将 ${fileName} 移动到回收站`);
+        }, 800);
+      }
+    );
+  },
+  
+  /**
+   * 批量删除文件
+   * @param {Array<string>} fileNames - 文件名数组
+   */
+  deleteFiles(fileNames) {
+    if (!fileNames || fileNames.length === 0) {
+      UI.Toast.show('warning', '未选择文件', '请先选择要删除的文件');
+      return;
+    }
+    
+    // 显示确认对话框
+    UI.Modal.confirm(
+      '<i class="fas fa-trash"></i> 确认删除',
+      `确定要将选中的 ${fileNames.length} 个文件移动到回收站吗？`,
+      () => {
+        // 显示删除进度
+        UI.Toast.show('info', '删除中', `正在将 ${fileNames.length} 个文件移动到回收站...`);
+        
+        // 模拟删除过程
+        setTimeout(() => {
+          // 刷新文件列表
+          this.refreshFiles();
+          
+          // 显示删除成功提示
+          UI.Toast.show('success', '删除成功', `已将 ${fileNames.length} 个文件移动到回收站`);
+          
+          // 清除选择
+          this.clearFileSelection();
+        }, 800);
+      }
+    );
   }
 };
 

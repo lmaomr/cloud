@@ -45,7 +45,7 @@ const SidebarManager = {
     // 点击页面其他区域关闭侧边栏（移动端）
     document.addEventListener('click', (e) => {
       if (window.innerWidth <= 768 && 
-          !this.sidebar.classList.contains('active') &&
+          this.sidebar.classList.contains('active') &&
           !e.target.closest('.sidebar') && 
           !e.target.closest('#sidebarToggle')) {
         this.hideSidebar();
@@ -123,6 +123,7 @@ const SidebarManager = {
       this.mainContent.style.marginLeft = sidebarWidth;
       this.sidebar.style.transform = 'translateX(0)';
     } else {
+      this.sidebar.classList.add('active');
       this.sidebar.style.transform = 'translateX(0)';
     }
   },
@@ -512,6 +513,111 @@ const LoaderManager = {
 };
 
 /**
+ * 搜索功能管理
+ */
+const SearchManager = {
+  /**
+   * 初始化搜索功能
+   */
+  init() {
+    this.searchBox = document.querySelector('.search-box');
+    this.searchIcon = this.searchBox ? this.searchBox.querySelector('i') : null;
+    this.searchInput = this.searchBox ? this.searchBox.querySelector('input') : null;
+    
+    this.bindEvents();
+  },
+  
+  /**
+   * 绑定搜索相关事件
+   */
+  bindEvents() {
+    if (!this.searchBox || !this.searchIcon || !this.searchInput) {
+      console.error('搜索框元素未找到，无法绑定事件');
+      return;
+    }
+    
+    // 搜索图标点击事件
+    this.searchIcon.addEventListener('click', () => {
+      if (this.searchBox.classList.contains('expanded') && this.searchInput.value.trim() !== '') {
+        // 如果搜索框已展开且有内容，执行搜索
+        this.performSearch();
+      } else {
+        // 否则切换搜索框状态
+        this.toggleSearch();
+      }
+    });
+    
+    // 搜索框失去焦点事件
+    this.searchInput.addEventListener('blur', () => {
+      if (this.searchInput.value.trim() === '') {
+        // 延迟收缩，确保点击事件先处理
+        setTimeout(() => {
+          this.searchBox.classList.remove('expanded');
+        }, 150);
+      }
+    });
+    
+    // 搜索框键盘事件
+    this.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.searchInput.value = '';
+        this.searchInput.blur();
+        // 延迟收缩，确保动画流畅
+        setTimeout(() => {
+          this.searchBox.classList.remove('expanded');
+        }, 50);
+      } else if (e.key === 'Enter') {
+        this.performSearch();
+      }
+    });
+    
+    // 全局快捷键 - 按下 / 开始搜索
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && 
+          document.activeElement !== this.searchInput) {
+        e.preventDefault();
+        this.toggleSearch(true);
+      }
+    });
+  },
+  
+  /**
+   * 切换搜索框状态
+   * @param {boolean} [expand=null] - 强制展开状态
+   */
+  toggleSearch(expand = null) {
+    if (!this.searchBox) return;
+    
+    const shouldExpand = expand !== null ? expand : !this.searchBox.classList.contains('expanded');
+    
+    if (shouldExpand) {
+      this.searchBox.classList.add('expanded');
+      setTimeout(() => {
+        this.searchInput.focus();
+      }, 50);
+    } else {
+      if (this.searchInput.value.trim() === '') {
+        this.searchBox.classList.remove('expanded');
+      }
+    }
+  },
+  
+  /**
+   * 执行搜索
+   */
+  performSearch() {
+    const query = this.searchInput.value.trim();
+    if (!query) return;
+    
+    console.log('执行搜索:', query);
+    // 触发搜索事件
+    document.dispatchEvent(new CustomEvent('search:perform', { 
+      detail: { query } 
+    }));
+  }
+};
+
+/**
  * 导出UI模块
  */
 export const UI = {
@@ -520,6 +626,7 @@ export const UI = {
   Toast: ToastManager,
   Modal: ModalManager,
   Loader: LoaderManager,
+  Search: SearchManager,
   
   /**
    * 初始化所有UI组件
@@ -529,6 +636,7 @@ export const UI = {
     this.Theme.init();
     this.Toast.init();
     this.Loader.init();
+    this.Search.init();
     
     console.log('UI模块初始化完成');
   }
