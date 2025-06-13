@@ -116,52 +116,58 @@ export const UploadManager = {
   
   /**
    * 上传文件
-   * @param {FileList} files - 文件列表
+   * @param {FileList|Array} files - 文件列表
+   * @returns {Promise} - 上传结果
    */
   async uploadFiles(files) {
-    // 显示上传进度条
-    if (this.uploadProgress) {
-      this.uploadProgress.style.display = 'block';
-    }
-    
-    if (this.uploadItems) {
-      this.uploadItems.innerHTML = '';
-    }
-    
-    // 创建上传项
-    const uploadItemsMap = new Map(); // 存储文件和对应的上传项
-    
-    for (const file of files) {
-      const uploadItem = this.createUploadItem(file);
-      if (this.uploadItems) {
-        this.uploadItems.appendChild(uploadItem);
-      }
-      uploadItemsMap.set(file, uploadItem);
-      
-      // 启动模拟进度作为备用
-      this.startSimulatedProgress(uploadItem);
-    }
-    
     try {
-      const formData = new FormData();
-      for (const file of files) {
-        formData.append('file', file);
+      // 确保files是一个数组
+      const fileArray = Array.from(files || []);
+      
+      if (fileArray.length === 0) {
+        UI.Toast.show('warning', '上传失败', '没有选择任何文件');
+        return;
       }
       
-      // 上传进度回调
+      // 显示上传进度条
+      if (this.uploadProgress) {
+        this.uploadProgress.style.display = 'block';
+      }
+      
+      // 清空上传项列表
+      if (this.uploadItems) {
+        this.uploadItems.innerHTML = '';
+      }
+      
+      // 创建FormData对象
+      const formData = new FormData();
+      const uploadItemsMap = new Map();
+      
+      // 添加文件到FormData，并创建上传项UI
+      fileArray.forEach(file => {
+        formData.append('file', file);
+        
+        // 创建上传项UI
+        if (this.uploadItems) {
+          const uploadItem = this.createUploadItem(file);
+          this.uploadItems.appendChild(uploadItem);
+          uploadItemsMap.set(file, uploadItem);
+          
+          // 启动模拟进度
+          this.startSimulatedProgress(uploadItem);
+        }
+      });
+      
+      // 设置上传进度回调
       const onProgress = (percent, event) => {
-        // 如果只有一个文件，直接更新该文件的进度
-        if (files.length === 1) {
-          const uploadItem = uploadItemsMap.get(files[0]);
-          this.updateItemProgress(uploadItem, percent);
-        } else {
-          // 多个文件时，更新所有文件的进度
-          files.forEach(file => {
+        if (event && event.lengthComputable) {
+          const file = fileArray.find(f => f.size === event.total);
+          if (file) {
             const uploadItem = uploadItemsMap.get(file);
             if (uploadItem) {
               this.updateItemProgress(uploadItem, percent);
             }
-          });
+          }
         }
       };
       
@@ -169,7 +175,7 @@ export const UploadManager = {
       const result = await CloudAPI.uploadFiles(formData, onProgress);
       
       // 上传成功，将所有进度设为100%
-      files.forEach(file => {
+      fileArray.forEach(file => {
         const uploadItem = uploadItemsMap.get(file);
         if (uploadItem) {
           this.updateItemProgress(uploadItem, 100);
@@ -177,7 +183,7 @@ export const UploadManager = {
       });
       
       // 上传成功
-      UI.Toast.show('success', '上传成功', `已成功上传 ${files.length} 个文件`);
+      UI.Toast.show('success', '上传成功', `已成功上传 ${fileArray.length} 个文件`);
       
       // 刷新文件列表
       FileManager.refreshFiles();

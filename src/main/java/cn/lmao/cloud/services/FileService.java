@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -33,6 +36,7 @@ public class FileService {
 
     // 可重入锁，用于保证文件操作的线程安全
     private final ReentrantLock fileLock = new ReentrantLock();
+
     /**
      * 文件上传方法
      * 
@@ -75,6 +79,8 @@ public class FileService {
                         .map(f -> {
                             File newFile = new File(f);
                             newFile.setCloud(cloud); // 关联云盘
+                            // 确保文件路径是根目录（默认上传到根目录）
+                            newFile.setPath("/" + newFile.getName());
                             return fileRepository.save(newFile);
                         })
                         .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
@@ -93,7 +99,11 @@ public class FileService {
 
             // 3. 存储物理文件到磁盘
             String filePath = fileUploadUtil.storeFile(file, userId);
-            newFile.setPath(filePath); // 存储路径
+            // 确保文件路径是根目录（默认上传到根目录）
+            newFile.setPath("/" + newFile.getName());
+            log.info("上传文件: 名称={}, 路径={}, 大小={}, 类型={}", 
+                    newFile.getName(), newFile.getPath(), newFile.getSize(), newFile.getType());
+            
             // 5. 保存到数据库
             File savedFile = fileRepository.save(newFile);
             // 6. 更新云盘已用空间
@@ -104,4 +114,169 @@ public class FileService {
         }
     }
 
+    /**
+     * 获取文件列表（基础方法，不包含排序和路径过滤）
+     * @param cloud 用户云盘
+     * @return 文件列表
+     */
+    public List<File> getFileList(Cloud cloud) {
+        if (cloud == null) {
+            log.error(ExceptionCodeMsg.CLOUD_NOT_FOUND.getMsg());
+            throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+        }
+        return fileRepository.findByCloud(cloud);
+    }
+
+    /**
+     * 获取文件列表（支持路径过滤和排序）
+     * @param cloud 用户云盘
+     * @param path 文件路径
+     * @param sort 排序方式
+     * @return 文件列表
+     */
+    public List<File> getFileList(Cloud cloud, String path, String sort) {
+        if (cloud == null) {
+            log.error(ExceptionCodeMsg.CLOUD_NOT_FOUND.getMsg());
+            throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+        }
+
+        log.info("获取文件列表: 用户ID={}, 路径={}, 排序={}", cloud.getUser().getId(), path, sort);
+
+        // 获取用户所有文件
+        List<File> allFiles = fileRepository.findByCloud(cloud);
+        log.info("用户总文件数: {}", allFiles.size());
+        
+        List<File> filteredFiles = new ArrayList<>();
+
+        // 根据路径过滤文件
+        for (File file : allFiles) {
+            // 获取文件所在目录
+            String fileDirectory = getFileDirectory(file);
+            
+            // 如果文件路径与当前请求路径相符，则添加到过滤后的列表中
+            if (fileDirectory.equals(path)) {
+                filteredFiles.add(file);
+                log.debug("文件匹配当前路径: 名称={}, 路径={}, 目录={}", 
+                        file.getName(), file.getPath(), fileDirectory);
+            } else {
+                log.debug("文件不匹配当前路径: 名称={}, 路径={}, 目录={}, 请求路径={}", 
+                        file.getName(), file.getPath(), fileDirectory, path);
+            }
+        }
+
+        log.info("过滤后文件数: {}", filteredFiles.size());
+
+        // 根据排序参数对文件列表进行排序
+        sortFiles(filteredFiles, sort);
+
+        return filteredFiles;
+    }
+
+    /**
+     * 获取文件所在目录
+     * @param file 文件对象
+     * @return 文件所在目录路径
+     */
+    private String getFileDirectory(File file) {
+        // 从文件路径中提取目录信息
+        String filePath = file.getPath();
+        log.debug("获取文件目录: 文件名={}, 路径={}", file.getName(), filePath);
+        
+        if (filePath == null || filePath.isEmpty()) {
+            return "/"; // 默认为根目录
+        }
+        
+        // 如果路径就是文件名（没有目录部分），则返回根目录
+        if (filePath.equals("/" + file.getName())) {
+            return "/";
+        }
+        
+        // 提取目录部分
+        int lastSlashIndex = filePath.lastIndexOf('/');
+        if (lastSlashIndex <= 0) {
+            return "/"; // 如果没有斜杠或斜杠在开头，返回根目录
+        }
+        
+        String directory = filePath.substring(0, lastSlashIndex);
+        // 确保目录以/开头
+        if (!directory.startsWith("/")) {
+            directory = "/" + directory;
+        }
+        
+        log.debug("文件 {} 所在目录: {}", file.getName(), directory);
+        return directory;
+    }
+
+    /**
+     * 根据排序参数对文件列表进行排序
+     * @param files 文件列表
+     * @param sort 排序参数
+     */
+    private void sortFiles(List<File> files, String sort) {
+        if (sort == null || sort.isEmpty()) {
+            return;
+        }
+
+        switch (sort) {
+            case "name-asc":
+                files.sort(Comparator.comparing(File::getName));
+                break;
+            case "name-desc":
+                files.sort(Comparator.comparing(File::getName).reversed());
+                break;
+            case "time-asc":
+                files.sort(Comparator.comparing(File::getCreateTime));
+                break;
+            case "time-desc":
+                files.sort(Comparator.comparing(File::getCreateTime).reversed());
+                break;
+            case "size-asc":
+                files.sort(Comparator.comparing(File::getSize));
+                break;
+            case "size-desc":
+                files.sort(Comparator.comparing(File::getSize).reversed());
+                break;
+            default:
+                // 默认按名称升序排序
+                files.sort(Comparator.comparing(File::getName));
+                break;
+        }
+    }
+
+    /**
+     * 创建文件夹
+     * @param path 父路径
+     * @param name 文件夹名称
+     * @param userId 用户ID
+     * @return 创建的文件夹实体
+     */
+    public File createFolder(String path, String name, Long userId) {
+        fileLock.lock(); // 获取锁，保证线程安全
+        try {
+            // 1. 验证用户云盘是否存在
+            Cloud cloud = userService.getCloud(userId);
+            if (cloud == null) {
+                throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+            }
+
+            // 2. 构建文件夹元数据
+            File folder = new File();
+            folder.setName(name);
+            folder.setType("folder"); // 设置类型为文件夹
+            folder.setSize(0L); // 文件夹大小为0
+            folder.setCloud(cloud); // 关联云盘
+            
+            // 3. 构建文件夹路径
+            String folderPath = path.endsWith("/") ? path + name : path + "/" + name;
+            folder.setPath(folderPath);
+            
+            // 4. 生成文件夹哈希值（可以使用路径作为哈希）
+            folder.setHash("folder_" + folderPath.hashCode());
+            
+            // 5. 保存到数据库
+            return fileRepository.save(folder);
+        } finally {
+            fileLock.unlock(); // 释放锁
+        }
+    }
 }

@@ -511,6 +511,13 @@ export const FileManager = {
     e.stopPropagation();
     const action = actionBtn.dataset.action;
     const fileItem = actionBtn.closest('.file-item');
+    
+    // 确保fileItem存在
+    if (!fileItem) {
+      console.error('找不到文件项元素');
+      return;
+    }
+    
     const fileName = fileItem.querySelector('.file-name').textContent;
     
     switch(action) {

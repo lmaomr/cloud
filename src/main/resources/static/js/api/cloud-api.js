@@ -197,7 +197,7 @@ export class CloudAPI {
    * @returns {Promise} - 返回Promise对象
    */
   static async getFileList(path = '/', sort = 'name-asc') {
-    return await this.request(`/files/list?path=${encodeURIComponent(path)}&sort=${encodeURIComponent(sort)}`);
+    return await this.request(`/file/list?path=${encodeURIComponent(path)}&sort=${encodeURIComponent(sort)}`);
   }
 
   /**
@@ -207,7 +207,7 @@ export class CloudAPI {
    * @returns {Promise} - 返回Promise对象
    */
   static async createFolder(path, name) {
-    return await this.request('/files/directory', {
+    return await this.request('/file/directory', {
       method: 'POST',
       body: JSON.stringify({ path, name }),
     });
@@ -221,7 +221,7 @@ export class CloudAPI {
    * @returns {Promise} - 返回Promise对象
    */
   static async createTextFile(path, name, content = '') {
-    return await this.request('/files/text', {
+    return await this.request('/file/text', {
       method: 'POST',
       body: JSON.stringify({ path, name, content }),
     });
@@ -233,7 +233,7 @@ export class CloudAPI {
    * @returns {Promise} - 返回Promise对象
    */
   static async deleteFile(path) {
-    return await this.request('/files/delete', {
+    return await this.request('/file/delete', {
       method: 'POST',
       body: JSON.stringify({ path }),
     });
@@ -246,7 +246,7 @@ export class CloudAPI {
    * @returns {Promise} - 返回Promise对象
    */
   static async renameFile(path, newPath) {
-    return await this.request('/files/rename', {
+    return await this.request('/file/rename', {
       method: 'POST',
       body: JSON.stringify({ path, newPath }),
     });
@@ -259,7 +259,7 @@ export class CloudAPI {
    * @returns {Promise} - 返回Promise对象
    */
   static async moveFile(sourcePath, targetPath) {
-    return await this.request('/files/move', {
+    return await this.request('/file/move', {
       method: 'POST',
       body: JSON.stringify({ sourcePath, targetPath }),
     });
@@ -355,7 +355,7 @@ export class CloudAPI {
       });
       
       // 发送请求
-      xhr.open('POST', `${API_BASE_URL}/files/upload`);
+      xhr.open('POST', `${API_BASE_URL}/file/upload`);
       
       // 设置请求头
       if (token) xhr.setRequestHeader('Authorization', token);

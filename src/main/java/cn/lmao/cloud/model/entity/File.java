@@ -90,5 +90,7 @@ public class File {
         this.path = file.getPath();
         this.hash = file.getHash();
         this.size = file.getSize();
+        this.type = file.getType();
+        this.createTime = file.getCreateTime();
     }
 }

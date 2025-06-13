@@ -18,6 +18,7 @@ public enum ExceptionCodeMsg {
     /* ========== 请求参数异常 (4xx) ========== */
     PARAM_REQUIRED(400, "缺少必要参数"),
     PARAM_INVALID(400, "参数格式错误"),
+    PARAM_ERROR(400, "参数错误"),
     PARAM_TYPE_NOT_FOUND(400, "不支持该请求类型"),
     PARAM_METHOD_NOT_FOUND(400, "不支持该请求方法"),
     PARAM_TYPE_MISMATCH(400, "参数类型不匹配"),
