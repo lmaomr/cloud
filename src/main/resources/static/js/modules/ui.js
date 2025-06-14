@@ -439,13 +439,22 @@ const ModalManager = {
       </div>
     `;
     
-    return this.show(id, title, content, {
-      onConfirm,
+    const modal = this.show(id, title, content, {
+      onConfirm: () => {
+        // 执行确认回调
+        if (typeof onConfirm === 'function') {
+          onConfirm();
+        }
+        // 关闭弹框
+        this.close(id);
+      },
       onCancel,
       confirmText: '确认',
       cancelText: '取消',
       modalClass: 'confirm-modal'
     });
+    
+    return modal;
   }
 };
 

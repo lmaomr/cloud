@@ -756,6 +756,8 @@ nav {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 200px; /* 限制最大宽度 */
+    cursor: default; /* 鼠标悬浮时显示为默认光标 */
 }
 
 .grid-view .file-name {
@@ -1586,4 +1588,39 @@ body.dark-mode .file-actions i[data-action="delete"]:hover {
 }
 
 /* 使用checkbox控制侧边栏 */
+
+/* 输入组样式 */
+.input-group {
+  display: flex;
+  position: relative;
+  width: 100%;
+  gap: 8px; /* 添加间隙 */
+}
+
+.input-group .form-input {
+  flex: 1;
+  border-radius: 6px; /* 恢复圆角 */
+}
+
+.input-group .btn {
+  border-radius: 6px; /* 恢复圆角 */
+  margin-left: 0; /* 移除负边距 */
+}
+
+/* 确认对话框样式 */
+.confirm-modal .modal-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.confirm-modal .modal-icon {
+  font-size: 24px;
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.confirm-modal .modal-message {
+  flex: 1;
+}
  

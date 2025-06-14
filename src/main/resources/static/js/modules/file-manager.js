@@ -314,7 +314,7 @@ export const FileManager = {
           <i class="${isFolder ? 'fas fa-folder' : fileIcon}"></i>
         </div>
         <div class="file-info">
-          <div class="file-name">${file.name}</div>
+          <div class="file-name" title="${file.name}">${file.name}</div>
           <div class="file-meta">${isFolder ? '' : fileSize + ' • '}修改于 ${fileDate}</div>
         </div>
       </div>
@@ -919,9 +919,10 @@ export const FileManager = {
       // 模拟分享过程
       setTimeout(() => {
         const shareLink = `https://cloud.example.com/share/${Math.random().toString(36).substring(2, 10)}`;
+        const modalId = 'shareModal-' + Date.now();
         
         // 显示分享链接
-        UI.Modal.show('shareModal', '<i class="fas fa-share-alt"></i> 分享文件', `
+        UI.Modal.show(modalId, '<i class="fas fa-share-alt"></i> 分享文件', `
           <div class="form-group">
             <label for="shareLink" class="form-label">分享链接</label>
             <div class="input-group">
@@ -933,7 +934,11 @@ export const FileManager = {
         `, {
           confirmText: '完成',
           cancelText: '取消',
-          showClose: true
+          showClose: true,
+          onConfirm: () => {
+            // 关闭弹框
+            UI.Modal.close(modalId);
+          }
         });
         
         // 聚焦到输入框并选中文本
@@ -972,9 +977,10 @@ export const FileManager = {
     // 模拟分享过程
     setTimeout(() => {
       const shareLink = `https://cloud.example.com/share/${Math.random().toString(36).substring(2, 10)}`;
+      const modalId = 'shareModal-' + Date.now();
       
       // 显示分享链接
-      UI.Modal.show('shareModal', '<i class="fas fa-share-alt"></i> 批量分享文件', `
+      UI.Modal.show(modalId, '<i class="fas fa-share-alt"></i> 批量分享文件', `
         <div class="form-group">
           <label for="shareLink" class="form-label">分享链接 (${fileNames.length}个文件)</label>
           <div class="input-group">
@@ -986,7 +992,11 @@ export const FileManager = {
       `, {
         confirmText: '完成',
         cancelText: '取消',
-        showClose: true
+        showClose: true,
+        onConfirm: () => {
+          // 关闭弹框
+          UI.Modal.close(modalId);
+        }
       });
       
       // 聚焦到输入框并选中文本
@@ -1010,8 +1020,10 @@ export const FileManager = {
       return;
     }
     
+    const modalId = 'moveModal-' + Date.now();
+    
     // 显示移动文件对话框
-    UI.Modal.show('moveModal', '<i class="fas fa-arrows-alt"></i> 移动文件', `
+    UI.Modal.show(modalId, '<i class="fas fa-arrows-alt"></i> 移动文件', `
       <div class="form-group">
         <label for="targetPath" class="form-label">目标路径</label>
         <select id="targetPath" class="form-input">
@@ -1046,7 +1058,7 @@ export const FileManager = {
           UI.Toast.show('success', '移动成功', `已将 ${fileNames.length} 个文件移动到 ${targetPath}`);
           
           // 关闭对话框
-          UI.Modal.close('moveModal');
+          UI.Modal.close(modalId);
         }, 1000);
       }
     });
@@ -1067,8 +1079,10 @@ export const FileManager = {
     const fileType = isFolder ? '' : fileName.substring(fileName.lastIndexOf('.'));
     const baseName = isFolder ? fileName : fileName.substring(0, fileName.lastIndexOf('.'));
     
+    const modalId = 'renameModal-' + Date.now();
+    
     // 显示重命名对话框
-    UI.Modal.show('renameModal', `<i class="fas fa-edit"></i> 重命名${isFolder ? '文件夹' : '文件'}`, `
+    UI.Modal.show(modalId, `<i class="fas fa-edit"></i> 重命名${isFolder ? '文件夹' : '文件'}`, `
       <div class="form-group">
         <label for="newFileName" class="form-label">新名称</label>
         <input type="text" id="newFileName" class="form-input" value="${baseName}">
@@ -1098,7 +1112,7 @@ export const FileManager = {
           UI.Toast.show('success', '重命名成功', `已将 ${fileName} 重命名为 ${newFileName}`);
           
           // 关闭对话框
-          UI.Modal.close('renameModal');
+          UI.Modal.close(modalId);
         }, 800);
       }
     });
@@ -1119,6 +1133,7 @@ export const FileManager = {
    */
   deleteFile(fileName) {
     // 显示确认对话框
+    const modalId = 'deleteModal-' + Date.now();
     UI.Modal.confirm(
       '<i class="fas fa-trash"></i> 确认删除',
       `确定要将 "${fileName}" 移动到回收站吗？`,
@@ -1133,13 +1148,16 @@ export const FileManager = {
           
           // 显示删除成功提示
           UI.Toast.show('success', '删除成功', `已将 ${fileName} 移动到回收站`);
+          
+          // 关闭弹框 - 由于 confirm 方法内部生成的 ID 无法直接获取，这里不调用关闭方法
+          // UI.Modal.confirm 方法会自动处理关闭
         }, 800);
       }
     );
   },
   
   /**
-   * 批量删除文件
+   * 删除多个文件
    * @param {Array<string>} fileNames - 文件名数组
    */
   deleteFiles(fileNames) {
@@ -1166,10 +1184,11 @@ export const FileManager = {
           
           // 清除选择
           this.clearFileSelection();
+          
+          // 关闭弹框 - 由于 confirm 方法内部生成的 ID 无法直接获取，这里不调用关闭方法
+          // UI.Modal.confirm 方法会自动处理关闭
         }, 800);
       }
     );
   }
 };
-
-export default FileManager; 
