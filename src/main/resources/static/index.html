@@ -91,7 +91,7 @@
                     <div class="action-buttons">
                         <button class="btn btn-primary" id="createBtn" aria-label="新建"><i class="fas fa-plus"></i> 新建</button>
                         <!-- 新建菜单 -->
-                        <div class="create-menu" id="createMenu" style="display: none;">
+                        <div class="create-menu" id="createMenu">
                             <div class="create-menu-item" data-action="folder">
                                 <i class="fas fa-folder"></i> 新建文件夹
                             </div>
@@ -123,13 +123,12 @@
                         <div class="dropdown-menu">
                             <a href="javascript:void(0);" data-sort="name-asc">按名称升序</a>
                             <a href="javascript:void(0);" data-sort="name-desc">按名称降序</a>
-                            <a href="javascript:void(0);" data-sort="date-asc">按日期升序</a>
-                            <a href="javascript:void(0);" data-sort="date-desc">按日期降序</a>
+                            <a href="javascript:void(0);" data-sort="time-asc">按日期升序</a>
+                            <a href="javascript:void(0);" data-sort="time-desc">按日期降序</a>
                             <a href="javascript:void(0);" data-sort="size-asc">按大小升序</a>
                             <a href="javascript:void(0);" data-sort="size-desc">按大小降序</a>
                         </div>
                     </div>
-                    <button class="icon-btn" title="设置" aria-label="设置"><i class="fas fa-cog"></i></button>
                     <button class="icon-btn theme-toggle" title="切换主题" aria-label="切换明暗主题"><i class="fas fa-moon"></i></button>
                     
                     <!-- 移动端用户信息区域 - 只在小屏幕显示 -->
@@ -148,7 +147,7 @@
             </div>
             
             <!-- 文件操作工具栏 -->
-            <div class="file-actions-toolbar" id="fileActionsToolbar" style="display: none;" aria-live="polite">
+            <div class="file-actions-toolbar" id="fileActionsToolbar" aria-live="polite">
                 <div class="selected-count">已选择 <span id="selectedCount">0</span> 个项目</div>
                 <div class="toolbar-actions">
                     <button class="toolbar-btn" title="下载" aria-label="下载所选文件"><i class="fas fa-download"></i></button>
@@ -171,11 +170,11 @@
                 </div>
                 
                 <!-- 实际文件列表 (默认隐藏) -->
-                <div class="file-list grid-view" id="fileList" style="display: none;" aria-label="文件列表"></div>
+                <div class="file-list grid-view" id="fileList" aria-label="文件列表"></div>
             </div>
             
             <!-- 上传进度条 (默认隐藏) -->
-            <div class="upload-progress" id="uploadProgress" style="display: none;">
+            <div class="upload-progress" id="uploadProgress">
                 <div class="upload-header">
                     <div class="upload-title">
                         <i class="fas fa-cloud-upload-alt"></i> 上传进度
@@ -191,7 +190,7 @@
     <div class="toast-container" id="toastContainer"></div>
     
     <!-- 隐藏的文件输入框 -->
-    <input type="file" id="fileInput" style="display: none;" multiple>
-    <input type="file" id="folderInput" style="display: none;" webkitdirectory directory multiple>
+    <input type="file" id="fileInput" multiple>
+    <input type="file" id="folderInput" webkitdirectory directory multiple>
 </body>
 </html>

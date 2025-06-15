@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -63,6 +64,11 @@ public class File {
     @Column(name = "file_type")
     private String type;
 
+    // 新增文件状态标识
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'ACTIVE'")
+    private FileStatus status = FileStatus.ACTIVE;
+
     @Column(name = "create_time", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(0)")
     private LocalDateTime createTime;
 
@@ -83,6 +89,13 @@ public class File {
                     .findFirst()
                     .orElse("other");
         }
+    }
+
+    // 文件状态枚举
+    public enum FileStatus {
+        ACTIVE,    // 活跃可用
+        DELETED,   // 已删除
+        ARCHIVED   // 已归档
     }
 
     public File(File file) {

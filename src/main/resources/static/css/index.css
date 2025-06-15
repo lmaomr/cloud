@@ -1623,4 +1623,34 @@ body.dark-mode .file-actions i[data-action="delete"]:hover {
 .confirm-modal .modal-message {
   flex: 1;
 }
+
+/* 从HTML中提取的内联样式 */
+.logout-btn {
+  margin-left: auto;
+}
+
+.create-menu {
+  display: none;
+}
+
+.file-actions-toolbar {
+  display: none;
+}
+
+.file-list#fileList {
+  display: none;
+}
+
+.upload-progress {
+  display: none;
+}
+
+#fileInput, #folderInput {
+  display: none;
+}
+
+/* 默认隐藏管理面板选项，只有管理员才能看到 */
+li[data-section="admin-panel"] {
+  display: none;
+}
  

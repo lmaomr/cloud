@@ -29,11 +29,12 @@ public class User {
     @Column(name = "user_email" ,nullable = false)
     private String email;
 
-    @Column(name = "niken_name", nullable = false)
+    @Column(name = "nick_name", nullable = false)
     private String nikenName;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "user_role", nullable = false)
-    private String role;
+    private Role role = Role.USER;
 
     @Column(name = "create_time", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(0)")
     private LocalDateTime createTime;
@@ -47,8 +48,8 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
-        //设置默认角色
-        this.role = Role.USER.name();
+        this.nikenName = this.nikenName == null ? 
+            this.username.substring(0, 1) : this.nikenName;
         createTime = LocalDateTime.now();
         updateTime = createTime;
     }

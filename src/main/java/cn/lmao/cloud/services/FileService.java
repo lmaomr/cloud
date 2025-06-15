@@ -98,7 +98,10 @@ public class FileService {
             newFile.setCloud(cloud); // 关联云盘
 
             // 3. 存储物理文件到磁盘
-            String filePath = fileUploadUtil.storeFile(file, userId);
+            if(fileUploadUtil.storeFile(file, userId) == null) {
+                log.error("文件上传失败");
+                throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAILED);
+            }
             // 确保文件路径是根目录（默认上传到根目录）
             newFile.setPath("/" + newFile.getName());
             log.info("上传文件: 名称={}, 路径={}, 大小={}, 类型={}", 

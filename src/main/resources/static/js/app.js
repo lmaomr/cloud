@@ -272,7 +272,7 @@ class CloudApp {
       if (userInfo && userInfo.data) {
         // 更新用户信息
         const username = userInfo.data.username;
-        const userRole = userInfo.data.isAdmin ? '管理员' : '普通用户';
+        const userRole = userInfo.data.role == 'ADMIN' ? '管理员' : '普通用户';
         const avatar = username.charAt(0).toUpperCase();
         
         // 更新桌面版用户信息
@@ -287,6 +287,18 @@ class CloudApp {
         const mobileUserInfo = document.querySelector('.user-info-area.mobile-only');
         if (mobileUserInfo) {
           mobileUserInfo.querySelector('.avatar span').textContent = avatar;
+        }
+        
+        // 根据用户权限控制管理面板选项的显示
+        const adminPanelItem = document.querySelector('[data-section="admin-panel"]');
+        if (adminPanelItem) {
+          if (userInfo.data.role == 'ADMIN') {
+            // 如果是管理员，显示管理面板选项
+            adminPanelItem.style.display = 'list-item';
+          } else {
+            // 如果不是管理员，隐藏管理面板选项
+            adminPanelItem.style.display = 'none';
+          }
         }
         
         // 获取用户云盘信息
