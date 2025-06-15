@@ -122,6 +122,8 @@ export const UploadManager = {
   async uploadFiles(files) {
     // 定义上传结果变量
     let result = null;
+    // 存储上传项和对应的interval ID
+    const uploadItemsMap = new Map();
     
     try {
       // 确保files是一个数组
@@ -144,7 +146,6 @@ export const UploadManager = {
       
       // 创建FormData对象
       const formData = new FormData();
-      const uploadItemsMap = new Map();
       
       // 添加文件到FormData，并创建上传项UI
       fileArray.forEach(file => {
@@ -207,18 +208,47 @@ export const UploadManager = {
     } catch (error) {
       console.error('上传过程中发生错误:', error);
       
-      // 显示错误信息
-      let errorMessage = error.message || '上传失败';
+      // 停止所有上传项的模拟进度
+      uploadItemsMap.forEach((uploadItem) => {
+        this.stopSimulatedProgress(uploadItem);
+        
+        // 将进度条设置为错误状态
+        const progressBar = uploadItem.querySelector('.upload-progress-inner');
+        const percentage = uploadItem.querySelector('.upload-percentage');
+        if (progressBar) {
+          progressBar.style.width = '100%';
+          progressBar.style.backgroundColor = '#ff4d4f'; // 错误状态红色
+        }
+        if (percentage) {
+          percentage.textContent = '失败';
+          percentage.style.color = '#ff4d4f';
+        }
+      });
+      
+      // 解析错误信息
+      let errorMessage = '';
       
       if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
         errorMessage = '服务器连接失败，请检查服务器是否正常运行';
-        UI.Toast.show('error', '上传失败', errorMessage);
-      } else if (error.message.includes('Maximum upload size exceeded')) {
+      } else if (error.message && error.message.includes('Maximum upload size exceeded')) {
         errorMessage = '文件大小超过限制，请上传小于100MB的文件';
-        UI.Toast.show('error', '上传失败', errorMessage);
+      } else if (error.message && error.message.includes('Unsupported file type')) {
+        errorMessage = '不支持的文件类型，请上传允许的文件格式';
+      } else if (error.message && error.message.includes('Insufficient storage')) {
+        errorMessage = '存储空间不足，请清理空间后再试';
+      } else if (error.message && error.message.includes('Permission denied')) {
+        errorMessage = '权限不足，无法上传文件';
+      } else if (error.message && error.message.includes('File already exists')) {
+        errorMessage = '文件已存在，请重命名后再试';
       } else {
-        UI.Toast.show('error', '上传失败', errorMessage);
+        // 如果后端返回了具体错误信息，优先使用后端消息
+        errorMessage = error.message || '上传失败，请稍后重试';
       }
+      
+      // 显示错误信息
+      UI.Toast.error('上传失败', errorMessage, 8000, {
+        priority: UI.Toast.PRIORITY.HIGH
+      });
       
       return { success: false, message: errorMessage, error, files: Array.from(files || []) };
     }
@@ -262,10 +292,7 @@ export const UploadManager = {
     if (!item) return;
     
     // 停止模拟进度
-    if (item._simulationInterval) {
-      clearInterval(item._simulationInterval);
-      item._simulationInterval = null;
-    }
+    this.stopSimulatedProgress(item);
     
     const progressBar = item.querySelector('.upload-progress-inner');
     const percentage = item.querySelector('.upload-percentage');
@@ -310,6 +337,17 @@ export const UploadManager = {
     
     // 保存interval ID以便后续清除
     item._simulationInterval = interval;
+  },
+  
+  /**
+   * 停止模拟进度
+   * @param {HTMLElement} item - 上传项元素
+   */
+  stopSimulatedProgress(item) {
+    if (item && item._simulationInterval) {
+      clearInterval(item._simulationInterval);
+      item._simulationInterval = null;
+    }
   },
   
   /**

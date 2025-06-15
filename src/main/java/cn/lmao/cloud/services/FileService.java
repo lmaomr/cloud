@@ -315,6 +315,32 @@ public class FileService {
             fileLock.unlock(); // 释放锁
         }
     }
+
+    /**
+     * 删除文件
+     */
+    public void deleteFile(Long fileId, Long userId) {
+        fileLock.lock(); // 获取锁，保证线程安全
+        try {
+            // 1. 验证用户云盘是否存在
+            Cloud cloud = userService.getCloud(userId);
+            if (cloud == null) {
+                throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+            }
+
+            // 2. 验证文件是否属于当前用户
+            File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));   
+            if(!file.getCloud().getUser().getId().equals(userId)) {
+                throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
+            }
+
+            file.setStatus(File.FileStatus.DELETED);
+
+        } finally {
+            fileLock.unlock(); // 释放锁
+        }
+    }   
             
             
     
