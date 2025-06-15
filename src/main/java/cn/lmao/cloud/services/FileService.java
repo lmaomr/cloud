@@ -131,7 +131,7 @@ public class FileService {
             log.error(ExceptionCodeMsg.CLOUD_NOT_FOUND.getMsg());
             throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
         }
-        return fileRepository.findByCloud(cloud);
+        return fileRepository.findByCloudAndStatus(cloud, File.FileStatus.ACTIVE);
     }
 
     /**
@@ -150,7 +150,7 @@ public class FileService {
         log.info("获取文件列表: 用户ID={}, 路径={}, 排序={}", cloud.getUser().getId(), path, sort);
 
         // 获取用户所有文件
-        List<File> allFiles = fileRepository.findByCloud(cloud);
+        List<File> allFiles = fileRepository.findByCloudAndStatus(cloud, File.FileStatus.ACTIVE);
         log.info("用户总文件数: {}", allFiles.size());
         
         List<File> filteredFiles = new ArrayList<>();
@@ -289,8 +289,10 @@ public class FileService {
 
     /**
      * 文件重命名
+     * @throws IOException 
      */
-    public File renameFile(Long fileId, String newName, Long userId) {
+    @Transactional
+    public File renameFile(Long fileId, String newName, Long userId) throws IOException {
         fileLock.lock(); // 获取锁，保证线程安全
         try {
             // 1. 验证用户云盘是否存在
@@ -309,7 +311,9 @@ public class FileService {
             }
 
             // 4. 更新文件名
+            log.info("重命名文件: 文件ID={}, 新文件名={}", fileId, newName);
             file.setName(newName);
+            file.setPath(file.getPath().replace(file.getName(), newName));
             return fileRepository.save(file);
         } finally {
             fileLock.unlock(); // 释放锁
@@ -319,6 +323,7 @@ public class FileService {
     /**
      * 删除文件
      */
+    @Transactional
     public void deleteFile(Long fileId, Long userId) {
         fileLock.lock(); // 获取锁，保证线程安全
         try {
@@ -330,20 +335,39 @@ public class FileService {
 
             // 2. 验证文件是否属于当前用户
             File file = fileRepository.findById(fileId)
-                    .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));   
+                    .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
+                       
             if(!file.getCloud().getUser().getId().equals(userId)) {
                 throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
             }
 
+            log.info("删除文件: 文件ID={}, 文件名={}", fileId, file.getName());
             file.setStatus(File.FileStatus.DELETED);
-
+            // 3. 更新文件状态为已删除
+            fileRepository.save(file);
         } finally {
             fileLock.unlock(); // 释放锁
         }
     }   
             
-            
-    
-    
+    /**
+     * 获取回收站列表
+     * @param userId 用户ID
+     * @return 回收站列表
+     */
+    public List<File> getTrashFiles(Long userId) {
+        Cloud cloud = userService.getCloud(userId);
+
+        if (cloud == null) {
+            throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+        }
+
+        log.info("获取用户ID={}的回收站文件列表", userId);
+
+        return fileRepository.findByCloudAndStatus(cloud, File.FileStatus.DELETED)
+                .stream()
+                .sorted(Comparator.comparing(File::getCreateTime).reversed())
+                .toList();
+    }   
     
 }

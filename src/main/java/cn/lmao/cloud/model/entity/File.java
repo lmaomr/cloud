@@ -72,6 +72,9 @@ public class File {
     @Column(name = "create_time", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(0)")
     private LocalDateTime createTime;
 
+    @Column(name = "update_time", nullable = false, columnDefinition = "TIMESTAMP(0)")
+    private LocalDateTime updateTime = LocalDateTime.now();
+
     @ManyToOne(fetch = FetchType.LAZY) //懒加载
     @JoinColumn(name = "cloud_id")
     @JsonBackReference
@@ -89,6 +92,11 @@ public class File {
                     .findFirst()
                     .orElse("other");
         }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updateTime = LocalDateTime.now();
     }
 
     // 文件状态枚举

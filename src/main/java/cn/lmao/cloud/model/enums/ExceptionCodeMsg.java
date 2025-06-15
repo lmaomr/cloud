@@ -63,6 +63,8 @@ public enum ExceptionCodeMsg {
     FILE_UPLOAD_CONFLICT(10205, "文件已存在，请勿重复上传"),
     FILE_EMPTY(10206, "上传的文件为空"),
     FILE_UPLOAD_FAIL(10207, "文件上传失败"),
+    FILE_RENAME_FAILED(10209, "文件重命名失败"),
+    FILE_NOT_FOUND(10210, "文件不存在或已被删除"),
     FILE_PATH_INVALID(10208, "文件路径非法"),
     CLOUD_NOT_FOUND(10211, "云盘不存在或已被删除"),
     CLOUD_ALREADY_EXISTS(10212, "云盘名称已存在"),

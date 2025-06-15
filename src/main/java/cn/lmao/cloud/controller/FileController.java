@@ -61,15 +61,15 @@ public class FileController {
             @RequestParam(value = "path", defaultValue = "/") String path,
             @RequestParam(value = "sort", defaultValue = "name-asc") String sort) {
         log.info("获取文件列表: 路径={}, 排序方式={}", path, sort);
-        
+
         // 从安全上下文中获取当前用户
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
         Cloud userCloud = userService.getCloud(userId);
-        
+
         return ApiResponse.success(fileService.getFileList(userCloud, path, sort));
     }
-    
+
     /**
      * 创建文件夹
      * 
@@ -80,20 +80,20 @@ public class FileController {
     public ApiResponse<File> createFolder(@RequestBody Map<String, String> requestBody) {
         String path = requestBody.get("path");
         String name = requestBody.get("name");
-        
+
         log.info("创建文件夹: 路径={}, 名称={}", path, name);
-        
+
         if (name == null || name.trim().isEmpty()) {
             return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
         }
-        
+
         // 从安全上下文中获取当前用户
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        
+
         // 创建文件夹
         File folder = fileService.createFolder(path, name, userId);
-        
+
         return ApiResponse.success(folder);
     }
 
@@ -102,23 +102,67 @@ public class FileController {
      */
     @PostMapping("/rename")
     public ApiResponse<File> renameFile(@RequestBody Map<String, String> requestBody) {
+        try {
+            log.info("重命名文件请求: {}", requestBody);
+            String fileId = requestBody.get("fileId");
+            String newName = requestBody.get("newName");
+
+            log.info("重命名文件: 文件ID={}, 新名称={}", fileId, newName);
+
+            if (fileId == null || fileId.trim().isEmpty() || newName == null || newName.trim().isEmpty()) {
+                return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+            }
+
+            // 从安全上下文中获取当前用户
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            Long userId = userService.getUserByName(username).getId();
+
+            // 重命名文件
+            File renamedFile = fileService.renameFile(Long.parseLong(fileId), newName, userId);
+            return ApiResponse.success(renamedFile);
+        } catch (Exception e) {
+            log.error("重命名文件请求异常: {}", e.getMessage());
+            return ApiResponse.exception(ExceptionCodeMsg.FILE_RENAME_FAILED);
+        }
+    }
+
+    /**
+     * 删除文件
+     */
+    @PostMapping("/delete")
+    public ApiResponse<String> deleteFile(@RequestBody Map<String, String> requestBody) {
         String fileId = requestBody.get("fileId");
-        String newName = requestBody.get("newName");
 
-        log.info("重命名文件: 文件ID={}, 新名称={}", fileId, newName);
+        log.info("删除文件: 文件ID={}", fileId);
 
-        if (fileId == null || fileId.trim().isEmpty() || newName == null || newName.trim().isEmpty()) {
+        if (fileId == null || fileId.trim().isEmpty()) {
             return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
         }
 
         // 从安全上下文中获取当前用户
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        
-        // 重命名文件
-        File renamedFile = fileService.renameFile(Long.parseLong(fileId), newName, userId);
 
-        return ApiResponse.success(renamedFile);
+        // 删除文件
+        fileService.deleteFile(Long.parseLong(fileId), userId);
+
+        return ApiResponse.success("删除成功");
     }
 
+    /**
+     * 获取回收站文件列表
+     */
+    @GetMapping("/trash")
+    public ApiResponse<List<File>> getTrashFiles() {
+        log.info("获取回收站文件列表");
+
+        // 从安全上下文中获取当前用户
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+
+        // 获取回收站文件列表
+        List<File> trashFiles = fileService.getTrashFiles(userId);
+
+        return ApiResponse.success(trashFiles);
+    }
 }

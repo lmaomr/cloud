@@ -86,13 +86,6 @@ class CloudApp {
       // 创建模态框
       this.createModals();
       
-      // 添加额外的事件监听，确保侧边栏导航正常工作
-      document.addEventListener('section:change', (e) => {
-        if (e.detail && e.detail.section) {
-          Logger.debug('App接收到部分切换事件:', e.detail.section);
-        }
-      });
-      
       // 应用初始化完成
       this.initialized = true;
       Logger.info('应用初始化完成');
@@ -153,18 +146,6 @@ class CloudApp {
     if (this.logoutBtn) {
       this.logoutBtn.addEventListener('click', () => this.handleLogout());
     }
-    
-    // 监听section:change事件，确保FileManager能够正确处理部分切换
-    document.addEventListener('section:change', (e) => {
-      if (e.detail && e.detail.section) {
-        console.log('App接收到部分切换事件:', e.detail.section);
-        
-        // 确保FileManager能够处理部分切换
-        if (FileManager && typeof FileManager.handleSectionChange === 'function') {
-          FileManager.handleSectionChange(e.detail.section);
-        }
-      }
-    });
     
     // 页面卸载前清理资源
     window.addEventListener('beforeunload', () => {

@@ -2154,4 +2154,38 @@ body.dark-mode .error-message p {
 body.dark-mode .error-message i {
   background-color: rgba(255, 77, 79, 0.2);
 }
+
+/* 回收站操作栏样式 */
+.trash-action-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+    width: 100%;
+    position: relative;
+    z-index: 5;
+    gap: 12px;
+}
+
+.trash-action-bar .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.trash-action-bar .btn i {
+    font-size: 14px;
+}
+
+body.dark-mode .trash-action-bar {
+    background: #282a36;
+    border: 1px solid #3a3f4b;
+}
  

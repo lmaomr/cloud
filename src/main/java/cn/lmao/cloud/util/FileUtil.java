@@ -47,6 +47,30 @@ public class FileUtil {
     }
 
     /**
+     * 删除文件
+     * @param filePath 文件路径
+     * @return 是否删除成功
+     * @throws IOException 
+     */
+    public boolean deleteFile(String filePath) throws IOException {
+        Path path = Paths.get(uploadRootDir, filePath);
+        return Files.deleteIfExists(path);
+    }
+
+    /** 
+     * 重命名文件
+     * @param filePath 文件路径
+     * @param newName 新文件名
+     * @return 是否重命名成功
+     * @throws IOException 
+     */
+    public boolean renameFile(String filePath, String newName) throws IOException {
+        Path path = Paths.get(uploadRootDir, filePath);
+        Path newPath = path.resolveSibling(newName);
+        return Files.move(path, newPath, StandardCopyOption.REPLACE_EXISTING) != null;
+    }
+
+    /**
      * 获取文件上传根目录
      */
     public String getUploadRootDir() {

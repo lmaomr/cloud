@@ -243,133 +243,10 @@ export class CloudAPI {
     try {
       // 正常调用API
       const response = await this.request(`/file/list?path=${encodeURIComponent(path)}&sort=${encodeURIComponent(sort)}`);
-      
-      // 如果API返回的数据为空或者很少，添加一些模拟文件用于测试
-      if (!response.data || response.data.length < 3) {
-        console.log('添加模拟文件用于测试');
-        
-        // 创建模拟文件列表
-        const mockFiles = [
-          {
-            id: 'doc-1',
-            name: '项目计划.docx',
-            path: '/项目计划.docx',
-            type: 'file',
-            size: 1024 * 1024 * 2.5, // 2.5MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'doc-2',
-            name: '财务报表.xlsx',
-            path: '/财务报表.xlsx',
-            type: 'file',
-            size: 1024 * 1024 * 1.8, // 1.8MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'doc-3',
-            name: '会议记录.pdf',
-            path: '/会议记录.pdf',
-            type: 'file',
-            size: 1024 * 1024 * 3.2, // 3.2MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'video-1',
-            name: '产品演示.mp4',
-            path: '/产品演示.mp4',
-            type: 'file',
-            size: 1024 * 1024 * 15.7, // 15.7MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'audio-1',
-            name: '会议录音.mp3',
-            path: '/会议录音.mp3',
-            type: 'file',
-            size: 1024 * 1024 * 5.3, // 5.3MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          }
-        ];
-        
-        // 将模拟文件添加到API返回的数据中
-        if (!response.data) {
-          response.data = mockFiles;
-        } else {
-          response.data = [...response.data, ...mockFiles];
-        }
-      }
-      
       return response;
     } catch (error) {
       console.error('获取文件列表失败:', error);
-      
-      // 如果API调用失败，返回模拟数据
-      return {
-        code: 200,
-        msg: '获取文件列表成功(模拟)',
-        data: [
-          {
-            id: 'folder-1',
-            name: '我的文档',
-            path: '/我的文档',
-            type: 'folder',
-            size: 0,
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'doc-1',
-            name: '项目计划.docx',
-            path: '/项目计划.docx',
-            type: 'file',
-            size: 1024 * 1024 * 2.5, // 2.5MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'doc-2',
-            name: '财务报表.xlsx',
-            path: '/财务报表.xlsx',
-            type: 'file',
-            size: 1024 * 1024 * 1.8, // 1.8MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'doc-3',
-            name: '会议记录.pdf',
-            path: '/会议记录.pdf',
-            type: 'file',
-            size: 1024 * 1024 * 3.2, // 3.2MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'video-1',
-            name: '产品演示.mp4',
-            path: '/产品演示.mp4',
-            type: 'file',
-            size: 1024 * 1024 * 15.7, // 15.7MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          },
-          {
-            id: 'audio-1',
-            name: '会议录音.mp3',
-            path: '/会议录音.mp3',
-            type: 'file',
-            size: 1024 * 1024 * 5.3, // 5.3MB
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString()
-          }
-        ]
-      };
+      throw error;
     }
   }
 
@@ -402,13 +279,13 @@ export class CloudAPI {
 
   /**
    * 删除文件
-   * @param {string} path - 文件路径
+   * @param {string} fileId - 文件ID
    * @returns {Promise} - 返回Promise对象
    */
-  static async deleteFile(path) {
+  static async deleteFile(fileId) {
     return await this.request('/file/delete', {
       method: 'POST',
-      body: JSON.stringify({ path }),
+      body: JSON.stringify({ fileId }),
     });
   }
 
@@ -418,10 +295,10 @@ export class CloudAPI {
    * @param {string} newPath - 新路径
    * @returns {Promise} - 返回Promise对象
    */
-  static async renameFile(path, newPath) {
+  static async renameFile(fileId, newName) {
     return await this.request('/file/rename', {
       method: 'POST',
-      body: JSON.stringify({ path, newPath }),
+      body: JSON.stringify({ fileId, newName }),
     });
   }
 
