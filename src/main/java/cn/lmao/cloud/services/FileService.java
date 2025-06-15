@@ -11,7 +11,7 @@ import cn.lmao.cloud.model.entity.File;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import cn.lmao.cloud.repository.FileRepository;
 import cn.lmao.cloud.util.FileHashUtil;
-import cn.lmao.cloud.util.FileUploadUtil;
+import cn.lmao.cloud.util.FileUtil;
 import cn.lmao.cloud.util.LogUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +32,7 @@ public class FileService {
     private final FileRepository fileRepository;
     private final UserService userService;
     private final CloudService cloudService;
-    private final FileUploadUtil fileUploadUtil;
+    private final FileUtil fileUtil;
 
     // 可重入锁，用于保证文件操作的线程安全
     private final ReentrantLock fileLock = new ReentrantLock();
@@ -71,6 +71,10 @@ public class FileService {
             String fileHash = FileHashUtil.calculateSha256(file);
             Optional<File> hashFile = fileRepository.findFirstByHashOrderByIdDesc(fileHash);
             if (hashFile.isPresent()) {
+                if(hashFile.get().getCloud().getUser().equals(cloud.getUser())){
+                    log.info("文件已存在，请勿重复上传" + fileHash);
+                    return new FileUploadResponse(hashFile.get(), true);
+                }
                 // newFile.setFileUrl(storedPath); // 存储路径
                 log.info("文件已存在，直接返回已存在的文件信息：" + fileHash);
                 // 如果文件已存在，直接返回已存在的文件信息
@@ -98,7 +102,7 @@ public class FileService {
             newFile.setCloud(cloud); // 关联云盘
 
             // 3. 存储物理文件到磁盘
-            if(fileUploadUtil.storeFile(file, userId) == null) {
+            if(fileUtil.storeFile(file, userId) == null) {
                 log.error("文件上传失败");
                 throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAILED);
             }
@@ -282,4 +286,38 @@ public class FileService {
             fileLock.unlock(); // 释放锁
         }
     }
+
+    /**
+     * 文件重命名
+     */
+    public File renameFile(Long fileId, String newName, Long userId) {
+        fileLock.lock(); // 获取锁，保证线程安全
+        try {
+            // 1. 验证用户云盘是否存在
+            Cloud cloud = userService.getCloud(userId);
+            if (cloud == null) {
+                throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+            }
+
+            // 2. 验证文件是否存在
+            File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
+            
+            // 3. 验证文件是否属于当前用户
+            if (!file.getCloud().getUser().getId().equals(userId)) {
+                throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
+            }
+
+            // 4. 更新文件名
+            file.setName(newName);
+            return fileRepository.save(file);
+        } finally {
+            fileLock.unlock(); // 释放锁
+        }
+    }
+            
+            
+    
+    
+    
 }

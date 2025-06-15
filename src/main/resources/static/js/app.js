@@ -8,6 +8,31 @@ import { UI } from './modules/ui.js';
 import { FileManager } from './modules/file-manager.js';
 import { UploadManager } from './modules/upload-manager.js';
 
+// 环境检测
+const IS_PRODUCTION = window.location.hostname !== 'localhost' && 
+                      !window.location.hostname.includes('127.0.0.1') && 
+                      !window.location.hostname.includes('.local');
+
+// 日志工具
+const Logger = {
+  debug: (message, ...args) => {
+    if (!IS_PRODUCTION) {
+      console.debug(`[DEBUG] ${message}`, ...args);
+    }
+  },
+  info: (message, ...args) => {
+    if (!IS_PRODUCTION) {
+      console.info(`[INFO] ${message}`, ...args);
+    }
+  },
+  warn: (message, ...args) => {
+    console.warn(`[WARN] ${message}`, ...args);
+  },
+  error: (message, ...args) => {
+    console.error(`[ERROR] ${message}`, ...args);
+  }
+};
+
 /**
  * 应用程序类
  */
@@ -29,7 +54,7 @@ class CloudApp {
    * 初始化应用
    */
   async init() {
-    console.log('初始化云存储应用...');
+    Logger.info('初始化云存储应用...');
     
     try {
       // 检查登录状态
@@ -61,14 +86,21 @@ class CloudApp {
       // 创建模态框
       this.createModals();
       
+      // 添加额外的事件监听，确保侧边栏导航正常工作
+      document.addEventListener('section:change', (e) => {
+        if (e.detail && e.detail.section) {
+          Logger.debug('App接收到部分切换事件:', e.detail.section);
+        }
+      });
+      
       // 应用初始化完成
       this.initialized = true;
-      console.log('应用初始化完成');
+      Logger.info('应用初始化完成');
       
       // 隐藏页面加载指示器
       setTimeout(() => UI.Loader.hidePageLoader(), 800);
     } catch (error) {
-      console.error('应用初始化失败:', error);
+      Logger.error('应用初始化失败:', error);
       
       // 检查是否是认证错误
       if (error.status === 401 || error.code === 401) {
@@ -121,6 +153,23 @@ class CloudApp {
     if (this.logoutBtn) {
       this.logoutBtn.addEventListener('click', () => this.handleLogout());
     }
+    
+    // 监听section:change事件，确保FileManager能够正确处理部分切换
+    document.addEventListener('section:change', (e) => {
+      if (e.detail && e.detail.section) {
+        console.log('App接收到部分切换事件:', e.detail.section);
+        
+        // 确保FileManager能够处理部分切换
+        if (FileManager && typeof FileManager.handleSectionChange === 'function') {
+          FileManager.handleSectionChange(e.detail.section);
+        }
+      }
+    });
+    
+    // 页面卸载前清理资源
+    window.addEventListener('beforeunload', () => {
+      this.cleanup();
+    });
   }
   
   /**
@@ -348,6 +397,33 @@ class CloudApp {
         window.location.href = 'login.html';
       }, 1000);
     });
+  }
+  
+  /**
+   * 清理应用资源
+   */
+  cleanup() {
+    // 清理各模块资源
+    if (FileManager && typeof FileManager.destroy === 'function') {
+      FileManager.destroy();
+    }
+    
+    if (UploadManager && typeof UploadManager.destroy === 'function') {
+      UploadManager.destroy();
+    }
+    
+    if (UI) {
+      // 清理UI模块资源
+      if (UI.Toast && typeof UI.Toast.destroy === 'function') {
+        UI.Toast.destroy();
+      }
+      
+      if (UI.Modal && typeof UI.Modal.destroy === 'function') {
+        UI.Modal.destroy();
+      }
+    }
+    
+    console.log('应用资源已清理');
   }
 }
 

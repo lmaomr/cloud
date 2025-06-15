@@ -19,8 +19,13 @@ public class FileUploadResponse {
     private boolean success;
     private String message;
 
-    // 添加接收 File 实体的构造函数
+    // 基础构造函数（新上传文件）
     public FileUploadResponse(File file) {
+        this(file, false);
+    }
+
+    // 添加接收 File 实体的构造函数
+    public FileUploadResponse(File file, boolean existingFile) {
         this.fileId = file.getId().toString();
         this.originalName = file.getName();
         this.storedName = file.getPath(); // 假设这是存储路径
@@ -29,7 +34,7 @@ public class FileUploadResponse {
         this.fileType = file.getType();
         this.uploadTime = file.getCreateTime();
         this.success = true;
-        this.message = "文件上传成功";
+        this.message = existingFile ? "文件已存在,请勿重复上传" : "文件上传成功";
     }
 
     // 失败情况的构造函数

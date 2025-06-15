@@ -120,13 +120,16 @@ export const UploadManager = {
    * @returns {Promise} - 上传结果
    */
   async uploadFiles(files) {
+    // 定义上传结果变量
+    let result = null;
+    
     try {
       // 确保files是一个数组
       const fileArray = Array.from(files || []);
       
       if (fileArray.length === 0) {
         UI.Toast.show('warning', '上传失败', '没有选择任何文件');
-        return;
+        return { success: false, message: '没有选择任何文件', files: [] };
       }
       
       // 显示上传进度条
@@ -172,7 +175,7 @@ export const UploadManager = {
       };
       
       // 调用API上传文件
-      const result = await CloudAPI.uploadFiles(formData, onProgress);
+      result = await CloudAPI.uploadFiles(formData, onProgress);
       
       // 上传成功，将所有进度设为100%
       fileArray.forEach(file => {
@@ -189,24 +192,35 @@ export const UploadManager = {
       FileManager.refreshFiles();
       
       // 延迟关闭上传进度条
-      setTimeout(() => {
+      const closeProgressTimeout = setTimeout(() => {
         if (this.uploadProgress) {
           this.uploadProgress.style.display = 'none';
         }
+        // 清除定时器引用
+        this._closeProgressTimeout = null;
       }, 2000);
       
-      return result;
+      // 保存定时器引用，以便在需要时清除
+      this._closeProgressTimeout = closeProgressTimeout;
+      
+      return { success: true, message: '上传成功', files: fileArray, result };
     } catch (error) {
       console.error('上传过程中发生错误:', error);
       
       // 显示错误信息
+      let errorMessage = error.message || '上传失败';
+      
       if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-        UI.Toast.show('error', '上传失败', '服务器连接失败，请检查服务器是否正常运行');
+        errorMessage = '服务器连接失败，请检查服务器是否正常运行';
+        UI.Toast.show('error', '上传失败', errorMessage);
       } else if (error.message.includes('Maximum upload size exceeded')) {
-        UI.Toast.show('error', '上传失败', '文件大小超过限制，请上传小于100MB的文件');
+        errorMessage = '文件大小超过限制，请上传小于100MB的文件';
+        UI.Toast.show('error', '上传失败', errorMessage);
       } else {
-        UI.Toast.show('error', '上传失败', error.message);
+        UI.Toast.show('error', '上传失败', errorMessage);
       }
+      
+      return { success: false, message: errorMessage, error, files: Array.from(files || []) };
     }
   },
   
@@ -360,6 +374,25 @@ export const UploadManager = {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  },
+  
+  /**
+   * 清理资源
+   */
+  destroy() {
+    // 清除可能存在的定时器
+    if (this._closeProgressTimeout) {
+      clearTimeout(this._closeProgressTimeout);
+      this._closeProgressTimeout = null;
+    }
+    
+    // 移除事件监听器
+    const dropZone = document.querySelector('.file-container');
+    if (dropZone) {
+      dropZone.classList.remove('drag-over');
+    }
+    
+    console.log('上传管理器资源已清理');
   }
 };
 
