@@ -257,9 +257,9 @@ export const FileManager = {
           <div class="error-message">
             <i class="fas fa-exclamation-circle"></i>
             <h3>加载文件列表失败</h3>
-            <p>${error.message || '无法连接到服务器，请稍后再试'}</p>
-            <button class="btn btn-primary retry-btn">
-              <i class="fas fa-sync-alt"></i> 重试
+            <p>${error.message || '无法连接到服务器，请检查您的网络连接并稍后再试'}</p>
+            <button class="retry-btn">
+              <i class="fas fa-sync-alt"></i> 重新加载
             </button>
           </div>
         `;
@@ -1053,9 +1053,9 @@ export const FileManager = {
             <div class="error-message">
               <i class="fas fa-exclamation-circle"></i>
               <h3>加载${this.getTypeName(type)}失败</h3>
-              <p>${error.message || '无法连接到服务器，请稍后再试'}</p>
-              <button class="btn btn-primary retry-btn">
-                <i class="fas fa-sync-alt"></i> 重试
+              <p>${error.message || '无法连接到服务器，请检查您的网络连接并稍后再试'}</p>
+              <button class="retry-btn">
+                <i class="fas fa-sync-alt"></i> 重新加载
               </button>
             </div>
           `;
@@ -1325,9 +1325,9 @@ export const FileManager = {
             <div class="error-message">
               <i class="fas fa-exclamation-circle"></i>
               <h3>加载共享内容失败</h3>
-              <p>${error.message || '无法连接到服务器，请稍后再试'}</p>
-              <button class="btn btn-primary retry-btn">
-                <i class="fas fa-sync-alt"></i> 重试
+              <p>${error.message || '无法连接到服务器，请检查您的网络连接并稍后再试'}</p>
+              <button class="retry-btn">
+                <i class="fas fa-sync-alt"></i> 重新加载
               </button>
             </div>
           `;
@@ -1998,7 +1998,7 @@ export const FileManager = {
           }
           
           // 显示加载完成提示
-          UI.Toast.show('success', '加载完成', `已加载 ${trashFiles.length} 个回收站文件`, 5000, {
+          UI.Toast.success('加载完成', `已加载 ${trashFiles.length} 个回收站文件`, 5000, {
             group: 'trashOperations'
           });
         } else {
@@ -2067,9 +2067,9 @@ export const FileManager = {
             <div class="error-message">
               <i class="fas fa-exclamation-circle"></i>
               <h3>加载回收站失败</h3>
-              <p>${error.message || '无法连接到服务器，请稍后再试'}</p>
-              <button class="btn btn-primary retry-btn">
-                <i class="fas fa-sync-alt"></i> 重试
+              <p>${error.message || '无法连接到服务器，请检查您的网络连接并稍后再试'}</p>
+              <button class="retry-btn">
+                <i class="fas fa-sync-alt"></i> 重新加载
               </button>
             </div>
           `;

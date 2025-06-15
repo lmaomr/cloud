@@ -96,4 +96,29 @@ public class FileController {
         
         return ApiResponse.success(folder);
     }
+
+    /**
+     * 文件重命名
+     */
+    @PostMapping("/rename")
+    public ApiResponse<File> renameFile(@RequestBody Map<String, String> requestBody) {
+        String fileId = requestBody.get("fileId");
+        String newName = requestBody.get("newName");
+
+        log.info("重命名文件: 文件ID={}, 新名称={}", fileId, newName);
+
+        if (fileId == null || fileId.trim().isEmpty() || newName == null || newName.trim().isEmpty()) {
+            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+        }
+
+        // 从安全上下文中获取当前用户
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+        
+        // 重命名文件
+        File renamedFile = fileService.renameFile(Long.parseLong(fileId), newName, userId);
+
+        return ApiResponse.success(renamedFile);
+    }
+
 }

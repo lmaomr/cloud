@@ -2070,31 +2070,88 @@ body.dark-mode .shared-item {
 
 /* 修复回收站和分享的错误提示样式 */
 .error-message {
-  padding: 20px;
+  padding: 40px 20px;
   text-align: center;
-  color: var(--danger-color);
-  background-color: rgba(244, 67, 54, 0.1);
+  color: var(--text-color);
+  background-color: transparent;
   border-radius: 8px;
   margin: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
 }
 
 .error-message i {
-  font-size: 24px;
+  font-size: 48px;
   margin-bottom: 8px;
+  color: #ff4d4f;
+  opacity: 0.8;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 77, 79, 0.1);
+  border-radius: 50%;
 }
 
 .error-message h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
 }
 
 .error-message p {
-  margin: 0;
+  margin: 0 0 10px;
   font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+.retry-btn {
+  margin-top: 10px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.retry-btn:hover {
+  background-color: var(--primary-hover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.retry-btn i {
+  font-size: 14px;
+  margin: 0;
+  width: auto;
+  height: auto;
+  background: none;
+  color: white;
+  opacity: 1;
+}
+
+body.dark-mode .error-message {
+  color: #e4e6eb;
+}
+
+body.dark-mode .error-message p {
+  color: #9aa0a6;
+}
+
+body.dark-mode .error-message i {
+  background-color: rgba(255, 77, 79, 0.2);
 }
  
