@@ -1,6 +1,5 @@
 package cn.lmao.cloud.services;
 
-
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 
@@ -47,12 +46,12 @@ public class FileService {
      * @return 文件上传响应DTO
      * @throws IOException 文件操作异常
      * 
-     * 处理流程：
-     * 1. 获取用户云盘信息
-     * 2. 检查云盘剩余空间
-     * 3. 存储物理文件到磁盘
-     * 4. 保存文件元数据到数据库
-     * 5. 更新云盘使用空间
+     *                     处理流程：
+     *                     1. 获取用户云盘信息
+     *                     2. 检查云盘剩余空间
+     *                     3. 存储物理文件到磁盘
+     *                     4. 保存文件元数据到数据库
+     *                     5. 更新云盘使用空间
      */
     @Transactional(rollbackFor = Exception.class)
     public FileUploadResponse uploadFile(MultipartFile file, Long userId) throws IOException {
@@ -63,7 +62,7 @@ public class FileService {
 
             if (cloud == null) {
                 throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
-            }   
+            }
 
             // 2. 检查云盘空间是否足够
             if (cloud.getUsedCapacity() + file.getSize() > cloud.getTotalCapacity()) {
@@ -73,7 +72,8 @@ public class FileService {
             String fileHash = FileHashUtil.calculateSha256(file);
             Optional<File> hashFile = fileRepository.findFirstByHashOrderByIdDesc(fileHash);
             if (hashFile.isPresent()) {
-                if(hashFile.get().getCloud().getUser().equals(cloud.getUser())){
+                if (hashFile.get().getCloud().getUser().equals(cloud.getUser())
+                        && hashFile.get().getStatus() == File.FileStatus.ACTIVE) {
                     log.info("文件已存在，请勿重复上传" + fileHash);
                     return new FileUploadResponse(hashFile.get(), true);
                 }
@@ -91,7 +91,7 @@ public class FileService {
                         })
                         .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
                 // 6. 更新云盘已用空间
-                cloudService.updateCloudCapacity(cloud.getId(),file.getSize(), true);
+                cloudService.updateCloudCapacity(cloud.getId(), file.getSize(), true);
                 return new FileUploadResponse(existingFile);
             }
 
@@ -104,19 +104,20 @@ public class FileService {
             newFile.setCloud(cloud); // 关联云盘
 
             // 3. 存储物理文件到磁盘
-            if(fileUtil.storeFile(file, userId) == null) {
+            String filePath = fileUtil.storeFile(file, userId);
+            if (filePath == null) {
                 log.error("文件上传失败");
                 throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAILED);
             }
             // 确保文件路径是根目录（默认上传到根目录）
-            newFile.setPath("/" + newFile.getName());
-            log.info("上传文件: 名称={}, 路径={}, 大小={}, 类型={}", 
+            newFile.setPath(filePath);
+            log.info("上传文件: 名称={}, 路径={}, 大小={}, 类型={}",
                     newFile.getName(), newFile.getPath(), newFile.getSize(), newFile.getType());
-            
+
             // 5. 保存到数据库
             File savedFile = fileRepository.save(newFile);
             // 6. 更新云盘已用空间
-            cloudService.updateCloudCapacity(cloud.getId(),file.getSize(), true);
+            cloudService.updateCloudCapacity(cloud.getId(), file.getSize(), true);
             return new FileUploadResponse(savedFile);
         } finally {
             fileLock.unlock(); // 释放锁
@@ -125,6 +126,7 @@ public class FileService {
 
     /**
      * 下载文件
+     * 
      * @param cloud
      * @return
      */
@@ -156,11 +158,12 @@ public class FileService {
         log.info("文件下载准备就绪: 文件ID={}, 路径={}", fileId, file.getPath());
         // 5. 返回文件下载响应
         // 这里可以根据需要返回文件的下载链接或直接返回文件内容
-        fileUtil.downloadFile(filePath, userId, file.getName(), response);
+        fileUtil.downloadFile(filePath, file.getName(), response);
     }
 
     /**
      * 获取文件列表（基础方法，不包含排序和路径过滤）
+     * 
      * @param cloud 用户云盘
      * @return 文件列表
      */
@@ -174,9 +177,10 @@ public class FileService {
 
     /**
      * 获取文件列表（支持路径过滤和排序）
+     * 
      * @param cloud 用户云盘
-     * @param path 文件路径
-     * @param sort 排序方式
+     * @param path  文件路径
+     * @param sort  排序方式
      * @return 文件列表
      */
     public List<File> getFileList(Cloud cloud, String path, String sort) {
@@ -190,21 +194,21 @@ public class FileService {
         // 获取用户所有文件
         List<File> allFiles = fileRepository.findByCloudAndStatus(cloud, File.FileStatus.ACTIVE);
         log.info("用户总文件数: {}", allFiles.size());
-        
+
         List<File> filteredFiles = new ArrayList<>();
 
         // 根据路径过滤文件
         for (File file : allFiles) {
             // 获取文件所在目录
             String fileDirectory = getFileDirectory(file);
-            
+
             // 如果文件路径与当前请求路径相符，则添加到过滤后的列表中
             if (fileDirectory.equals(path)) {
                 filteredFiles.add(file);
-                log.debug("文件匹配当前路径: 名称={}, 路径={}, 目录={}", 
+                log.debug("文件匹配当前路径: 名称={}, 路径={}, 目录={}",
                         file.getName(), file.getPath(), fileDirectory);
             } else {
-                log.debug("文件不匹配当前路径: 名称={}, 路径={}, 目录={}, 请求路径={}", 
+                log.debug("文件不匹配当前路径: 名称={}, 路径={}, 目录={}, 请求路径={}",
                         file.getName(), file.getPath(), fileDirectory, path);
             }
         }
@@ -219,6 +223,7 @@ public class FileService {
 
     /**
      * 获取文件所在目录
+     * 
      * @param file 文件对象
      * @return 文件所在目录路径
      */
@@ -226,36 +231,37 @@ public class FileService {
         // 从文件路径中提取目录信息
         String filePath = file.getPath();
         log.debug("获取文件目录: 文件名={}, 路径={}", file.getName(), filePath);
-        
+
         if (filePath == null || filePath.isEmpty()) {
             return "/"; // 默认为根目录
         }
-        
+
         // 如果路径就是文件名（没有目录部分），则返回根目录
         if (filePath.equals("/" + file.getName())) {
             return "/";
         }
-        
+
         // 提取目录部分
         int lastSlashIndex = filePath.lastIndexOf('/');
         if (lastSlashIndex <= 0) {
             return "/"; // 如果没有斜杠或斜杠在开头，返回根目录
         }
-        
+
         String directory = filePath.substring(0, lastSlashIndex);
         // 确保目录以/开头
         if (!directory.startsWith("/")) {
             directory = "/" + directory;
         }
-        
+
         log.debug("文件 {} 所在目录: {}", file.getName(), directory);
         return directory;
     }
 
     /**
      * 根据排序参数对文件列表进行排序
+     * 
      * @param files 文件列表
-     * @param sort 排序参数
+     * @param sort  排序参数
      */
     private void sortFiles(List<File> files, String sort) {
         if (sort == null || sort.isEmpty()) {
@@ -290,8 +296,9 @@ public class FileService {
 
     /**
      * 创建文件夹
-     * @param path 父路径
-     * @param name 文件夹名称
+     * 
+     * @param path   父路径
+     * @param name   文件夹名称
      * @param userId 用户ID
      * @return 创建的文件夹实体
      */
@@ -310,14 +317,14 @@ public class FileService {
             folder.setType("folder"); // 设置类型为文件夹
             folder.setSize(0L); // 文件夹大小为0
             folder.setCloud(cloud); // 关联云盘
-            
+
             // 3. 构建文件夹路径
             String folderPath = path.endsWith("/") ? path + name : path + "/" + name;
             folder.setPath(folderPath);
-            
+
             // 4. 生成文件夹哈希值（可以使用路径作为哈希）
             folder.setHash("folder_" + folderPath.hashCode());
-            
+
             // 5. 保存到数据库
             return fileRepository.save(folder);
         } finally {
@@ -327,7 +334,8 @@ public class FileService {
 
     /**
      * 文件重命名
-     * @throws IOException 
+     * 
+     * @throws IOException
      */
     @Transactional
     public File renameFile(Long fileId, String newName, Long userId) throws IOException {
@@ -342,7 +350,7 @@ public class FileService {
             // 2. 验证文件是否存在
             File file = fileRepository.findById(fileId)
                     .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
-            
+
             // 3. 验证文件是否属于当前用户
             if (!file.getCloud().getUser().getId().equals(userId)) {
                 throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
@@ -374,8 +382,8 @@ public class FileService {
             // 2. 验证文件是否属于当前用户
             File file = fileRepository.findById(fileId)
                     .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
-                       
-            if(!file.getCloud().getUser().getId().equals(userId)) {
+
+            if (!file.getCloud().getUser().getId().equals(userId)) {
                 throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
             }
 
@@ -386,10 +394,11 @@ public class FileService {
         } finally {
             fileLock.unlock(); // 释放锁
         }
-    }   
-            
+    }
+
     /**
      * 获取回收站列表
+     * 
      * @param userId 用户ID
      * @return 回收站列表
      */
@@ -406,9 +415,6 @@ public class FileService {
                 .stream()
                 .sorted(Comparator.comparing(File::getCreateTime).reversed())
                 .toList();
-    }   
+    }
 
-
-
-    
 }

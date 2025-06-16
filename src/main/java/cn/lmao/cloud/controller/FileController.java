@@ -1,5 +1,6 @@
 package cn.lmao.cloud.controller;
 
+import cn.lmao.cloud.exception.CustomException;
 import cn.lmao.cloud.model.dto.ApiResponse;
 import cn.lmao.cloud.model.dto.FileUploadResponse;
 import cn.lmao.cloud.model.entity.Cloud;
@@ -57,11 +58,11 @@ public class FileController {
      * @return 文件下载响应
      */
     @GetMapping("/download/{fileId}")
-    public ApiResponse<String> downloadFile(@PathVariable String fileId, HttpServletResponse response) throws IOException {
+    public void downloadFile(@PathVariable String fileId, HttpServletResponse response) throws IOException {
         log.info("下载文件: 文件ID={}", fileId);
 
         if (fileId == null || fileId.trim().isEmpty()) {
-            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+            throw new CustomException(ExceptionCodeMsg.FILE_NOT_FOUND);
         }
 
         // 从安全上下文中获取当前用户
@@ -70,8 +71,6 @@ public class FileController {
 
         // 下载文件
         fileService.downloadFile(Long.parseLong(fileId), userId, response);
-        
-        return ApiResponse.success("下载成功");
     }
 
     /**

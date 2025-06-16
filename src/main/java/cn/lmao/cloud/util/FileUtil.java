@@ -47,7 +47,7 @@ public class FileUtil {
         validateFile(file);
         Path targetPath = buildTargetPath(file, userId);
         saveFileToTarget(file, targetPath);
-        return generateRelativePath(userId, targetPath.getFileName().toString());
+        return targetPath.toString();
     }
 
     /**
@@ -57,13 +57,14 @@ public class FileUtil {
      * @param response 响应
      * @throws IOException
      */
-    public void downloadFile(Path filePath, Long userId, String fileName, HttpServletResponse response) throws IOException {
-        Path resolvedPath = Path.of(generateRelativePath(userId, filePath.toString()));
-        System.out.println("下载路径: " + resolvedPath);
+    public void downloadFile(Path filePath, String fileName, HttpServletResponse response) throws IOException {
         // 2. 检查文件是否存在
-        if (!Files.exists(resolvedPath)) {
+        if (!Files.exists(filePath)) {
             throw new CustomException(ExceptionCodeMsg.FILE_NOT_FOUND);
         }
+
+        // 重置响应
+        response.reset();
 
         // 3. 设置响应头（支持中文文件名）
         String encodedFileName = URLEncoder.encode(
@@ -75,13 +76,16 @@ public class FileUtil {
                 "attachment; filename*=UTF-8''" + encodedFileName);
 
         // 4. 分块传输文件
-        try (InputStream in = Files.newInputStream(resolvedPath);
+        try (InputStream in = Files.newInputStream(filePath);
                 OutputStream out = response.getOutputStream()) {
             byte[] buffer = new byte[8192];
             int bytesRead;
             while ((bytesRead = in.read(buffer)) != -1) {
                 out.write(buffer, 0, bytesRead);
             }
+        } catch (IOException e) {
+            response.resetBuffer();
+            throw new CustomException(ExceptionCodeMsg.FILE_NOT_FOUND);
         }
     }
 
@@ -92,9 +96,8 @@ public class FileUtil {
      * @return 是否删除成功
      * @throws IOException
      */
-    public boolean deleteFile(String filePath) throws IOException {
-        Path path = Paths.get(uploadRootDir, filePath);
-        return Files.deleteIfExists(path);
+    public boolean deleteFile(Path filePath) throws IOException {
+        return Files.deleteIfExists(validateFilePath(filePath));
     }
 
     /**
@@ -185,16 +188,16 @@ public class FileUtil {
         }
     }
 
-    /**
-     * 生成用户文件的相对路径
-     *
-     * @param userId   用户ID
-     * @param fileName 文件名
-     * @return 相对路径字符串
-     */
-    private String generateRelativePath(Long userId, String fileName) {
-        return USER_SUBDIR_PREFIX + userId + "/" + fileName;
-    }
+    // /**
+    //  * 生成用户文件的相对路径
+    //  *
+    //  * @param userId   用户ID
+    //  * @param fileName 文件名
+    //  * @return 相对路径字符串
+    //  */
+    // private String generateRelativePath(Long userId, String fileName) {
+    //     return USER_SUBDIR_PREFIX + userId + "/" + fileName;
+    // }
 
     /**
      * 检查文件大小是否超过限制

@@ -14,32 +14,32 @@ export const FileManager = {
    * 当前视图类型（grid或list）
    */
   currentView: 'grid',
-  
+
   /**
    * 当前排序方式
    */
   currentSort: 'name-asc',
-  
+
   /**
    * 选中的文件列表
    */
   selectedFiles: [],
-  
+
   /**
    * 当前路径
    */
   currentPath: '/',
-  
+
   /**
    * 当前文件列表缓存
    */
   currentFiles: [],
-  
+
   /**
    * 是否处于搜索模式
    */
   isSearchMode: false,
-  
+
   /**
    * 初始化文件管理器
    */
@@ -51,13 +51,13 @@ export const FileManager = {
     this.selectedCountElement = document.getElementById('selectedCount');
     this.viewBtns = document.querySelectorAll('.view-btn');
     this.refreshBtn = document.getElementById('refreshBtn');
-    
+
     // 加载保存的视图类型
     const savedView = localStorage.getItem('view');
     if (savedView) {
       this.currentView = savedView;
     }
-    
+
     // 存储事件处理函数引用，便于后续移除
     this._eventHandlers = {
       fileItemClick: (e) => this.handleFileItemClick(e),
@@ -92,19 +92,19 @@ export const FileManager = {
       dragLeave: (e) => this.handleDragLeave(e),
       drop: (e) => this.handleDrop(e)
     };
-    
+
     // 绑定事件
     this.bindEvents();
-    
+
     // 设置视图类型
     this.setView(this.currentView);
-    
+
     console.log('文件管理器初始化完成');
-    
+
     // 加载文件列表
     this.loadFiles();
   },
-  
+
   /**
    * 绑定事件
    */
@@ -115,12 +115,12 @@ export const FileManager = {
         this.setView(btn.dataset.view);
       });
     });
-    
+
     // 刷新按钮
     if (this.refreshBtn) {
       this.refreshBtn.addEventListener('click', () => this.refreshFiles());
     }
-    
+
     // 排序选项
     document.querySelectorAll('[data-sort]').forEach(item => {
       item.addEventListener('click', (e) => {
@@ -128,27 +128,27 @@ export const FileManager = {
         this.sortFiles(item.dataset.sort);
       });
     });
-    
+
     // 文件项选择 - 使用事件委托处理点击事件
     document.addEventListener('click', this._eventHandlers.fileItemClick);
-    
+
     // 文件项复选框点击处理
     document.addEventListener('change', this._eventHandlers.checkboxChange);
-    
+
     // 文件操作按钮
     document.addEventListener('click', this._eventHandlers.fileAction);
-    
+
     // 批量操作按钮
     document.querySelectorAll('.toolbar-btn').forEach(btn => {
       btn.addEventListener('click', (e) => this.handleBulkAction(e));
     });
-    
+
     // 监听部分切换事件
     document.addEventListener('section:change', this._eventHandlers.sectionChange);
-    
+
     // 监听搜索事件
     document.addEventListener('search:perform', this._eventHandlers.searchPerform);
-    
+
     // 拖放上传事件
     const dropTargets = [this.fileList, this.emptyFileList];
     dropTargets.forEach(target => {
@@ -160,7 +160,7 @@ export const FileManager = {
       }
     });
   },
-  
+
   /**
    * 移除事件监听器
    */
@@ -172,7 +172,7 @@ export const FileManager = {
       document.removeEventListener('click', this._eventHandlers.fileAction);
       document.removeEventListener('section:change', this._eventHandlers.sectionChange);
       document.removeEventListener('search:perform', this._eventHandlers.searchPerform);
-      
+
       // 移除拖放事件监听器
       const dropTargets = [this.fileList, this.emptyFileList];
       dropTargets.forEach(target => {
@@ -183,27 +183,39 @@ export const FileManager = {
           target.removeEventListener('drop', this._eventHandlers.drop);
         }
       });
-      
+
       console.log('文件管理器事件监听器已移除');
     }
   },
-  
+
   /**
    * 处理部分切换
    * @param {string} section - 部分ID
    */
   handleSectionChange(section) {
+    console.log('切换到部分:', section);
+    
     // 清除选择
     this.clearFileSelection();
     
+    // 强制隐藏工具栏，确保不会持续显示
+    if (this.fileActionsToolbar) {
+      this.fileActionsToolbar.style.display = 'none';
+      
+      // 如果工具栏有回收站特定样式，重置它
+      if (this.fileActionsToolbar.classList.contains('trash-toolbar-styled')) {
+        this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
+      }
+    }
+
     // 重置当前路径
     this.currentPath = '/';
-    
+
     // 移除可能存在的回收站操作栏
     this.removeTrashActionBar();
-    
+
     // 根据不同的部分加载不同内容
-    switch(section) {
+    switch (section) {
       case 'my-files':
         this.refreshFiles();
         break;
@@ -227,7 +239,7 @@ export const FileManager = {
         this.showSectionUnderDevelopment(section);
     }
   },
-  
+
   /**
    * 移除回收站操作栏
    */
@@ -237,29 +249,29 @@ export const FileManager = {
       existingActionBar.parentNode.removeChild(existingActionBar);
     }
   },
-  
+
   /**
    * 设置视图模式
    * @param {string} view - 视图类型：grid或list
    */
   setView(view) {
     this.currentView = view;
-    
+
     // 更新视图按钮状态
     this.viewBtns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === view);
     });
-    
+
     // 更新文件列表类
     if (this.fileList) {
       this.fileList.classList.remove('grid-view', 'list-view');
       this.fileList.classList.add(`${view}-view`);
     }
-    
+
     // 保存用户偏好
     localStorage.setItem('view', view);
   },
-  
+
   /**
    * 加载文件列表
    */
@@ -267,28 +279,28 @@ export const FileManager = {
     try {
       // 显示加载指示器
       UI.Loader.showContentLoader('fileContainer');
-      
+
       // 调用API获取文件列表
       const response = await CloudAPI.getFileList(this.currentPath, this.currentSort);
       const files = response.data || [];
-      
+
       // 缓存当前文件列表
       this.currentFiles = files;
-      
+
       // 隐藏加载指示器
       UI.Loader.hideContentLoader();
-      
+
       // 显示文件列表
       this.renderFiles(files);
-      
+
       // 更新面包屑导航
       this.updateBreadcrumb();
     } catch (error) {
       console.error('加载文件列表失败:', error);
-      
+
       // 隐藏加载指示器
       UI.Loader.hideContentLoader();
-      
+
       // 显示错误提示
       if (this.fileList) {
         this.fileList.style.display = 'block';
@@ -303,50 +315,50 @@ export const FileManager = {
             </button>
           </div>
         `;
-        
+
         // 绑定重试按钮事件
         const retryBtn = this.fileList.querySelector('.retry-btn');
         if (retryBtn) {
           retryBtn.addEventListener('click', () => this.loadFiles());
         }
       }
-      
+
       // 隐藏空状态
       if (this.emptyFileList) {
         this.emptyFileList.style.display = 'none';
       }
-      
+
       // 显示错误提示
       UI.Toast.error('加载失败', error.message || '无法加载文件列表', 8000, {
         group: 'fileOperations'
       });
     }
   },
-  
+
   /**
    * 渲染文件列表
    * @param {Array} files - 文件数组
    */
   renderFiles(files) {
     if (!this.fileList) return;
-    
+
     // 清除所有选择状态
     this.clearFileSelection();
-    
+
     // 重置文件列表的显示状态
     this.fileList.innerHTML = ''; // 清空现有内容
-    
+
     if (files.length > 0) {
       // 有文件，显示文件列表
       this.fileList.style.display = 'grid';
       this.fileList.className = 'file-list';
       this.fileList.classList.add(`${this.currentView}-view`);
-      
+
       // 隐藏空状态
       if (this.emptyFileList) {
         this.emptyFileList.style.display = 'none';
       }
-      
+
       // 创建文件项
       files.forEach(file => {
         const fileItem = this.createFileItem(file);
@@ -356,11 +368,11 @@ export const FileManager = {
       // 没有文件，显示空状态
       this.fileList.style.display = 'none';
       this.fileList.className = 'file-list'; // 重置类名，防止应用之前的样式
-      
+
       if (this.emptyFileList) {
         this.emptyFileList.style.display = 'flex';
         this.emptyFileList.className = 'empty-file-list';
-        
+
         // 更新提示内容
         this.emptyFileList.innerHTML = `
           <div class="empty-file-icon">
@@ -374,7 +386,7 @@ export const FileManager = {
             </button>
           </div>
         `;
-        
+
         // 绑定上传按钮事件
         const uploadBtn = this.emptyFileList.querySelector('.upload-btn');
         if (uploadBtn) {
@@ -386,7 +398,7 @@ export const FileManager = {
       }
     }
   },
-  
+
   /**
    * 刷新文件列表
    */
@@ -395,19 +407,19 @@ export const FileManager = {
     if (this.isSearchMode) {
       this.exitSearchMode();
     }
-    
+
     // 清除选择
     this.clearFileSelection();
-    
+
     // 重新加载文件
     await this.loadFiles();
-    
+
     // 显示刷新提示
     UI.Toast.success('已刷新', '文件列表已更新', 3000, {
       group: 'fileOperations'
     });
   },
-  
+
   /**
    * 排序文件列表
    * @param {string} sortType - 排序类型
@@ -416,7 +428,7 @@ export const FileManager = {
     this.currentSort = sortType;
     await this.loadFiles();
   },
-  
+
   /**
    * 创建文件项元素
    * @param {Object} file - 文件对象
@@ -432,7 +444,7 @@ export const FileManager = {
     fileItem.setAttribute('aria-label', `${isFolder ? '文件夹: ' : '文件: '}${file.name}`);
     fileItem.setAttribute('data-id', file.id);
     fileItem.setAttribute('data-path', file.path);
-    
+
     const fileIcon = this.getFileIcon(file.name);
     const fileSize = isFolder ? '' : this.formatFileSize(file.size);
     const fileDate = new Date(file.createTime).toLocaleDateString('zh-CN', {
@@ -440,7 +452,7 @@ export const FileManager = {
       month: '2-digit',
       day: '2-digit'
     });
-    
+
     // 根据是否为回收站文件，显示不同的操作按钮
     let actionButtons = '';
     if (isTrash) {
@@ -458,7 +470,7 @@ export const FileManager = {
         <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除${file.name}"></i>
       `;
     }
-    
+
     fileItem.innerHTML = `
       <div class="file-checkbox">
         <input type="checkbox" class="item-checkbox" aria-label="选择${file.name}">
@@ -476,16 +488,16 @@ export const FileManager = {
         ${actionButtons}
       </div>
     `;
-    
+
     // 确保复选框始终处于未选中状态
     const checkbox = fileItem.querySelector('.item-checkbox');
     if (checkbox) {
       checkbox.checked = false;
     }
-    
+
     return fileItem;
   },
-  
+
   /**
    * 获取文件图标
    * @param {string} fileName - 文件名
@@ -493,8 +505,8 @@ export const FileManager = {
    */
   getFileIcon(fileName) {
     const extension = fileName.split('.').pop().toLowerCase();
-    
-    switch(extension) {
+
+    switch (extension) {
       case 'pdf':
         return 'fas fa-file-pdf';
       case 'doc':
@@ -534,7 +546,7 @@ export const FileManager = {
         return 'fas fa-file';
     }
   },
-  
+
   /**
    * 格式化文件大小
    * @param {number} bytes - 文件大小（字节）
@@ -542,14 +554,14 @@ export const FileManager = {
    */
   formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
-    
+
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   },
-  
+
   /**
    * 处理文件项点击
    * @param {Event} e - 点击事件
@@ -557,16 +569,16 @@ export const FileManager = {
   handleFileItemClick(e) {
     const fileItem = e.target.closest('.file-item');
     if (!fileItem) return;
-    
+
     // 如果点击的是文件操作按钮或复选框，不处理选择逻辑
     if (e.target.closest('.file-actions') || e.target.closest('.file-checkbox')) {
       return;
     }
-    
+
     // 处理Ctrl/Cmd键多选
     if (e.ctrlKey || e.metaKey) {
       this.toggleFileSelection(fileItem);
-    } 
+    }
     // 处理Shift键范围选择
     else if (e.shiftKey && this.selectedFiles.length > 0) {
       const allItems = Array.from(document.querySelectorAll('.file-item'));
@@ -578,10 +590,10 @@ export const FileManager = {
           Math.min(start, end),
           Math.max(start, end) + 1
         );
-        
+
         // 清除之前的选择
         this.clearFileSelection();
-        
+
         // 选择范围内的所有文件
         range.forEach(item => {
           this.selectFile(item);
@@ -593,21 +605,21 @@ export const FileManager = {
       // 如果是文件夹，导航进入
       if (fileItem.classList.contains('folder')) {
         this.navigateToFolder(fileItem);
-      } 
+      }
       // 如果是文件，选择
       else {
         // 清除之前的选择
         this.clearFileSelection();
-        
+
         // 选择当前文件
         this.selectFile(fileItem);
       }
     }
-    
+
     // 更新工具栏状态
     this.updateToolbar();
   },
-  
+
   /**
    * 切换文件选择状态
    * @param {HTMLElement} fileItem - 文件项元素
@@ -619,7 +631,7 @@ export const FileManager = {
       this.selectFile(fileItem);
     }
   },
-  
+
   /**
    * 选择文件
    * @param {HTMLElement} fileItem - 文件项元素
@@ -628,14 +640,14 @@ export const FileManager = {
     fileItem.classList.add('selected');
     const checkbox = fileItem.querySelector('.item-checkbox');
     if (checkbox) checkbox.checked = true;
-    
+
     // 添加到选中文件数组
     const fileName = fileItem.querySelector('.file-name').textContent;
     if (!this.selectedFiles.includes(fileName)) {
       this.selectedFiles.push(fileName);
     }
   },
-  
+
   /**
    * 取消选择文件
    * @param {HTMLElement} fileItem - 文件项元素
@@ -644,35 +656,58 @@ export const FileManager = {
     fileItem.classList.remove('selected');
     const checkbox = fileItem.querySelector('.item-checkbox');
     if (checkbox) checkbox.checked = false;
-    
+
     // 从选中文件数组中移除
     const fileName = fileItem.querySelector('.file-name').textContent;
     this.selectedFiles = this.selectedFiles.filter(name => name !== fileName);
   },
-  
+
   /**
    * 清除所有文件选择
    */
   clearFileSelection() {
+    console.log('清除文件选择，当前已选择:', this.selectedFiles.length);
+    
     // 清除所有选中的文件项
     document.querySelectorAll('.file-item.selected').forEach(item => {
       this.deselectFile(item);
     });
-    
+
     // 额外确保所有复选框都是未选中状态
     document.querySelectorAll('.item-checkbox').forEach(checkbox => {
       checkbox.checked = false;
     });
-    
+
     // 清空选中文件数组
     this.selectedFiles = [];
-    
+    console.log('选择已清除，当前已选择:', this.selectedFiles.length);
+
     // 隐藏工具栏
     if (this.fileActionsToolbar) {
       this.fileActionsToolbar.style.display = 'none';
+      
+      // 重置工具栏内容和样式
+      if (this.fileActionsToolbar.classList.contains('trash-toolbar-styled')) {
+        console.log('重置回收站特定工具栏样式');
+        this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
+        this.fileActionsToolbar.innerHTML = ''; // 清空回收站特定工具栏内容
+        
+        // 恢复默认工具栏内容
+        const defaultToolbarHTML = `
+          <div class="selected-count">已选择 <span id="selectedCount">0</span> 项</div>
+          <div class="toolbar-actions">
+            <button class="toolbar-btn" title="下载"><i class="fas fa-download"></i></button>
+            <button class="toolbar-btn" title="分享"><i class="fas fa-share-alt"></i></button>
+            <button class="toolbar-btn" title="移动"><i class="fas fa-folder-open"></i></button>
+            <button class="toolbar-btn" title="删除"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+        this.fileActionsToolbar.innerHTML = defaultToolbarHTML;
+        this.selectedCountElement = document.getElementById('selectedCount');
+      }
     }
   },
-  
+
   /**
    * 更新工具栏状态
    */
@@ -681,18 +716,18 @@ export const FileManager = {
       // 显示工具栏
       this.fileActionsToolbar.style.display = 'flex';
       this.selectedCountElement.textContent = this.selectedFiles.length;
-      
+
       // 判断当前是否在回收站
       const isInTrash = document.querySelector('.nav-group li[data-section="trash"].active') !== null;
-      
+
       // 如果在回收站中，更新工具栏样式
       if (isInTrash) {
         // 获取当前选中的文件数量
         const selectedCount = this.selectedFiles.length;
-        
+
         // 更新工具栏内容
         const toolbar = this.fileActionsToolbar;
-        
+
         // 检查是否已经应用了回收站特定样式
         if (!toolbar.classList.contains('trash-toolbar-styled')) {
           // 添加CSS样式到头部，而不是使用内联样式
@@ -830,25 +865,25 @@ export const FileManager = {
             `;
             document.head.appendChild(style);
           }
-          
+
           // 清空工具栏内容
           toolbar.innerHTML = '';
-          
+
           // 应用CSS类而不是内联样式
           toolbar.classList.add('trash-toolbar-styled');
-          
+
           // 创建选中计数容器
           const newCountContainer = document.createElement('div');
           newCountContainer.className = 'selected-count-container';
           newCountContainer.innerHTML = `已选择 <span id="selectedCount">${selectedCount}</span> 个项目`;
           toolbar.appendChild(newCountContainer);
           this.selectedCountElement = newCountContainer.querySelector('#selectedCount');
-          
+
           // 创建按钮容器
           const btnContainer = document.createElement('div');
           btnContainer.className = 'trash-toolbar-buttons';
           toolbar.appendChild(btnContainer);
-          
+
           // 创建恢复按钮
           const restoreBtn = document.createElement('button');
           restoreBtn.className = 'toolbar-btn restore-btn';
@@ -856,7 +891,7 @@ export const FileManager = {
           restoreBtn.innerHTML = '<i class="fas fa-trash-restore"></i><span>恢复</span>';
           restoreBtn.addEventListener('click', (e) => this.handleBulkAction(e));
           btnContainer.appendChild(restoreBtn);
-          
+
           // 创建删除按钮
           const deleteBtn = document.createElement('button');
           deleteBtn.className = 'toolbar-btn delete-btn';
@@ -864,7 +899,7 @@ export const FileManager = {
           deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i><span>删除</span>';
           deleteBtn.addEventListener('click', (e) => this.handleBulkAction(e));
           btnContainer.appendChild(deleteBtn);
-          
+
           // 添加清除选择按钮
           const clearBtn = document.createElement('button');
           clearBtn.className = 'toolbar-btn clear-btn';
@@ -879,14 +914,29 @@ export const FileManager = {
       }
     } else {
       this.fileActionsToolbar.style.display = 'none';
-      
-      // 移除回收站特定样式标记
+
+      // 如果工具栏有回收站特定样式，重置它
       if (this.fileActionsToolbar.classList.contains('trash-toolbar-styled')) {
+        console.log('在updateToolbar中重置回收站特定样式');
         this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
+        this.fileActionsToolbar.innerHTML = '';
+        
+        // 恢复默认工具栏内容
+        const defaultToolbarHTML = `
+          <div class="selected-count">已选择 <span id="selectedCount">0</span> 项</div>
+          <div class="toolbar-actions">
+            <button class="toolbar-btn" title="下载"><i class="fas fa-download"></i></button>
+            <button class="toolbar-btn" title="分享"><i class="fas fa-share-alt"></i></button>
+            <button class="toolbar-btn" title="移动"><i class="fas fa-folder-open"></i></button>
+            <button class="toolbar-btn" title="删除"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+        this.fileActionsToolbar.innerHTML = defaultToolbarHTML;
+        this.selectedCountElement = document.getElementById('selectedCount');
       }
     }
   },
-  
+
   /**
    * 处理文件操作
    * @param {Event} e - 点击事件
@@ -894,21 +944,21 @@ export const FileManager = {
   handleFileAction(e) {
     const actionBtn = e.target.closest('[data-action]');
     if (!actionBtn) return;
-    
+
     e.stopPropagation();
     const action = actionBtn.dataset.action;
     const fileItem = actionBtn.closest('.file-item');
-    
+
     // 确保fileItem存在
     if (!fileItem) {
       console.error('找不到文件项元素');
       return;
     }
-    
+
     const fileName = fileItem.querySelector('.file-name').textContent;
     const fileId = fileItem.dataset.id;
-    
-    switch(action) {
+
+    switch (action) {
       case 'download':
         this.downloadFile(fileName);
         break;
@@ -929,7 +979,7 @@ export const FileManager = {
         break;
     }
   },
-  
+
   /**
    * 从回收站恢复文件
    * @param {string} fileName - 文件名
@@ -940,29 +990,41 @@ export const FileManager = {
     UI.Modal.confirm(
       '<i class="fas fa-trash-restore"></i> 恢复文件',
       `确定要将 "${fileName}" 恢复到原位置吗？`,
-      () => {
+      async () => {
         // 显示恢复进度
         const loadingToastId = UI.Toast.loading('恢复中', `正在恢复 ${fileName}...`, {
           group: 'trashOperations'
         });
-        
-        // 模拟恢复过程
-        setTimeout(() => {
+
+        try {
+          // 调用API恢复文件
+          await CloudAPI.restoreFile(fileId);
+          
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
           
           // 刷新回收站
           this.loadTrashContent();
           
+          // 恢复操作不更新存储空间信息，因为只是文件位置变化，不影响总存储量
+
           // 显示恢复成功提示
           UI.Toast.success('恢复成功', `已恢复 ${fileName}`, 5000, {
             group: 'trashOperations'
           });
-        }, 800);
+        } catch (error) {
+          // 隐藏加载通知
+          UI.Toast.hide(loadingToastId);
+          
+          console.error('恢复文件失败:', error);
+          UI.Toast.error('恢复失败', error.message || '无法恢复文件', 5000, {
+            group: 'trashOperations'
+          });
+        }
       }
     );
   },
-  
+
   /**
    * 永久删除回收站中的文件
    * @param {string} fileName - 文件名
@@ -973,42 +1035,55 @@ export const FileManager = {
     UI.Modal.confirm(
       '<i class="fas fa-trash-alt"></i> 永久删除',
       `确定要永久删除 "${fileName}" 吗？此操作不可撤销！`,
-      () => {
+      async () => {
         // 显示删除进度
         const loadingToastId = UI.Toast.loading('删除中', `正在永久删除 ${fileName}...`, {
           group: 'trashOperations'
         });
-        
-        // 模拟删除过程
-        setTimeout(() => {
+
+        try {
+          // 调用API永久删除文件
+          await CloudAPI.deletePermanentFile(fileId);
+          
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
           
           // 刷新回收站
           this.loadTrashContent();
           
+          // 更新存储空间信息
+          await this.updateStorageInfo();
+
           // 显示删除成功提示
           UI.Toast.success('删除成功', `已永久删除 ${fileName}`, 5000, {
             group: 'trashOperations'
           });
-        }, 800);
+        } catch (error) {
+          // 隐藏加载通知
+          UI.Toast.hide(loadingToastId);
+          
+          console.error('永久删除文件失败:', error);
+          UI.Toast.error('删除失败', error.message || '无法删除文件', 5000, {
+            group: 'trashOperations'
+          });
+        }
       }
     );
   },
-  
+
   /**
    * 处理批量操作
    * @param {Event} e - 点击事件
    */
   handleBulkAction(e) {
     const action = e.currentTarget.title.toLowerCase();
-    
+
     // 判断当前是否在回收站
     const isInTrash = document.querySelector('.nav-group li[data-section="trash"].active') !== null;
-    
+
     if (isInTrash) {
       // 回收站中的批量操作
-      switch(action) {
+      switch (action) {
         case '恢复':
           this.restoreFiles(this.selectedFiles);
           break;
@@ -1021,7 +1096,7 @@ export const FileManager = {
       }
     } else {
       // 普通文件的批量操作
-      switch(action) {
+      switch (action) {
         case '下载':
           this.downloadFiles(this.selectedFiles);
           break;
@@ -1037,7 +1112,7 @@ export const FileManager = {
       }
     }
   },
-  
+
   /**
    * 批量恢复回收站文件
    * @param {Array<string>} fileNames - 文件名数组
@@ -1047,34 +1122,54 @@ export const FileManager = {
       UI.Toast.warning('未选择文件', '请先选择要恢复的文件', 5000);
       return;
     }
-    
+
     // 显示确认对话框
     UI.Modal.confirm(
       '<i class="fas fa-trash-restore"></i> 批量恢复',
       `确定要将选中的 ${fileNames.length} 个文件恢复到原位置吗？`,
-      () => {
-        // 显示恢复进度
-        const loadingToastId = UI.Toast.loading('恢复中', `正在恢复 ${fileNames.length} 个文件...`, {
-          group: 'trashOperations'
-        });
-        
-        // 模拟恢复过程
-        setTimeout(() => {
+      async () => {
+        try {
+          // 显示恢复进度
+          const loadingToastId = UI.Toast.loading('恢复中', `正在恢复 ${fileNames.length} 个文件...`, {
+            group: 'trashOperations'
+          });
+
+          // 创建所有恢复操作的Promise数组
+          const restorePromises = fileNames.map(fileName => {
+            const fileItem = this.findFileItemByName(fileName);
+            if (!fileItem) return Promise.reject(new Error(`找不到文件: ${fileName}`));
+
+            const fileId = fileItem.dataset.id;
+            if (!fileId) return Promise.reject(new Error(`无效的文件ID: ${fileName}`));
+            
+            return CloudAPI.restoreFile(fileId);
+          });
+
+          // 等待所有恢复操作完成
+          await Promise.all(restorePromises);
+
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
-          
+
           // 刷新回收站
           this.loadTrashContent();
           
+          // 恢复操作不更新存储空间信息，因为只是文件位置变化，不影响总存储量
+
           // 显示恢复成功提示
           UI.Toast.success('恢复成功', `已恢复 ${fileNames.length} 个文件`, 5000, {
             group: 'trashOperations'
           });
-        }, 800);
+        } catch (error) {
+          console.error('批量恢复文件失败:', error);
+          UI.Toast.error('恢复失败', error.message || '无法恢复选中的文件', 5000, {
+            group: 'trashOperations'
+          });
+        }
       }
     );
   },
-  
+
   /**
    * 批量永久删除回收站文件
    * @param {Array<string>} fileNames - 文件名数组
@@ -1084,34 +1179,55 @@ export const FileManager = {
       UI.Toast.warning('未选择文件', '请先选择要删除的文件', 5000);
       return;
     }
-    
+
     // 显示确认对话框
     UI.Modal.confirm(
       '<i class="fas fa-trash-alt"></i> 批量永久删除',
       `确定要永久删除选中的 ${fileNames.length} 个文件吗？此操作不可撤销！`,
-      () => {
-        // 显示删除进度
-        const loadingToastId = UI.Toast.loading('删除中', `正在永久删除 ${fileNames.length} 个文件...`, {
-          group: 'trashOperations'
-        });
-        
-        // 模拟删除过程
-        setTimeout(() => {
+      async () => {
+        try {
+          // 显示删除进度
+          const loadingToastId = UI.Toast.loading('删除中', `正在永久删除 ${fileNames.length} 个文件...`, {
+            group: 'trashOperations'
+          });
+
+          // 创建所有删除操作的Promise数组
+          const deletePromises = fileNames.map(fileName => {
+            const fileItem = this.findFileItemByName(fileName);
+            if (!fileItem) return Promise.reject(new Error(`找不到文件: ${fileName}`));
+
+            const fileId = fileItem.dataset.id;
+            if (!fileId) return Promise.reject(new Error(`无效的文件ID: ${fileName}`));
+            
+            return CloudAPI.deletePermanentFile(fileId);
+          });
+
+          // 等待所有删除操作完成
+          await Promise.all(deletePromises);
+
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
-          
+
           // 刷新回收站
           this.loadTrashContent();
           
+          // 更新存储空间信息
+          await this.updateStorageInfo();
+
           // 显示删除成功提示
           UI.Toast.success('删除成功', `已永久删除 ${fileNames.length} 个文件`, 5000, {
             group: 'trashOperations'
           });
-        }, 800);
+        } catch (error) {
+          console.error('批量永久删除文件失败:', error);
+          UI.Toast.error('删除失败', error.message || '无法删除选中的文件', 5000, {
+            group: 'trashOperations'
+          });
+        }
       }
     );
   },
-  
+
   /**
    * 导航到文件夹
    * @param {HTMLElement} folderItem - 文件夹元素
@@ -1121,27 +1237,27 @@ export const FileManager = {
       console.error('无效的文件夹项');
       return;
     }
-    
+
     const folderName = folderItem.querySelector('.file-name').textContent;
     const folderPath = folderItem.dataset.path || `${this.currentPath}${this.currentPath.endsWith('/') ? '' : '/'}${folderName}`;
-    
+
     // 更新当前路径
     this.currentPath = folderPath;
-    
+
     // 更新面包屑导航
     this.updateBreadcrumb();
-    
+
     // 加载文件夹内容
     await this.loadFiles();
   },
-  
+
   /**
    * 更新面包屑导航
    */
   updateBreadcrumb() {
     // 如果处于搜索模式，不更新
     if (this.isSearchMode) return;
-    
+
     // 如果有保存的原始面包屑，恢复它
     if (this._originalBreadcrumb) {
       const breadcrumb = document.querySelector('.breadcrumb');
@@ -1151,14 +1267,14 @@ export const FileManager = {
       }
       return;
     }
-    
+
     // 原有的面包屑更新逻辑
     const breadcrumb = document.querySelector('.breadcrumb');
     if (!breadcrumb) return;
-    
+
     // 清空面包屑
     breadcrumb.innerHTML = '';
-    
+
     // 添加首页
     const homeItem = document.createElement('span');
     homeItem.className = 'path-item';
@@ -1168,26 +1284,26 @@ export const FileManager = {
       this.loadFiles();
     });
     breadcrumb.appendChild(homeItem);
-    
+
     // 如果在根目录，不需要添加更多路径项
     if (this.currentPath === '/') {
       return;
     }
-    
+
     // 分割路径
     const pathParts = this.currentPath.split('/').filter(Boolean);
     let currentPath = '';
-    
+
     // 添加每个路径部分
     pathParts.forEach((part, index) => {
       // 添加分隔符
       const separator = document.createElement('i');
       separator.className = 'fas fa-chevron-right path-separator';
       breadcrumb.appendChild(separator);
-      
+
       // 更新当前路径
       currentPath += '/' + part;
-      
+
       // 创建路径项
       const pathItem = document.createElement('span');
       pathItem.className = 'path-item';
@@ -1195,45 +1311,45 @@ export const FileManager = {
         pathItem.classList.add('current');
       }
       pathItem.textContent = part;
-      
+
       // 绑定点击事件
       const path = currentPath; // 创建闭包以保存当前路径
       pathItem.addEventListener('click', () => {
         this.currentPath = path;
         this.loadFiles();
       });
-      
+
       breadcrumb.appendChild(pathItem);
     });
   },
-  
+
   /**
    * 显示正在开发的部分
    * @param {string} section - 部分ID
    */
   showSectionUnderDevelopment(section) {
     console.log('显示开发中页面:', section);
-    
+
     // 隐藏实际文件列表
     if (this.fileList) {
       this.fileList.style.display = 'none';
       this.fileList.className = 'file-list'; // 重置类名
       this.fileList.innerHTML = ''; // 清空内容
     }
-    
+
     // 确保文件操作工具栏隐藏
     if (this.fileActionsToolbar) {
       this.fileActionsToolbar.style.display = 'none';
     }
-    
+
     // 清除选中状态
     this.clearFileSelection();
-    
+
     // 显示空文件列表提示（用于显示"开发中"信息）
     if (this.emptyFileList) {
       this.emptyFileList.style.display = 'flex';
       this.emptyFileList.className = 'empty-file-list dev-empty';
-      
+
       // 获取部分名称
       let sectionName = '';
       document.querySelectorAll('.nav-group li').forEach(item => {
@@ -1244,7 +1360,7 @@ export const FileManager = {
           }
         }
       });
-      
+
       // 更新提示内容
       this.emptyFileList.innerHTML = `
         <div class="empty-file-icon">
@@ -1258,7 +1374,7 @@ export const FileManager = {
           </button>
         </div>
       `;
-      
+
       // 绑定按钮事件
       const goToFilesBtn = this.emptyFileList.querySelector('.go-to-files-btn');
       if (goToFilesBtn) {
@@ -1271,12 +1387,12 @@ export const FileManager = {
           });
         });
       }
-      
+
       // 更新面包屑导航
       const breadcrumb = document.querySelector('.breadcrumb');
       if (breadcrumb) {
         breadcrumb.innerHTML = '';
-        
+
         // 添加首页
         const homeItem = document.createElement('span');
         homeItem.className = 'path-item';
@@ -1290,12 +1406,12 @@ export const FileManager = {
           });
         });
         breadcrumb.appendChild(homeItem);
-        
+
         // 添加分隔符
         const separator = document.createElement('i');
         separator.className = 'fas fa-chevron-right path-separator';
         breadcrumb.appendChild(separator);
-        
+
         // 添加当前部分
         const currentItem = document.createElement('span');
         currentItem.className = 'path-item current';
@@ -1304,65 +1420,65 @@ export const FileManager = {
       }
     }
   },
-  
+
   /**
    * 加载按类型筛选的内容
    * @param {string} type - 文件类型
    */
   loadFilteredContent(type) {
     console.log(`加载${this.getTypeName(type)}内容，类型:`, type);
-    
+
     // 显示加载指示器
     UI.Loader.showContentLoader('fileContainer');
-    
+
     // 清除选中状态
     this.clearFileSelection();
-    
+
     // 重置文件列表类名
     if (this.fileList) {
       this.fileList.className = 'file-list';
       this.fileList.classList.add(`${this.currentView}-view`);
     }
-    
+
     // 调用API获取所有文件
     CloudAPI.getFileList('/', this.currentSort)
       .then(response => {
         const allFiles = response.data || [];
         console.log(`API返回的所有文件数量:`, allFiles.length);
-        
+
         // 根据类型过滤文件
         let filteredFiles = [];
-        
+
         if (type === 'video') {
-          filteredFiles = allFiles.filter(file => 
+          filteredFiles = allFiles.filter(file =>
             file.type !== 'folder' && this.isVideoFile(file.name)
           );
         } else if (type === 'audio') {
-          filteredFiles = allFiles.filter(file => 
+          filteredFiles = allFiles.filter(file =>
             file.type !== 'folder' && this.isAudioFile(file.name)
           );
         } else if (type === 'document') {
-          filteredFiles = allFiles.filter(file => 
+          filteredFiles = allFiles.filter(file =>
             file.type !== 'folder' && this.isDocumentFile(file.name)
           );
         }
-        
+
         console.log(`过滤后的${this.getTypeName(type)}文件数量:`, filteredFiles.length);
         filteredFiles.forEach(file => {
           console.log(`- ${file.name}`);
         });
-        
+
         // 缓存当前文件列表
         this.currentFiles = filteredFiles;
-        
+
         // 隐藏加载指示器
         UI.Loader.hideContentLoader();
-        
+
         // 更新面包屑导航
         const breadcrumb = document.querySelector('.breadcrumb');
         if (breadcrumb) {
           breadcrumb.innerHTML = '';
-          
+
           // 添加首页
           const homeItem = document.createElement('span');
           homeItem.className = 'path-item';
@@ -1372,19 +1488,19 @@ export const FileManager = {
             this.loadFiles();
           });
           breadcrumb.appendChild(homeItem);
-          
+
           // 添加分隔符
           const separator = document.createElement('i');
           separator.className = 'fas fa-chevron-right path-separator';
           breadcrumb.appendChild(separator);
-          
+
           // 添加当前部分
           const currentItem = document.createElement('span');
           currentItem.className = 'path-item current';
           currentItem.textContent = this.getTypeName(type);
           breadcrumb.appendChild(currentItem);
         }
-        
+
         // 显示文件列表
         if (filteredFiles.length > 0) {
           // 有文件，显示文件列表
@@ -1393,19 +1509,19 @@ export const FileManager = {
             this.fileList.className = 'file-list';
             this.fileList.classList.add(`${this.currentView}-view`);
             this.fileList.innerHTML = ''; // 清空现有内容
-            
+
             // 创建文件项
             filteredFiles.forEach(file => {
               const fileItem = this.createFileItem(file);
               this.fileList.appendChild(fileItem);
             });
           }
-          
+
           // 隐藏空状态
           if (this.emptyFileList) {
             this.emptyFileList.style.display = 'none';
           }
-          
+
           // 显示加载完成提示
           UI.Toast.success('加载完成', `已加载 ${filteredFiles.length} 个${this.getTypeName(type)}文件`, 5000, {
             group: 'fileOperations'
@@ -1417,14 +1533,14 @@ export const FileManager = {
             this.fileList.className = 'file-list'; // 重置类名，防止应用之前的样式
             this.fileList.innerHTML = ''; // 清空内容
           }
-          
+
           if (this.emptyFileList) {
             this.emptyFileList.style.display = 'flex';
             this.emptyFileList.className = `empty-file-list ${type}-empty`;
-            
+
             // 根据类型设置不同的提示信息
             let iconClass, title, description, buttonText;
-            switch(type) {
+            switch (type) {
               case 'video':
                 iconClass = 'fas fa-film';
                 title = '暂无视频';
@@ -1449,7 +1565,7 @@ export const FileManager = {
                 description = '您可以拖拽文件至此上传，或点击下方按钮选择文件';
                 buttonText = '上传文件';
             }
-            
+
             this.emptyFileList.innerHTML = `
               <div class="empty-file-icon">
                 <i class="${iconClass}"></i>
@@ -1462,7 +1578,7 @@ export const FileManager = {
                 </button>
               </div>
             `;
-            
+
             // 绑定上传按钮事件
             const uploadBtn = this.emptyFileList.querySelector('.upload-btn');
             if (uploadBtn) {
@@ -1472,9 +1588,9 @@ export const FileManager = {
               });
             }
           }
-          
+
           console.log(`未找到${this.getTypeName(type)}，显示空状态`);
-          
+
           // 显示无内容提示
           UI.Toast.info('无内容', `未找到${this.getTypeName(type)}文件`, 5000, {
             group: 'fileOperations'
@@ -1483,10 +1599,10 @@ export const FileManager = {
       })
       .catch(error => {
         console.error(`加载${this.getTypeName(type)}失败:`, error);
-        
+
         // 隐藏加载指示器
         UI.Loader.hideContentLoader();
-        
+
         // 显示错误提示
         if (this.fileList) {
           this.fileList.style.display = 'block';
@@ -1501,26 +1617,26 @@ export const FileManager = {
               </button>
             </div>
           `;
-          
+
           // 绑定重试按钮事件
           const retryBtn = this.fileList.querySelector('.retry-btn');
           if (retryBtn) {
             retryBtn.addEventListener('click', () => this.loadFilteredContent(type));
           }
         }
-        
+
         // 隐藏空状态
         if (this.emptyFileList) {
           this.emptyFileList.style.display = 'none';
         }
-        
+
         // 显示错误提示
         UI.Toast.error('加载失败', `无法加载${this.getTypeName(type)}文件`, 8000, {
           group: 'fileOperations'
         });
       });
   },
-  
+
   /**
    * 检查文件类型
    * @param {string} fileName - 文件名
@@ -1533,21 +1649,21 @@ export const FileManager = {
       console.error('无效的文件名:', fileName);
       return false;
     }
-    
+
     // 确保文件名包含扩展名
     const parts = fileName.split('.');
     if (parts.length < 2) {
       console.log('文件没有扩展名:', fileName);
       return false;
     }
-    
+
     const extension = parts[parts.length - 1].toLowerCase();
     const isMatchType = extensions.includes(extension);
-    
+
     console.log(`${fileType}检查: ${fileName}, 扩展名: ${extension}, 是${fileType}: ${isMatchType}`);
     return isMatchType;
   },
-  
+
   /**
    * 判断文件是否为视频文件
    * @param {string} fileName - 文件名
@@ -1557,7 +1673,7 @@ export const FileManager = {
     const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', '3gp', 'mpeg', 'mpg'];
     return this.checkFileType(fileName, videoExtensions, '视频');
   },
-  
+
   /**
    * 判断文件是否为音频文件
    * @param {string} fileName - 文件名
@@ -1567,7 +1683,7 @@ export const FileManager = {
     const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'alac'];
     return this.checkFileType(fileName, audioExtensions, '音频');
   },
-  
+
   /**
    * 判断文件是否为文档文件
    * @param {string} fileName - 文件名
@@ -1577,33 +1693,33 @@ export const FileManager = {
     const docExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'odt', 'ods', 'odp', 'md', 'markdown'];
     return this.checkFileType(fileName, docExtensions, '文档');
   },
-  
+
   /**
    * 获取类型名称
    * @param {string} type - 文件类型
    * @returns {string} 类型名称
    */
   getTypeName(type) {
-    switch(type) {
+    switch (type) {
       case 'video': return '视频';
       case 'audio': return '音乐';
       case 'document': return '文档';
       default: return '文件';
     }
   },
-  
+
   /**
    * 加载共享内容
    */
   loadSharedContent() {
     console.log('加载共享内容');
-    
+
     // 显示加载指示器
     UI.Loader.showContentLoader('fileContainer');
-    
+
     // 清除选中状态
     this.clearFileSelection();
-    
+
     // 创建一个Promise数组，同时获取我的分享和他人分享给我的内容
     Promise.all([
       CloudAPI.getShareList(),
@@ -1612,24 +1728,24 @@ export const FileManager = {
       .then(([mySharesResponse, sharedWithMeResponse]) => {
         const myShares = mySharesResponse.data || [];
         const sharedWithMe = sharedWithMeResponse.data || [];
-        
+
         // 合并两种共享内容
         const allSharedContent = [
-          ...myShares.map(item => ({...item, shareType: 'outgoing'})),
-          ...sharedWithMe.map(item => ({...item, shareType: 'incoming'}))
+          ...myShares.map(item => ({ ...item, shareType: 'outgoing' })),
+          ...sharedWithMe.map(item => ({ ...item, shareType: 'incoming' }))
         ];
-        
+
         // 缓存当前文件列表
         this.currentFiles = allSharedContent;
-        
+
         // 隐藏加载指示器
         UI.Loader.hideContentLoader();
-        
+
         // 更新面包屑导航
         const breadcrumb = document.querySelector('.breadcrumb');
         if (breadcrumb) {
           breadcrumb.innerHTML = '';
-          
+
           // 添加首页
           const homeItem = document.createElement('span');
           homeItem.className = 'path-item';
@@ -1639,26 +1755,26 @@ export const FileManager = {
             this.loadFiles();
           });
           breadcrumb.appendChild(homeItem);
-          
+
           // 添加分隔符
           const separator = document.createElement('i');
           separator.className = 'fas fa-chevron-right path-separator';
           breadcrumb.appendChild(separator);
-          
+
           // 添加当前部分
           const currentItem = document.createElement('span');
           currentItem.className = 'path-item current';
           currentItem.textContent = '互发共享';
           breadcrumb.appendChild(currentItem);
         }
-        
+
         // 显示文件列表
         if (allSharedContent.length > 0) {
           // 隐藏空状态
           if (this.emptyFileList) {
             this.emptyFileList.style.display = 'none';
           }
-          
+
           // 创建共享内容视图
           if (this.fileList) {
             this.fileList.style.display = 'flex';
@@ -1673,7 +1789,7 @@ export const FileManager = {
                 ${this.renderSharedContent(allSharedContent)}
               </div>
             `;
-            
+
             // 绑定标签页切换事件
             const tabBtns = this.fileList.querySelectorAll('.tab-btn');
             tabBtns.forEach(btn => {
@@ -1681,11 +1797,11 @@ export const FileManager = {
                 // 更新标签页激活状态
                 tabBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 // 过滤内容
                 const tabType = btn.dataset.tab;
                 let filteredContent;
-                
+
                 if (tabType === 'outgoing') {
                   filteredContent = allSharedContent.filter(item => item.shareType === 'outgoing');
                 } else if (tabType === 'incoming') {
@@ -1693,7 +1809,7 @@ export const FileManager = {
                 } else {
                   filteredContent = allSharedContent;
                 }
-                
+
                 // 更新内容
                 const container = this.fileList.querySelector('.shared-content-container');
                 if (container) {
@@ -1702,7 +1818,7 @@ export const FileManager = {
               });
             });
           }
-          
+
           // 显示加载完成提示
           UI.Toast.success('加载完成', `已加载 ${allSharedContent.length} 个共享内容`, 5000, {
             group: 'shareOperations'
@@ -1714,11 +1830,11 @@ export const FileManager = {
             this.fileList.className = 'file-list'; // 重置类名
             this.fileList.innerHTML = ''; // 清空内容
           }
-          
+
           if (this.emptyFileList) {
             this.emptyFileList.style.display = 'flex';
             this.emptyFileList.className = 'empty-file-list shared-empty';
-            
+
             // 更新提示内容
             this.emptyFileList.innerHTML = `
               <div class="empty-file-icon">
@@ -1732,7 +1848,7 @@ export const FileManager = {
                 </button>
               </div>
             `;
-            
+
             // 绑定按钮事件
             const goToFilesBtn = this.emptyFileList.querySelector('.go-to-files-btn');
             if (goToFilesBtn) {
@@ -1746,7 +1862,7 @@ export const FileManager = {
               });
             }
           }
-          
+
           // 显示加载完成提示
           UI.Toast.info('无内容', '未找到共享内容', 5000, {
             group: 'shareOperations'
@@ -1755,10 +1871,10 @@ export const FileManager = {
       })
       .catch(error => {
         console.error('加载共享内容失败:', error);
-        
+
         // 隐藏加载指示器
         UI.Loader.hideContentLoader();
-        
+
         // 显示错误提示
         if (this.fileList) {
           this.fileList.style.display = 'block';
@@ -1773,26 +1889,26 @@ export const FileManager = {
               </button>
             </div>
           `;
-          
+
           // 绑定重试按钮事件
           const retryBtn = this.fileList.querySelector('.retry-btn');
           if (retryBtn) {
             retryBtn.addEventListener('click', () => this.loadSharedContent());
           }
         }
-        
+
         // 隐藏空状态
         if (this.emptyFileList) {
           this.emptyFileList.style.display = 'none';
         }
-        
+
         // 显示错误提示
         UI.Toast.error('加载失败', error.message || '无法加载共享内容', 8000, {
           group: 'shareOperations'
         });
       });
   },
-  
+
   /**
    * 渲染共享内容
    * @param {Array} sharedItems - 共享项目数组
@@ -1802,14 +1918,14 @@ export const FileManager = {
     if (!sharedItems || sharedItems.length === 0) {
       return `<div class="no-items-message">没有共享内容</div>`;
     }
-    
+
     return `
       <div class="shared-items-list">
         ${sharedItems.map(item => this.renderSharedItem(item)).join('')}
       </div>
     `;
   },
-  
+
   /**
    * 渲染单个共享项目
    * @param {Object} item - 共享项目
@@ -1819,7 +1935,7 @@ export const FileManager = {
     const isOutgoing = item.shareType === 'outgoing';
     const fileIcon = this.getFileIcon(item.name);
     const expireTime = new Date(item.expireTime).toLocaleString();
-    
+
     return `
       <div class="shared-item ${isOutgoing ? 'outgoing' : 'incoming'}">
         <div class="shared-item-icon">
@@ -1828,32 +1944,32 @@ export const FileManager = {
         <div class="shared-item-info">
           <div class="shared-item-name" title="${item.name}">${item.name}</div>
           <div class="shared-item-meta">
-            ${isOutgoing 
-              ? `<span>分享于 ${new Date(item.createTime).toLocaleString()}</span>` 
-              : `<span>由 ${item.sharedBy} 分享</span>`}
+            ${isOutgoing
+        ? `<span>分享于 ${new Date(item.createTime).toLocaleString()}</span>`
+        : `<span>由 ${item.sharedBy} 分享</span>`}
             <span>过期时间: ${expireTime}</span>
           </div>
         </div>
         <div class="shared-item-actions">
-          ${isOutgoing 
-            ? `<button class="btn btn-sm btn-secondary copy-link-btn" data-link="${item.shareLink}" title="复制链接">
+          ${isOutgoing
+        ? `<button class="btn btn-sm btn-secondary copy-link-btn" data-link="${item.shareLink}" title="复制链接">
                  <i class="fas fa-copy"></i>
                </button>
                <button class="btn btn-sm btn-danger cancel-share-btn" data-id="${item.id}" title="取消分享">
                  <i class="fas fa-times"></i>
                </button>`
-            : `<button class="btn btn-sm btn-primary download-btn" data-path="${item.path}" title="下载">
+        : `<button class="btn btn-sm btn-primary download-btn" data-path="${item.path}" title="下载">
                  <i class="fas fa-download"></i>
                </button>
                <button class="btn btn-sm btn-secondary save-btn" data-path="${item.path}" title="保存到我的文件">
                  <i class="fas fa-save"></i>
                </button>`
-          }
+      }
         </div>
       </div>
     `;
   },
-  
+
   /**
    * 下载文件
    * @param {string} fileName - 文件名
@@ -1865,42 +1981,63 @@ export const FileManager = {
       if (!fileItem) {
         throw new Error(`找不到文件: ${fileName}`);
       }
-      
+
       // 获取文件ID
       const fileId = fileItem.dataset.id;
       if (!fileId) {
         throw new Error(`无效的文件ID: ${fileName}`);
       }
-      
+
       // 显示准备下载的提示
       UI.Toast.info('准备下载', `正在准备下载 ${fileName}...`, 2000);
-      
+
       // 获取下载链接
       const downloadUrl = CloudAPI.getFileDownloadUrl(fileId);
       
-      // 创建隐藏的a标签触发下载
-      const downloadLink = document.createElement('a');
-      downloadLink.href = downloadUrl;
-      downloadLink.download = fileName; // 设置下载文件名
-      downloadLink.style.display = 'none';
-      document.body.appendChild(downloadLink);
+      // 获取认证令牌
+      const token = CloudAPI.getAuthToken();
       
-      // 触发下载
-      downloadLink.click();
+      // 使用fetch API下载文件，确保包含认证信息
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': token || '',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`下载失败: ${response.statusText}`);
+      }
+      
+      // 将响应转换为blob
+      const blob = await response.blob();
+      
+      // 创建blob URL
+      const objectUrl = URL.createObjectURL(blob);
+      
+      // 使用a标签下载文件
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
       
       // 清理
       setTimeout(() => {
-        document.body.removeChild(downloadLink);
+        document.body.removeChild(a);
+        URL.revokeObjectURL(objectUrl); // 释放blob URL
       }, 100);
-      
+
       UI.Toast.success('下载开始', `文件 ${fileName} 开始下载`, 3000);
-      
+
     } catch (error) {
       console.error('下载文件失败:', error);
       UI.Toast.error('下载失败', error.message || '下载文件时出错', 5000);
     }
   },
-  
+
   /**
    * 查找文件项
    * @param {string} fileName - 文件名
@@ -1916,7 +2053,7 @@ export const FileManager = {
     }
     return null;
   },
-  
+
   /**
    * 搜索文件
    * @param {string} query - 搜索关键词
@@ -1929,26 +2066,26 @@ export const FileManager = {
       }
       return;
     }
-    
+
     console.log('搜索文件:', query);
-    
+
     // 进入搜索模式
     this.isSearchMode = true;
-    
+
     // 清除选择
     this.clearFileSelection();
-    
+
     // 在当前文件列表中搜索
-    const searchResults = this.currentFiles.filter(file => 
+    const searchResults = this.currentFiles.filter(file =>
       file.name.toLowerCase().includes(query.toLowerCase())
     );
-    
+
     // 渲染搜索结果
     this.renderFiles(searchResults);
-    
+
     // 更新面包屑导航，添加搜索指示
     this.updateBreadcrumbForSearch(query);
-    
+
     // 显示搜索结果提示
     if (searchResults.length > 0) {
       UI.Toast.show('info', '搜索结果', `找到 ${searchResults.length} 个匹配项`);
@@ -1956,22 +2093,22 @@ export const FileManager = {
       UI.Toast.show('warning', '搜索结果', '没有找到匹配项');
     }
   },
-  
+
   /**
    * 退出搜索模式
    */
   exitSearchMode() {
     if (!this.isSearchMode) return;
-    
+
     this.isSearchMode = false;
-    
+
     // 重新加载当前目录文件
     this.renderFiles(this.currentFiles);
-    
+
     // 更新面包屑导航
     this.updateBreadcrumb();
   },
-  
+
   /**
    * 更新搜索模式下的面包屑导航
    * @param {string} query - 搜索关键词
@@ -1979,12 +2116,12 @@ export const FileManager = {
   updateBreadcrumbForSearch(query) {
     const breadcrumb = document.querySelector('.breadcrumb');
     if (!breadcrumb) return;
-    
+
     // 保存原始路径的面包屑
     if (!this._originalBreadcrumb) {
       this._originalBreadcrumb = breadcrumb.innerHTML;
     }
-    
+
     // 创建搜索面包屑
     breadcrumb.innerHTML = `
       <span class="path-item"><i class="fas fa-home"></i> 首页</span>
@@ -1994,14 +2131,14 @@ export const FileManager = {
         <i class="fas fa-times"></i>
       </button>
     `;
-    
+
     // 绑定退出搜索按钮事件
     const exitSearchBtn = breadcrumb.querySelector('.exit-search');
     if (exitSearchBtn) {
       exitSearchBtn.addEventListener('click', () => this.exitSearchMode());
     }
   },
-  
+
   /**
    * 批量下载文件
    * @param {Array<string>} fileNames - 文件名数组
@@ -2011,20 +2148,20 @@ export const FileManager = {
       UI.Toast.warning('未选择文件', '请先选择要下载的文件', 3000);
       return;
     }
-    
+
     UI.Toast.info('准备下载', `正在准备下载 ${fileNames.length} 个文件...`, 3000);
-    
+
     try {
       // 如果只有一个文件，直接调用单文件下载
       if (fileNames.length === 1) {
         await this.downloadFile(fileNames[0]);
         return;
       }
-      
+
       // 多个文件，逐个下载并添加延迟
       for (let i = 0; i < fileNames.length; i++) {
         const fileName = fileNames[i];
-        
+
         // 使用setTimeout添加延迟，避免浏览器阻止多个下载
         setTimeout(() => {
           this.downloadFile(fileName).catch(error => {
@@ -2032,13 +2169,13 @@ export const FileManager = {
           });
         }, i * 1000); // 每个文件间隔1秒
       }
-      
+
     } catch (error) {
       console.error('批量下载文件失败:', error);
       UI.Toast.error('下载失败', error.message || '批量下载文件时出错', 5000);
     }
   },
-  
+
   /**
    * 分享文件
    * @param {string} fileName - 文件名
@@ -2046,12 +2183,12 @@ export const FileManager = {
   shareFile(fileName) {
     try {
       UI.Toast.show('info', '准备分享', `正在生成分享链接: ${fileName}...`);
-      
+
       // 模拟分享过程
       setTimeout(() => {
         const shareLink = `https://cloud.example.com/share/${Math.random().toString(36).substring(2, 10)}`;
         const modalId = 'shareModal-' + Date.now();
-        
+
         // 显示分享链接
         UI.Modal.show(modalId, '<i class="fas fa-share-alt"></i> 分享文件', `
           <div class="form-group">
@@ -2071,7 +2208,7 @@ export const FileManager = {
             UI.Modal.close(modalId);
           }
         });
-        
+
         // 聚焦到输入框并选中文本
         setTimeout(() => {
           const input = document.getElementById('shareLink');
@@ -2086,7 +2223,7 @@ export const FileManager = {
       UI.Toast.show('error', '分享失败', error.message || '无法分享文件');
     }
   },
-  
+
   /**
    * 批量分享文件
    * @param {Array<string>} fileNames - 文件名数组
@@ -2096,20 +2233,20 @@ export const FileManager = {
       UI.Toast.show('warning', '未选择文件', '请先选择要分享的文件');
       return;
     }
-    
+
     if (fileNames.length === 1) {
       // 如果只有一个文件，调用单文件分享
       this.shareFile(fileNames[0]);
       return;
     }
-    
+
     UI.Toast.show('info', '准备分享', `正在生成批量分享链接...`);
-    
+
     // 模拟分享过程
     setTimeout(() => {
       const shareLink = `https://cloud.example.com/share/${Math.random().toString(36).substring(2, 10)}`;
       const modalId = 'shareModal-' + Date.now();
-      
+
       // 显示分享链接
       UI.Modal.show(modalId, '<i class="fas fa-share-alt"></i> 批量分享文件', `
         <div class="form-group">
@@ -2129,7 +2266,7 @@ export const FileManager = {
           UI.Modal.close(modalId);
         }
       });
-      
+
       // 聚焦到输入框并选中文本
       setTimeout(() => {
         const input = document.getElementById('shareLink');
@@ -2140,7 +2277,7 @@ export const FileManager = {
       }, 100);
     }, 800);
   },
-  
+
   /**
    * 移动文件
    * @param {Array<string>} fileNames - 文件名数组
@@ -2150,9 +2287,9 @@ export const FileManager = {
       UI.Toast.show('warning', '未选择文件', '请先选择要移动的文件');
       return;
     }
-    
+
     const modalId = 'moveModal-' + Date.now();
-    
+
     // 显示移动文件对话框
     UI.Modal.show(modalId, '<i class="fas fa-arrows-alt"></i> 移动文件', `
       <div class="form-group">
@@ -2176,25 +2313,25 @@ export const FileManager = {
       cancelText: '取消',
       onConfirm: () => {
         const targetPath = document.getElementById('targetPath').value;
-        
+
         // 显示移动进度
         UI.Toast.show('info', '移动中', `正在移动 ${fileNames.length} 个文件到 ${targetPath}...`);
-        
+
         // 模拟移动过程
         setTimeout(() => {
           // 刷新文件列表
           this.refreshFiles();
-          
+
           // 显示移动成功提示
           UI.Toast.show('success', '移动成功', `已将 ${fileNames.length} 个文件移动到 ${targetPath}`);
-          
+
           // 关闭对话框
           UI.Modal.close(modalId);
         }, 1000);
       }
     });
   },
-  
+
   /**
    * 重命名文件
    * @param {string} fileName - 文件名
@@ -2205,13 +2342,13 @@ export const FileManager = {
       UI.Toast.show('error', '重命名失败', `找不到文件: ${fileName}`);
       return;
     }
-    
+
     const isFolder = fileItem.classList.contains('folder');
     const fileType = isFolder ? '' : fileName.substring(fileName.lastIndexOf('.'));
     const baseName = isFolder ? fileName : fileName.substring(0, fileName.lastIndexOf('.'));
-    
+
     const modalId = 'renameModal-' + Date.now();
-    
+
     // 显示重命名对话框
     UI.Modal.show(modalId, `<i class="fas fa-edit"></i> 重命名${isFolder ? '文件夹' : '文件'}`, `
       <div class="form-group">
@@ -2228,9 +2365,9 @@ export const FileManager = {
           UI.Toast.show('warning', '重命名失败', '名称不能为空');
           return;
         }
-        
+
         const newFileName = isFolder ? newBaseName : newBaseName + fileType;
-        
+
         // 显示重命名进度
         UI.Toast.show('info', '重命名中', `正在将 ${fileName} 重命名为 ${newFileName}...`);
         await CloudAPI.renameFile(fileItem.dataset.id, newFileName);
@@ -2238,16 +2375,16 @@ export const FileManager = {
         setTimeout(() => {
           // 刷新文件列表
           this.refreshFiles();
-          
+
           // 显示重命名成功提示
           UI.Toast.show('success', '重命名成功', `已将 ${fileName} 重命名为 ${newFileName}`);
-          
+
           // 关闭对话框
           UI.Modal.close(modalId);
         }, 800);
       }
     });
-    
+
     // 聚焦到输入框并选中文本
     setTimeout(() => {
       const input = document.getElementById('newFileName');
@@ -2257,7 +2394,7 @@ export const FileManager = {
       }
     }, 100);
   },
-  
+
   /**
    * 删除文件
    * @param {string} fileName - 文件名
@@ -2282,16 +2419,18 @@ export const FileManager = {
           const loadingToastId = UI.Toast.loading('删除中', `正在将 ${fileName} 移动到回收站...`, {
             group: 'fileOperations'
           });
-          
+
           // 调用API删除文件
           await CloudAPI.deleteFile(fileId);
-          
+
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
-          
+
           // 刷新文件列表
           this.refreshFiles();
           
+          // 普通删除不更新存储空间信息，因为文件只是移动到回收站而非真正删除
+
           // 显示删除成功提示
           UI.Toast.success('删除成功', `已将 ${fileName} 移动到回收站`, 5000, {
             group: 'fileOperations'
@@ -2307,6 +2446,47 @@ export const FileManager = {
   },
   
   /**
+   * 更新存储空间使用情况
+   */
+  async updateStorageInfo() {
+    try {
+      // 获取当前登录用户名
+      const userInfo = await CloudAPI.getUserInfo();
+      if (!userInfo || !userInfo.data || !userInfo.data.username) {
+        console.error('获取用户信息失败，无法更新存储空间');
+        return;
+      }
+
+      // 获取云盘信息
+      const username = userInfo.data.username;
+      const cloudInfo = await CloudAPI.getUserCloud(username);
+      
+      if (cloudInfo && cloudInfo.data) {
+        // 更新存储空间信息
+        const usedCapacity = cloudInfo.data.usedCapacity;
+        const totalCapacity = cloudInfo.data.totalCapacity;
+        const usedPercentage = (usedCapacity / totalCapacity) * 100;
+        
+        // 更新存储空间进度条
+        const storageProgress = document.querySelector('.storage-progress');
+        if (storageProgress) {
+          const progressBar = storageProgress.querySelector('.progress-bar');
+          const progress = progressBar.querySelector('.progress');
+          const storageText = storageProgress.querySelector('.storage-text span');
+          
+          progressBar.setAttribute('aria-valuenow', usedPercentage);
+          progress.style.width = `${usedPercentage}%`;
+          storageText.textContent = `${this.formatFileSize(usedCapacity)} / ${this.formatFileSize(totalCapacity)}`;
+        }
+        
+        console.log('存储空间信息已更新');
+      }
+    } catch (error) {
+      console.error('更新存储空间信息失败:', error);
+    }
+  },
+
+  /**
    * 删除多个文件
    * @param {Array<string>} fileNames - 文件名数组
    */
@@ -2315,7 +2495,7 @@ export const FileManager = {
       UI.Toast.warning('未选择文件', '请先选择要删除的文件', 5000);
       return;
     }
-    
+
     // 显示确认对话框
     UI.Modal.confirm(
       '<i class="fas fa-trash"></i> 确认删除',
@@ -2326,25 +2506,28 @@ export const FileManager = {
           const loadingToastId = UI.Toast.loading('删除中', `正在将 ${fileNames.length} 个文件移动到回收站...`, {
             group: 'fileOperations'
           });
-          
+
           // 创建删除操作的Promise数组
           const deletePromises = fileNames.map(fileName => {
             const fileItem = this.findFileItemByName(fileName);
             if (!fileItem) return Promise.reject(new Error(`找不到文件: ${fileName}`));
-            
-            const filePath = fileItem.dataset.path || `${this.currentPath}${this.currentPath.endsWith('/') ? '' : '/'}${fileName}`;
-            return CloudAPI.deleteFile(filePath);
+
+            const fileId = fileItem.dataset.id;
+            if (!fileId) return Promise.reject(new Error(`无效的文件ID: ${fileName}`));
+            return CloudAPI.deleteFile(fileId);
           });
-          
+
           // 等待所有删除操作完成
           await Promise.all(deletePromises);
-          
+
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
-          
+
           // 刷新文件列表
           this.refreshFiles();
           
+          // 普通删除不更新存储空间信息，因为文件只是移动到回收站而非真正删除
+
           // 显示删除成功提示
           UI.Toast.success('删除成功', `已将 ${fileNames.length} 个文件移动到回收站`, 5000, {
             group: 'fileOperations'
@@ -2358,38 +2541,38 @@ export const FileManager = {
       }
     );
   },
-  
+
   /**
    * 加载回收站内容
    */
   loadTrashContent() {
     console.log('加载回收站内容');
-    
+
     // 显示加载指示器
     UI.Loader.showContentLoader('fileContainer');
-    
+
     // 清除选中状态
     this.clearFileSelection();
-    
+
     // 移除可能存在的旧回收站操作栏
     this.removeTrashActionBar();
-    
+
     // 调用API获取回收站列表
     CloudAPI.getTrashList()
       .then(response => {
         const trashFiles = response.data || [];
-        
+
         // 缓存当前文件列表
         this.currentFiles = trashFiles;
-        
+
         // 隐藏加载指示器
         UI.Loader.hideContentLoader();
-        
+
         // 更新面包屑导航
         const breadcrumb = document.querySelector('.breadcrumb');
         if (breadcrumb) {
           breadcrumb.innerHTML = '';
-          
+
           // 添加首页
           const homeItem = document.createElement('span');
           homeItem.className = 'path-item';
@@ -2399,52 +2582,52 @@ export const FileManager = {
             this.loadFiles();
           });
           breadcrumb.appendChild(homeItem);
-          
+
           // 添加分隔符
           const separator = document.createElement('i');
           separator.className = 'fas fa-chevron-right path-separator';
           breadcrumb.appendChild(separator);
-          
+
           // 添加当前部分
           const currentItem = document.createElement('span');
           currentItem.className = 'path-item current';
           currentItem.textContent = '回收站';
           breadcrumb.appendChild(currentItem);
         }
-        
+
         // 显示文件列表
         if (trashFiles.length > 0) {
           // 隐藏空状态
           if (this.emptyFileList) {
             this.emptyFileList.style.display = 'none';
           }
-          
+
           // 创建回收站操作栏 - 放在合适的位置
           const fileContainer = document.getElementById('fileContainer');
           const fileList = document.getElementById('fileList');
-          
+
           // 移除回收站操作栏，不再显示全部恢复和清空回收站按钮
           if (fileContainer && document.querySelector('.trash-action-bar')) {
             const existingActionBar = document.querySelector('.trash-action-bar');
             existingActionBar.parentNode.removeChild(existingActionBar);
           }
-          
+
           // 创建回收站内容视图
           if (this.fileList) {
             this.fileList.style.display = 'grid';
             this.fileList.className = 'file-list trash-content-view';
             this.fileList.classList.add(`${this.currentView}-view`);
             this.fileList.innerHTML = '';
-            
+
             // 创建文件项
             trashFiles.forEach(file => {
               const fileItem = this.createFileItem(file, true); // 第二个参数表示是回收站文件
               this.fileList.appendChild(fileItem);
             });
-            
+
             // 注意：工具栏样式已移至updateToolbar方法中
           }
-          
+
           // 显示加载完成提示
           UI.Toast.success('加载完成', `已加载 ${trashFiles.length} 个回收站文件`, 5000, {
             group: 'trashOperations'
@@ -2456,14 +2639,14 @@ export const FileManager = {
             this.fileList.className = 'file-list'; // 重置类名
             this.fileList.innerHTML = ''; // 清空内容
           }
-          
+
           // 移除可能存在的操作栏
           this.removeTrashActionBar();
-          
+
           if (this.emptyFileList) {
             this.emptyFileList.style.display = 'flex';
             this.emptyFileList.className = 'empty-file-list trash-empty';
-            
+
             // 更新提示内容
             this.emptyFileList.innerHTML = `
               <div class="empty-file-icon">
@@ -2477,7 +2660,7 @@ export const FileManager = {
                 </button>
               </div>
             `;
-            
+
             // 绑定按钮事件
             const goToFilesBtn = this.emptyFileList.querySelector('.go-to-files-btn');
             if (goToFilesBtn) {
@@ -2491,7 +2674,7 @@ export const FileManager = {
               });
             }
           }
-          
+
           // 显示空回收站提示
           UI.Toast.info('回收站为空', '回收站中没有任何文件', 5000, {
             group: 'trashOperations'
@@ -2500,10 +2683,10 @@ export const FileManager = {
       })
       .catch(error => {
         console.error('加载回收站内容失败:', error);
-        
+
         // 隐藏加载指示器
         UI.Loader.hideContentLoader();
-        
+
         // 显示错误提示
         if (this.fileList) {
           this.fileList.style.display = 'block';
@@ -2518,26 +2701,26 @@ export const FileManager = {
               </button>
             </div>
           `;
-          
+
           // 绑定重试按钮事件
           const retryBtn = this.fileList.querySelector('.retry-btn');
           if (retryBtn) {
             retryBtn.addEventListener('click', () => this.loadTrashContent());
           }
         }
-        
+
         // 隐藏空状态
         if (this.emptyFileList) {
           this.emptyFileList.style.display = 'none';
         }
-        
+
         // 显示错误提示
         UI.Toast.error('加载失败', error.message || '无法加载回收站内容', 8000, {
           group: 'trashOperations'
         });
       });
   },
-  
+
   /**
    * 处理拖拽悬停事件
    * @param {DragEvent} e - 拖拽事件
@@ -2547,7 +2730,7 @@ export const FileManager = {
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'copy';
   },
-  
+
   /**
    * 处理拖拽进入事件
    * @param {DragEvent} e - 拖拽事件
@@ -2555,14 +2738,14 @@ export const FileManager = {
   handleDragEnter(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // 添加拖拽样式
     const target = e.currentTarget;
     if (target) {
       target.classList.add('drag-over');
     }
   },
-  
+
   /**
    * 处理拖拽离开事件
    * @param {DragEvent} e - 拖拽事件
@@ -2570,18 +2753,18 @@ export const FileManager = {
   handleDragLeave(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // 检查是否真的离开了目标元素（而不是进入了子元素）
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX;
     const y = e.clientY;
-    
+
     // 如果鼠标位置在元素外部，则移除拖拽样式
     if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
       e.currentTarget.classList.remove('drag-over');
     }
   },
-  
+
   /**
    * 处理拖拽放下事件
    * @param {DragEvent} e - 拖拽事件
@@ -2589,43 +2772,43 @@ export const FileManager = {
   handleDrop(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // 移除拖拽样式
     const target = e.currentTarget;
     if (target) {
       target.classList.remove('drag-over');
     }
-    
+
     // 获取拖拽的文件
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       this.uploadDroppedFiles(files);
     }
   },
-  
+
   /**
    * 上传拖拽的文件
    * @param {FileList} files - 文件列表
    */
   uploadDroppedFiles(files) {
     console.log('开始处理拖放文件上传，文件数量:', files.length);
-    
+
     // 确保有文件需要上传
     if (!files || files.length === 0) {
       console.warn('没有可上传的文件');
       return;
     }
-    
+
     // 动态导入上传管理器
     import('./upload-manager.js')
       .then(module => {
         console.log('上传管理器模块加载成功');
         const uploadManager = module.default;
-        
+
         if (!uploadManager) {
           throw new Error('无法获取上传管理器实例');
         }
-        
+
         // 显示上传进度条
         const uploadProgressContainer = document.getElementById('uploadProgress');
         if (uploadProgressContainer) {
@@ -2633,27 +2816,27 @@ export const FileManager = {
         } else {
           console.warn('找不到上传进度容器元素');
         }
-        
+
         // 获取当前路径
         const currentPath = this.currentPath || '/';
         console.log('当前上传路径:', currentPath);
-        
+
         // 创建FormData对象
         const formData = new FormData();
         formData.append('path', currentPath);
-        
+
         // 处理每个文件上传
         const uploadIds = [];
         Array.from(files).forEach(file => {
           console.log('准备上传文件:', file.name, '大小:', file.size);
-          
+
           // 生成唯一ID
           const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
           uploadIds.push(id);
-          
+
           // 添加文件到FormData - 使用'file'作为字段名，与后端匹配
           formData.append('file', file);
-          
+
           // 添加上传项到UI
           try {
             uploadManager.addUploadItem(id, file.name);
@@ -2662,7 +2845,7 @@ export const FileManager = {
             throw err;
           }
         });
-        
+
         // 执行上传
         console.log('开始执行上传，文件数量:', uploadIds.length);
         return uploadManager.performUpload(formData);

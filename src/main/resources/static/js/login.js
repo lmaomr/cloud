@@ -66,6 +66,7 @@ class LoginController {
         
         // 注册表单提交
         if (this.registerForm) {
+            console.log('注册表单');
             this.registerForm.addEventListener('submit', (e) => this.handleRegister(e));
         }
         
@@ -180,7 +181,6 @@ class LoginController {
         
         // 表单验证
         let isValid = true;
-        
         if (!username) {
             document.getElementById('registerUsernameError').textContent = '请输入用户名';
             isValid = false;
@@ -221,6 +221,7 @@ class LoginController {
         registerButton.textContent = '注册中...';
         
         try {
+            console.log(username, password, email);
             // 调用注册API
             await CloudAPI.register(username, password, email);
             

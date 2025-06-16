@@ -456,17 +456,32 @@ export class CloudAPI {
    * @param {string} fileId - 文件ID
    * @returns {string} - 下载链接
    */
-  static async getFileDownloadUrl(fileId) {
-    // 确保有认证令牌
-    const token = this.getAuthToken();
-    // 构建下载URL，包含认证信息
-    // return `${API_BASE_URL}/file/download/${fileId}${token ? `?token=${encodeURIComponent(token.replace('Bearer ', ''))}` : ''}`;
-    return await this.request(`/file/download/${fileId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': token || '',
-        'X-Request-ID': generateUUID(),
-      },
+  static getFileDownloadUrl(fileId) {
+    // 直接返回下载URL
+    return `${API_BASE_URL}/file/download/${fileId}`;
+  }
+
+  /**
+   * 从回收站恢复文件
+   * @param {string} fileId - 文件ID
+   * @returns {Promise} - 返回Promise对象
+   */
+  static async restoreFile(fileId) {
+    return await this.request('/file/restore', {
+      method: 'POST',
+      body: JSON.stringify({ fileId }),
+    });
+  }
+  
+  /**
+   * 永久删除回收站中的文件
+   * @param {string} fileId - 文件ID
+   * @returns {Promise} - 返回Promise对象
+   */
+  static async deletePermanentFile(fileId) {
+    return await this.request('/file/delete-permanent', {
+      method: 'POST',
+      body: JSON.stringify({ fileId }),
     });
   }
 }

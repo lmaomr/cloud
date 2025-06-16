@@ -66,6 +66,7 @@ public enum ExceptionCodeMsg {
     FILE_RENAME_FAILED(10209, "文件重命名失败"),
     FILE_NOT_FOUND(10210, "文件不存在或已被删除"),
     FILE_PATH_INVALID(10208, "文件路径非法"),
+    DELETE_FILE_FAIL(10209, "删除文件失败"),
     CLOUD_NOT_FOUND(10211, "云盘不存在或已被删除"),
     CLOUD_ALREADY_EXISTS(10212, "云盘名称已存在"),
     CLOUD_QUOTA_EXCEEDED(10213, "云盘容量配额不足"),

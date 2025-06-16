@@ -183,6 +183,10 @@ class UploadManager {
         this.updateProgress(id, 100, true); // 明确标记为成功
       });
       
+      // 上传成功后更新存储空间信息
+      console.log('更新存储空间使用情况');
+      await this.updateStorageInfo();
+      
       // 上传成功后刷新文件列表
       console.log('刷新文件列表');
       await FileManager.refreshFiles();
@@ -570,18 +574,76 @@ class UploadManager {
           // 上传完成，添加到历史记录
           this.addToHistory(item.name, 'success', '上传成功');
           
+          // 更新存储空间使用情况
+          this.updateStorageInfo();
+          
           // 2秒后从当前上传列表中移除
           setTimeout(() => {
             if (element.parentNode === this.uploadItemsContainer) {
               this.uploadItemsContainer.removeChild(element);
               delete this.uploadItems[id];
             }
-          }, 2000);
+          }, 5000);
         } else {
           // 上传中
           statusElement.textContent = `${Math.round(progress)}%`;
         }
       }
+    }
+  }
+  
+  /**
+   * 更新存储空间使用情况
+   */
+  async updateStorageInfo() {
+    try {
+      // 获取当前登录用户名
+      const userInfo = await CloudAPI.getUserInfo();
+      if (!userInfo || !userInfo.data || !userInfo.data.username) {
+        console.error('获取用户信息失败，无法更新存储空间');
+        return;
+      }
+
+      // 获取云盘信息
+      const username = userInfo.data.username;
+      const cloudInfo = await CloudAPI.getUserCloud(username);
+      
+      if (cloudInfo && cloudInfo.data) {
+        // 更新存储空间信息
+        const usedCapacity = cloudInfo.data.usedCapacity;
+        const totalCapacity = cloudInfo.data.totalCapacity;
+        const usedPercentage = (usedCapacity / totalCapacity) * 100;
+        
+        // 更新存储空间进度条
+        const storageProgress = document.querySelector('.storage-progress');
+        if (storageProgress) {
+          const progressBar = storageProgress.querySelector('.progress-bar');
+          const progress = progressBar.querySelector('.progress');
+          const storageText = storageProgress.querySelector('.storage-text span');
+          
+          progressBar.setAttribute('aria-valuenow', usedPercentage);
+          progress.style.width = `${usedPercentage}%`;
+          
+          // 使用FileManager的方法格式化文件大小
+          if (window.FileManager && typeof window.FileManager.formatFileSize === 'function') {
+            storageText.textContent = `${window.FileManager.formatFileSize(usedCapacity)} / ${window.FileManager.formatFileSize(totalCapacity)}`;
+          } else {
+            // 如果FileManager不可用，使用简单格式化
+            const formatSize = (bytes) => {
+              if (bytes === 0) return '0 B';
+              const k = 1024;
+              const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+            storageText.textContent = `${formatSize(usedCapacity)} / ${formatSize(totalCapacity)}`;
+          }
+        }
+        
+        console.log('存储空间信息已更新');
+      }
+    } catch (error) {
+      console.error('更新存储空间信息失败:', error);
     }
   }
   
