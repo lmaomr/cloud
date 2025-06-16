@@ -85,7 +85,12 @@ export const FileManager = {
         if (e.detail && e.detail.query) {
           this.searchFiles(e.detail.query);
         }
-      }
+      },
+      // 拖放事件处理
+      dragOver: (e) => this.handleDragOver(e),
+      dragEnter: (e) => this.handleDragEnter(e),
+      dragLeave: (e) => this.handleDragLeave(e),
+      drop: (e) => this.handleDrop(e)
     };
     
     // 绑定事件
@@ -143,6 +148,17 @@ export const FileManager = {
     
     // 监听搜索事件
     document.addEventListener('search:perform', this._eventHandlers.searchPerform);
+    
+    // 拖放上传事件
+    const dropTargets = [this.fileList, this.emptyFileList];
+    dropTargets.forEach(target => {
+      if (target) {
+        target.addEventListener('dragover', this._eventHandlers.dragOver);
+        target.addEventListener('dragenter', this._eventHandlers.dragEnter);
+        target.addEventListener('dragleave', this._eventHandlers.dragLeave);
+        target.addEventListener('drop', this._eventHandlers.drop);
+      }
+    });
   },
   
   /**
@@ -156,6 +172,17 @@ export const FileManager = {
       document.removeEventListener('click', this._eventHandlers.fileAction);
       document.removeEventListener('section:change', this._eventHandlers.sectionChange);
       document.removeEventListener('search:perform', this._eventHandlers.searchPerform);
+      
+      // 移除拖放事件监听器
+      const dropTargets = [this.fileList, this.emptyFileList];
+      dropTargets.forEach(target => {
+        if (target) {
+          target.removeEventListener('dragover', this._eventHandlers.dragOver);
+          target.removeEventListener('dragenter', this._eventHandlers.dragEnter);
+          target.removeEventListener('dragleave', this._eventHandlers.dragLeave);
+          target.removeEventListener('drop', this._eventHandlers.drop);
+        }
+      });
       
       console.log('文件管理器事件监听器已移除');
     }
@@ -340,7 +367,7 @@ export const FileManager = {
             <i class="fas fa-box-open"></i>
           </div>
           <div class="empty-file-title">此文件夹为空</div>
-          <div class="empty-file-description">拖拽文件至此或点击左上方"新建"按钮添加文件</div>
+          <div class="empty-file-description">拖拽文件至此上传，或点击下方按钮选择文件</div>
           <div class="empty-file-actions">
             <button class="btn btn-primary upload-btn">
               <i class="fas fa-upload"></i> 上传文件
@@ -393,9 +420,10 @@ export const FileManager = {
   /**
    * 创建文件项元素
    * @param {Object} file - 文件对象
+   * @param {boolean} isTrash - 是否为回收站文件
    * @returns {HTMLElement} 文件项元素
    */
-  createFileItem(file) {
+  createFileItem(file, isTrash = false) {
     const isFolder = file.type === 'folder';
     const fileItem = document.createElement('div');
     fileItem.className = `file-item ${isFolder ? 'folder' : 'file'}`;
@@ -413,6 +441,24 @@ export const FileManager = {
       day: '2-digit'
     });
     
+    // 根据是否为回收站文件，显示不同的操作按钮
+    let actionButtons = '';
+    if (isTrash) {
+      // 回收站文件只显示恢复和删除按钮
+      actionButtons = `
+        <i class="fas fa-trash-restore" data-action="restore" title="恢复" role="button" tabindex="0" aria-label="恢复${file.name}"></i>
+        <i class="fas fa-trash-alt" data-action="delete-permanent" title="永久删除" role="button" tabindex="0" aria-label="永久删除${file.name}"></i>
+      `;
+    } else {
+      // 普通文件显示下载、分享、重命名和删除按钮
+      actionButtons = `
+        <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载${file.name}"></i>
+        <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享${file.name}"></i>
+        <i class="fas fa-edit" data-action="rename" title="重命名" role="button" tabindex="0" aria-label="重命名${file.name}"></i>
+        <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除${file.name}"></i>
+      `;
+    }
+    
     fileItem.innerHTML = `
       <div class="file-checkbox">
         <input type="checkbox" class="item-checkbox" aria-label="选择${file.name}">
@@ -427,10 +473,7 @@ export const FileManager = {
         </div>
       </div>
       <div class="file-actions">
-        <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载${file.name}"></i>
-        <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享${file.name}"></i>
-        <i class="fas fa-edit" data-action="rename" title="重命名" role="button" tabindex="0" aria-label="重命名${file.name}"></i>
-        <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除${file.name}"></i>
+        ${actionButtons}
       </div>
     `;
     
@@ -635,10 +678,212 @@ export const FileManager = {
    */
   updateToolbar() {
     if (this.selectedFiles.length > 0) {
+      // 显示工具栏
       this.fileActionsToolbar.style.display = 'flex';
       this.selectedCountElement.textContent = this.selectedFiles.length;
+      
+      // 判断当前是否在回收站
+      const isInTrash = document.querySelector('.nav-group li[data-section="trash"].active') !== null;
+      
+      // 如果在回收站中，更新工具栏样式
+      if (isInTrash) {
+        // 获取当前选中的文件数量
+        const selectedCount = this.selectedFiles.length;
+        
+        // 更新工具栏内容
+        const toolbar = this.fileActionsToolbar;
+        
+        // 检查是否已经应用了回收站特定样式
+        if (!toolbar.classList.contains('trash-toolbar-styled')) {
+          // 添加CSS样式到头部，而不是使用内联样式
+          const styleId = 'trash-toolbar-style';
+          if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+              /* 工具栏基本样式 */
+              #fileActionsToolbar.trash-toolbar-styled {
+                padding: 8px 12px;
+                border-radius: 8px;
+                background-color: var(--card-bg, #ffffff);
+                color: var(--text-color, #333333);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                justify-content: space-between;
+                flex-wrap: nowrap;
+                gap: 8px;
+                width: 100%;
+                box-sizing: border-box;
+              }
+              
+              /* 计数容器样式 */
+              #fileActionsToolbar.trash-toolbar-styled .selected-count-container {
+                font-size: 13px;
+                flex-shrink: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color: var(--text-color, #333333);
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                padding: 0 10px;
+              }
+              
+              /* 按钮容器样式 */
+              #fileActionsToolbar.trash-toolbar-styled .trash-toolbar-buttons {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                flex-wrap: nowrap;
+                justify-content: flex-end;
+                min-width: 280px;
+              }
+              
+              /* 按钮基本样式 */
+              #fileActionsToolbar.trash-toolbar-styled .toolbar-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 5px 10px;
+                border-radius: 4px;
+                border: none;
+                cursor: pointer;
+                min-width: 70px;
+                font-size: 13px;
+                font-weight: 500;
+                white-space: nowrap;
+                line-height: 1;
+              }
+              
+              /* 恢复按钮样式 */
+              #fileActionsToolbar.trash-toolbar-styled .restore-btn {
+                background-color: var(--primary-color, #3498db);
+                color: #ffffff;
+              }
+              
+              /* 删除按钮样式 */
+              #fileActionsToolbar.trash-toolbar-styled .delete-btn {
+                background-color: var(--danger-color, #e74c3c);
+                color: #ffffff;
+              }
+              
+              /* 清除按钮样式 */
+              #fileActionsToolbar.trash-toolbar-styled .clear-btn {
+                background-color: var(--secondary-bg, #e0e0e0);
+                color: var(--text-color, #333333);
+              }
+              
+              /* 按钮图标样式 */
+              #fileActionsToolbar.trash-toolbar-styled .toolbar-btn i {
+                margin-right: 4px;
+              }
+              
+              /* 夜间模式样式 */
+              .dark-mode #fileActionsToolbar.trash-toolbar-styled {
+                background-color: var(--card-bg, #1a1a2e);
+                color: var(--text-color, #ffffff);
+              }
+              
+              .dark-mode #fileActionsToolbar.trash-toolbar-styled .selected-count-container {
+                color: var(--text-color, #ffffff);
+              }
+              
+              .dark-mode #fileActionsToolbar.trash-toolbar-styled .restore-btn {
+                background-color: var(--primary-color, #2980b9);
+                color: #ffffff;
+              }
+              
+              .dark-mode #fileActionsToolbar.trash-toolbar-styled .delete-btn {
+                background-color: var(--danger-color, #c0392b);
+                color: #ffffff;
+              }
+              
+              .dark-mode #fileActionsToolbar.trash-toolbar-styled .clear-btn {
+                background-color: var(--secondary-bg, rgba(255, 255, 255, 0.15));
+                color: var(--text-color, #ffffff);
+              }
+              
+              /* 响应式样式 */
+              @media (max-width: 600px) {
+                #fileActionsToolbar.trash-toolbar-styled {
+                  flex-wrap: wrap !important;
+                }
+                #fileActionsToolbar.trash-toolbar-styled .trash-toolbar-buttons {
+                  margin-top: 8px;
+                  width: 100%;
+                  justify-content: space-between;
+                }
+                #fileActionsToolbar.trash-toolbar-styled .selected-count-container {
+                  width: 100%;
+                  justify-content: center;
+                }
+                #fileActionsToolbar.trash-toolbar-styled .toolbar-btn {
+                  height: 32px;
+                  padding: 4px 8px;
+                  font-size: 12px;
+                }
+                #fileActionsToolbar.trash-toolbar-styled .toolbar-btn i {
+                  font-size: 12px;
+                  margin-right: 3px;
+                }
+              }
+            `;
+            document.head.appendChild(style);
+          }
+          
+          // 清空工具栏内容
+          toolbar.innerHTML = '';
+          
+          // 应用CSS类而不是内联样式
+          toolbar.classList.add('trash-toolbar-styled');
+          
+          // 创建选中计数容器
+          const newCountContainer = document.createElement('div');
+          newCountContainer.className = 'selected-count-container';
+          newCountContainer.innerHTML = `已选择 <span id="selectedCount">${selectedCount}</span> 个项目`;
+          toolbar.appendChild(newCountContainer);
+          this.selectedCountElement = newCountContainer.querySelector('#selectedCount');
+          
+          // 创建按钮容器
+          const btnContainer = document.createElement('div');
+          btnContainer.className = 'trash-toolbar-buttons';
+          toolbar.appendChild(btnContainer);
+          
+          // 创建恢复按钮
+          const restoreBtn = document.createElement('button');
+          restoreBtn.className = 'toolbar-btn restore-btn';
+          restoreBtn.title = '恢复';
+          restoreBtn.innerHTML = '<i class="fas fa-trash-restore"></i><span>恢复</span>';
+          restoreBtn.addEventListener('click', (e) => this.handleBulkAction(e));
+          btnContainer.appendChild(restoreBtn);
+          
+          // 创建删除按钮
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'toolbar-btn delete-btn';
+          deleteBtn.title = '永久删除';
+          deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i><span>删除</span>';
+          deleteBtn.addEventListener('click', (e) => this.handleBulkAction(e));
+          btnContainer.appendChild(deleteBtn);
+          
+          // 添加清除选择按钮
+          const clearBtn = document.createElement('button');
+          clearBtn.className = 'toolbar-btn clear-btn';
+          clearBtn.title = '清除选择';
+          clearBtn.innerHTML = '<i class="fas fa-times"></i><span>清除</span>';
+          clearBtn.addEventListener('click', () => this.clearFileSelection());
+          btnContainer.appendChild(clearBtn);
+        } else {
+          // 只更新选中数量
+          this.selectedCountElement.textContent = selectedCount;
+        }
+      }
     } else {
       this.fileActionsToolbar.style.display = 'none';
+      
+      // 移除回收站特定样式标记
+      if (this.fileActionsToolbar.classList.contains('trash-toolbar-styled')) {
+        this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
+      }
     }
   },
   
@@ -661,6 +906,7 @@ export const FileManager = {
     }
     
     const fileName = fileItem.querySelector('.file-name').textContent;
+    const fileId = fileItem.dataset.id;
     
     switch(action) {
       case 'download':
@@ -675,7 +921,79 @@ export const FileManager = {
       case 'delete':
         this.deleteFile(fileName);
         break;
+      case 'restore':
+        this.restoreFile(fileName, fileId);
+        break;
+      case 'delete-permanent':
+        this.deletePermanentFile(fileName, fileId);
+        break;
     }
+  },
+  
+  /**
+   * 从回收站恢复文件
+   * @param {string} fileName - 文件名
+   * @param {string} fileId - 文件ID
+   */
+  restoreFile(fileName, fileId) {
+    // 显示确认对话框
+    UI.Modal.confirm(
+      '<i class="fas fa-trash-restore"></i> 恢复文件',
+      `确定要将 "${fileName}" 恢复到原位置吗？`,
+      () => {
+        // 显示恢复进度
+        const loadingToastId = UI.Toast.loading('恢复中', `正在恢复 ${fileName}...`, {
+          group: 'trashOperations'
+        });
+        
+        // 模拟恢复过程
+        setTimeout(() => {
+          // 隐藏加载通知
+          UI.Toast.hide(loadingToastId);
+          
+          // 刷新回收站
+          this.loadTrashContent();
+          
+          // 显示恢复成功提示
+          UI.Toast.success('恢复成功', `已恢复 ${fileName}`, 5000, {
+            group: 'trashOperations'
+          });
+        }, 800);
+      }
+    );
+  },
+  
+  /**
+   * 永久删除回收站中的文件
+   * @param {string} fileName - 文件名
+   * @param {string} fileId - 文件ID
+   */
+  deletePermanentFile(fileName, fileId) {
+    // 显示确认对话框
+    UI.Modal.confirm(
+      '<i class="fas fa-trash-alt"></i> 永久删除',
+      `确定要永久删除 "${fileName}" 吗？此操作不可撤销！`,
+      () => {
+        // 显示删除进度
+        const loadingToastId = UI.Toast.loading('删除中', `正在永久删除 ${fileName}...`, {
+          group: 'trashOperations'
+        });
+        
+        // 模拟删除过程
+        setTimeout(() => {
+          // 隐藏加载通知
+          UI.Toast.hide(loadingToastId);
+          
+          // 刷新回收站
+          this.loadTrashContent();
+          
+          // 显示删除成功提示
+          UI.Toast.success('删除成功', `已永久删除 ${fileName}`, 5000, {
+            group: 'trashOperations'
+          });
+        }, 800);
+      }
+    );
   },
   
   /**
@@ -685,20 +1003,113 @@ export const FileManager = {
   handleBulkAction(e) {
     const action = e.currentTarget.title.toLowerCase();
     
-    switch(action) {
-      case '下载':
-        this.downloadFiles(this.selectedFiles);
-        break;
-      case '分享':
-        this.shareFiles(this.selectedFiles);
-        break;
-      case '移动':
-        this.moveFiles(this.selectedFiles);
-        break;
-      case '删除':
-        this.deleteFiles(this.selectedFiles);
-        break;
+    // 判断当前是否在回收站
+    const isInTrash = document.querySelector('.nav-group li[data-section="trash"].active') !== null;
+    
+    if (isInTrash) {
+      // 回收站中的批量操作
+      switch(action) {
+        case '恢复':
+          this.restoreFiles(this.selectedFiles);
+          break;
+        case '删除':
+          this.deletePermanentFiles(this.selectedFiles);
+          break;
+        case '永久删除':
+          this.deletePermanentFiles(this.selectedFiles);
+          break;
+      }
+    } else {
+      // 普通文件的批量操作
+      switch(action) {
+        case '下载':
+          this.downloadFiles(this.selectedFiles);
+          break;
+        case '分享':
+          this.shareFiles(this.selectedFiles);
+          break;
+        case '移动':
+          this.moveFiles(this.selectedFiles);
+          break;
+        case '删除':
+          this.deleteFiles(this.selectedFiles);
+          break;
+      }
     }
+  },
+  
+  /**
+   * 批量恢复回收站文件
+   * @param {Array<string>} fileNames - 文件名数组
+   */
+  restoreFiles(fileNames) {
+    if (!fileNames || fileNames.length === 0) {
+      UI.Toast.warning('未选择文件', '请先选择要恢复的文件', 5000);
+      return;
+    }
+    
+    // 显示确认对话框
+    UI.Modal.confirm(
+      '<i class="fas fa-trash-restore"></i> 批量恢复',
+      `确定要将选中的 ${fileNames.length} 个文件恢复到原位置吗？`,
+      () => {
+        // 显示恢复进度
+        const loadingToastId = UI.Toast.loading('恢复中', `正在恢复 ${fileNames.length} 个文件...`, {
+          group: 'trashOperations'
+        });
+        
+        // 模拟恢复过程
+        setTimeout(() => {
+          // 隐藏加载通知
+          UI.Toast.hide(loadingToastId);
+          
+          // 刷新回收站
+          this.loadTrashContent();
+          
+          // 显示恢复成功提示
+          UI.Toast.success('恢复成功', `已恢复 ${fileNames.length} 个文件`, 5000, {
+            group: 'trashOperations'
+          });
+        }, 800);
+      }
+    );
+  },
+  
+  /**
+   * 批量永久删除回收站文件
+   * @param {Array<string>} fileNames - 文件名数组
+   */
+  deletePermanentFiles(fileNames) {
+    if (!fileNames || fileNames.length === 0) {
+      UI.Toast.warning('未选择文件', '请先选择要删除的文件', 5000);
+      return;
+    }
+    
+    // 显示确认对话框
+    UI.Modal.confirm(
+      '<i class="fas fa-trash-alt"></i> 批量永久删除',
+      `确定要永久删除选中的 ${fileNames.length} 个文件吗？此操作不可撤销！`,
+      () => {
+        // 显示删除进度
+        const loadingToastId = UI.Toast.loading('删除中', `正在永久删除 ${fileNames.length} 个文件...`, {
+          group: 'trashOperations'
+        });
+        
+        // 模拟删除过程
+        setTimeout(() => {
+          // 隐藏加载通知
+          UI.Toast.hide(loadingToastId);
+          
+          // 刷新回收站
+          this.loadTrashContent();
+          
+          // 显示删除成功提示
+          UI.Toast.success('删除成功', `已永久删除 ${fileNames.length} 个文件`, 5000, {
+            group: 'trashOperations'
+          });
+        }, 800);
+      }
+    );
   },
   
   /**
@@ -1011,32 +1422,31 @@ export const FileManager = {
             this.emptyFileList.style.display = 'flex';
             this.emptyFileList.className = `empty-file-list ${type}-empty`;
             
-            // 更新提示内容
+            // 根据类型设置不同的提示信息
             let iconClass, title, description, buttonText;
-            
             switch(type) {
               case 'video':
                 iconClass = 'fas fa-film';
-                title = '暂无视频文件';
-                description = '您可以上传MP4、AVI、MOV等格式的视频文件';
+                title = '暂无视频';
+                description = '您可以拖拽视频文件至此上传，或点击下方按钮选择文件';
                 buttonText = '上传视频';
                 break;
               case 'audio':
                 iconClass = 'fas fa-music';
-                title = '暂无音频文件';
-                description = '您可以上传MP3、WAV、FLAC等格式的音频文件';
+                title = '暂无音乐';
+                description = '您可以拖拽音频文件至此上传，或点击下方按钮选择文件';
                 buttonText = '上传音乐';
                 break;
               case 'document':
                 iconClass = 'fas fa-file-alt';
-                title = '暂无文档文件';
-                description = '您可以上传PDF、Word、Excel等格式的文档文件';
+                title = '暂无文档';
+                description = '您可以拖拽文档文件至此上传，或点击下方按钮选择文件';
                 buttonText = '上传文档';
                 break;
               default:
                 iconClass = 'fas fa-file';
                 title = '暂无文件';
-                description = '您可以上传任意类型的文件';
+                description = '您可以拖拽文件至此上传，或点击下方按钮选择文件';
                 buttonText = '上传文件';
             }
             
@@ -1450,23 +1860,44 @@ export const FileManager = {
    */
   async downloadFile(fileName) {
     try {
-      // 获取文件路径
+      // 获取文件项
       const fileItem = this.findFileItemByName(fileName);
       if (!fileItem) {
         throw new Error(`找不到文件: ${fileName}`);
       }
       
-      const filePath = fileItem.dataset.path || `/${fileName}`;
+      // 获取文件ID
+      const fileId = fileItem.dataset.id;
+      if (!fileId) {
+        throw new Error(`无效的文件ID: ${fileName}`);
+      }
       
-      UI.Toast.show('info', '准备下载', `正在准备下载 ${fileName}...`);
+      // 显示准备下载的提示
+      UI.Toast.info('准备下载', `正在准备下载 ${fileName}...`, 2000);
       
-      // 实现下载逻辑
-      // ...
+      // 获取下载链接
+      const downloadUrl = CloudAPI.getFileDownloadUrl(fileId);
       
-      UI.Toast.show('success', '开始下载', `正在下载 ${fileName}`);
+      // 创建隐藏的a标签触发下载
+      const downloadLink = document.createElement('a');
+      downloadLink.href = downloadUrl;
+      downloadLink.download = fileName; // 设置下载文件名
+      downloadLink.style.display = 'none';
+      document.body.appendChild(downloadLink);
+      
+      // 触发下载
+      downloadLink.click();
+      
+      // 清理
+      setTimeout(() => {
+        document.body.removeChild(downloadLink);
+      }, 100);
+      
+      UI.Toast.success('下载开始', `文件 ${fileName} 开始下载`, 3000);
+      
     } catch (error) {
       console.error('下载文件失败:', error);
-      UI.Toast.show('error', '下载失败', error.message || '无法下载文件');
+      UI.Toast.error('下载失败', error.message || '下载文件时出错', 5000);
     }
   },
   
@@ -1577,23 +2008,34 @@ export const FileManager = {
    */
   async downloadFiles(fileNames) {
     if (!fileNames || fileNames.length === 0) {
-      UI.Toast.show('warning', '未选择文件', '请先选择要下载的文件');
+      UI.Toast.warning('未选择文件', '请先选择要下载的文件', 3000);
       return;
     }
     
-    UI.Toast.show('info', '准备下载', `正在准备下载 ${fileNames.length} 个文件...`);
+    UI.Toast.info('准备下载', `正在准备下载 ${fileNames.length} 个文件...`, 3000);
     
     try {
-      // 这里可以实现实际的批量下载逻辑
-      // 例如创建一个ZIP文件或者逐个下载
+      // 如果只有一个文件，直接调用单文件下载
+      if (fileNames.length === 1) {
+        await this.downloadFile(fileNames[0]);
+        return;
+      }
       
-      // 模拟下载过程
-      setTimeout(() => {
-        UI.Toast.show('success', '开始下载', `正在下载 ${fileNames.length} 个文件`);
-      }, 1000);
+      // 多个文件，逐个下载并添加延迟
+      for (let i = 0; i < fileNames.length; i++) {
+        const fileName = fileNames[i];
+        
+        // 使用setTimeout添加延迟，避免浏览器阻止多个下载
+        setTimeout(() => {
+          this.downloadFile(fileName).catch(error => {
+            console.error(`下载文件 ${fileName} 失败:`, error);
+          });
+        }, i * 1000); // 每个文件间隔1秒
+      }
+      
     } catch (error) {
       console.error('批量下载文件失败:', error);
-      UI.Toast.show('error', '下载失败', error.message || '无法下载选中的文件');
+      UI.Toast.error('下载失败', error.message || '批量下载文件时出错', 5000);
     }
   },
   
@@ -1981,85 +2423,10 @@ export const FileManager = {
           const fileContainer = document.getElementById('fileContainer');
           const fileList = document.getElementById('fileList');
           
-          if (fileContainer && !document.querySelector('.trash-action-bar')) {
-            const actionBar = document.createElement('div');
-            actionBar.className = 'trash-action-bar';
-            actionBar.innerHTML = `
-              <button class="btn btn-primary restore-all-btn">
-                <i class="fas fa-trash-restore"></i> 恢复全部
-              </button>
-              <button class="btn btn-danger delete-all-btn">
-                <i class="fas fa-trash-alt"></i> 清空回收站
-              </button>
-            `;
-            
-            // 在文件列表之前插入操作栏
-            fileContainer.insertBefore(actionBar, fileList);
-            
-            // 绑定按钮事件
-            const restoreAllBtn = actionBar.querySelector('.restore-all-btn');
-            const deleteAllBtn = actionBar.querySelector('.delete-all-btn');
-            
-            if (restoreAllBtn) {
-              restoreAllBtn.addEventListener('click', () => {
-                // 显示确认对话框
-                UI.Modal.confirm(
-                  '<i class="fas fa-trash-restore"></i> 恢复全部',
-                  '确定要恢复回收站中的所有文件吗？',
-                  () => {
-                    // 显示恢复进度
-                    const loadingToastId = UI.Toast.loading('恢复中', '正在恢复所有文件...', {
-                      group: 'trashOperations'
-                    });
-                    
-                    // 模拟恢复过程
-                    setTimeout(() => {
-                      // 隐藏加载通知
-                      UI.Toast.hide(loadingToastId);
-                      
-                      // 刷新回收站
-                      this.loadTrashContent();
-                      
-                      // 显示恢复成功提示
-                      UI.Toast.success('恢复成功', '已恢复所有文件', 5000, {
-                        group: 'trashOperations'
-                      });
-                    }, 800);
-                  }
-                );
-              });
-            }
-            
-            if (deleteAllBtn) {
-              deleteAllBtn.addEventListener('click', () => {
-                // 显示确认对话框
-                UI.Modal.confirm(
-                  '<i class="fas fa-trash-alt"></i> 清空回收站',
-                  '确定要永久删除回收站中的所有文件吗？此操作不可撤销！',
-                  () => {
-                    // 显示删除进度
-                    const loadingToastId = UI.Toast.loading('删除中', '正在永久删除所有文件...', {
-                      group: 'trashOperations',
-                      priority: UI.Toast.PRIORITY.HIGH
-                    });
-                    
-                    // 模拟删除过程
-                    setTimeout(() => {
-                      // 隐藏加载通知
-                      UI.Toast.hide(loadingToastId);
-                      
-                      // 刷新回收站
-                      this.loadTrashContent();
-                      
-                      // 显示删除成功提示
-                      UI.Toast.success('删除成功', '已清空回收站', 5000, {
-                        group: 'trashOperations'
-                      });
-                    }, 800);
-                  }
-                );
-              });
-            }
+          // 移除回收站操作栏，不再显示全部恢复和清空回收站按钮
+          if (fileContainer && document.querySelector('.trash-action-bar')) {
+            const existingActionBar = document.querySelector('.trash-action-bar');
+            existingActionBar.parentNode.removeChild(existingActionBar);
           }
           
           // 创建回收站内容视图
@@ -2074,6 +2441,8 @@ export const FileManager = {
               const fileItem = this.createFileItem(file, true); // 第二个参数表示是回收站文件
               this.fileList.appendChild(fileItem);
             });
+            
+            // 注意：工具栏样式已移至updateToolbar方法中
           }
           
           // 显示加载完成提示
@@ -2166,6 +2535,144 @@ export const FileManager = {
         UI.Toast.error('加载失败', error.message || '无法加载回收站内容', 8000, {
           group: 'trashOperations'
         });
+      });
+  },
+  
+  /**
+   * 处理拖拽悬停事件
+   * @param {DragEvent} e - 拖拽事件
+   */
+  handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  },
+  
+  /**
+   * 处理拖拽进入事件
+   * @param {DragEvent} e - 拖拽事件
+   */
+  handleDragEnter(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 添加拖拽样式
+    const target = e.currentTarget;
+    if (target) {
+      target.classList.add('drag-over');
+    }
+  },
+  
+  /**
+   * 处理拖拽离开事件
+   * @param {DragEvent} e - 拖拽事件
+   */
+  handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 检查是否真的离开了目标元素（而不是进入了子元素）
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // 如果鼠标位置在元素外部，则移除拖拽样式
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      e.currentTarget.classList.remove('drag-over');
+    }
+  },
+  
+  /**
+   * 处理拖拽放下事件
+   * @param {DragEvent} e - 拖拽事件
+   */
+  handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 移除拖拽样式
+    const target = e.currentTarget;
+    if (target) {
+      target.classList.remove('drag-over');
+    }
+    
+    // 获取拖拽的文件
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      this.uploadDroppedFiles(files);
+    }
+  },
+  
+  /**
+   * 上传拖拽的文件
+   * @param {FileList} files - 文件列表
+   */
+  uploadDroppedFiles(files) {
+    console.log('开始处理拖放文件上传，文件数量:', files.length);
+    
+    // 确保有文件需要上传
+    if (!files || files.length === 0) {
+      console.warn('没有可上传的文件');
+      return;
+    }
+    
+    // 动态导入上传管理器
+    import('./upload-manager.js')
+      .then(module => {
+        console.log('上传管理器模块加载成功');
+        const uploadManager = module.default;
+        
+        if (!uploadManager) {
+          throw new Error('无法获取上传管理器实例');
+        }
+        
+        // 显示上传进度条
+        const uploadProgressContainer = document.getElementById('uploadProgress');
+        if (uploadProgressContainer) {
+          uploadProgressContainer.style.display = 'block';
+        } else {
+          console.warn('找不到上传进度容器元素');
+        }
+        
+        // 获取当前路径
+        const currentPath = this.currentPath || '/';
+        console.log('当前上传路径:', currentPath);
+        
+        // 创建FormData对象
+        const formData = new FormData();
+        formData.append('path', currentPath);
+        
+        // 处理每个文件上传
+        const uploadIds = [];
+        Array.from(files).forEach(file => {
+          console.log('准备上传文件:', file.name, '大小:', file.size);
+          
+          // 生成唯一ID
+          const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+          uploadIds.push(id);
+          
+          // 添加文件到FormData - 使用'file'作为字段名，与后端匹配
+          formData.append('file', file);
+          
+          // 添加上传项到UI
+          try {
+            uploadManager.addUploadItem(id, file.name);
+          } catch (err) {
+            console.error('添加上传项到UI失败:', err);
+            throw err;
+          }
+        });
+        
+        // 执行上传
+        console.log('开始执行上传，文件数量:', uploadIds.length);
+        return uploadManager.performUpload(formData);
+      })
+      .then(result => {
+        console.log('拖放文件上传成功完成:', result);
+      })
+      .catch(error => {
+        console.error('拖放上传失败:', error);
+        UI.Toast.show('error', '上传失败', error.message || '文件上传过程中发生错误');
       });
   },
 }

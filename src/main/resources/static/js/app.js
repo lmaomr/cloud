@@ -6,7 +6,7 @@
 import { CloudAPI } from './api/cloud-api.js';
 import { UI } from './modules/ui.js';
 import { FileManager } from './modules/file-manager.js';
-import { UploadManager } from './modules/upload-manager.js';
+import uploadManager from './modules/upload-manager.js';
 
 // 环境检测
 const IS_PRODUCTION = window.location.hostname !== 'localhost' && 
@@ -75,7 +75,7 @@ class CloudApp {
       FileManager.init();
       
       // 初始化上传管理器
-      UploadManager.init();
+      uploadManager.init();
       
       // 绑定应用级事件
       this.bindEvents();
@@ -123,11 +123,11 @@ class CloudApp {
     
     // 文件选择变化事件
     if (this.fileInput) {
-      this.fileInput.addEventListener('change', (e) => UploadManager.handleFileSelect(e));
+      this.fileInput.addEventListener('change', (e) => uploadManager.handleFileSelect(e));
     }
     
     if (this.folderInput) {
-      this.folderInput.addEventListener('change', (e) => UploadManager.handleFileSelect(e));
+      this.folderInput.addEventListener('change', (e) => uploadManager.handleFileSelect(e));
     }
     
     // 新建菜单项点击事件
@@ -384,13 +384,14 @@ class CloudApp {
    * 清理应用资源
    */
   cleanup() {
-    // 清理各模块资源
+    // 清理文件管理器
     if (FileManager && typeof FileManager.destroy === 'function') {
       FileManager.destroy();
     }
     
-    if (UploadManager && typeof UploadManager.destroy === 'function') {
-      UploadManager.destroy();
+    // 清理上传管理器
+    if (uploadManager && typeof uploadManager.destroy === 'function') {
+      uploadManager.destroy();
     }
     
     if (UI) {

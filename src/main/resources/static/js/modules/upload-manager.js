@@ -1,437 +1,665 @@
 /**
- * 上传管理模块 - 处理文件上传相关功能
+ * 上传管理器 - 处理文件上传进度显示和历史记录
  * @module upload-manager
  */
 
-import { CloudAPI } from '../api/cloud-api.js';
 import { UI } from './ui.js';
+import { CloudAPI } from '../api/cloud-api.js';
 import { FileManager } from './file-manager.js';
 
 /**
- * 上传管理器
+ * 上传管理器类
  */
-export const UploadManager = {
+class UploadManager {
+  /**
+   * 创建上传管理器实例
+   */
+  constructor() {
+    // 上传项目列表
+    this.uploadItems = {};
+    
+    // 上传历史记录
+    this.uploadHistory = [];
+    
+    // 尝试从本地存储加载历史记录
+    this.loadHistoryFromStorage();
+    
+    // 上传进度条容器
+    this.uploadProgressContainer = document.getElementById('uploadProgress');
+    this.uploadItemsContainer = document.getElementById('uploadItems');
+    
+    // 绑定关闭按钮事件
+    this.bindCloseButton();
+    
+    // 初始化上传历史记录界面
+    this.initHistoryView();
+  }
+  
   /**
    * 初始化上传管理器
    */
   init() {
-    this.uploadProgress = document.getElementById('uploadProgress');
-    this.uploadItems = document.getElementById('uploadItems');
-    
-    // 绑定拖放上传事件
-    this.setupDragAndDrop();
-    
-    // 绑定进度条关闭按钮事件
-    if (this.uploadProgress) {
-      const closeBtn = this.uploadProgress.querySelector('.upload-close');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-          this.uploadProgress.style.display = 'none';
-        });
-      }
-    }
-    
     console.log('上传管理器初始化完成');
-  },
+  }
   
   /**
-   * 设置拖放上传
-   */
-  setupDragAndDrop() {
-    const dropZone = document.querySelector('.file-container');
-    if (!dropZone) return;
-    
-    // 防止浏览器默认行为
-    document.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    
-    document.addEventListener('dragenter', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // 只有当拖入的是文件时才显示拖拽效果
-      if (e.dataTransfer.types.includes('Files')) {
-        dropZone.classList.add('drag-over');
-      }
-    });
-    
-    document.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // 只有当离开的是文档时才移除拖拽效果
-      if (e.relatedTarget === null) {
-        dropZone.classList.remove('drag-over');
-      }
-    });
-    
-    document.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // 移除拖拽效果
-      dropZone.classList.remove('drag-over');
-      
-      // 只有在目标区域内放置才处理文件
-      if (this.isDescendantOf(e.target, dropZone)) {
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-          this.uploadFiles(files);
-        }
-      }
-    });
-  },
-  
-  /**
-   * 检查元素是否是指定父元素的子元素
-   * @param {HTMLElement} child - 子元素
-   * @param {HTMLElement} parent - 父元素
-   * @returns {boolean} 是否是子元素
-   */
-  isDescendantOf(child, parent) {
-    let node = child;
-    while (node !== null) {
-      if (node === parent) {
-        return true;
-      }
-      node = node.parentNode;
-    }
-    return false;
-  },
-  
-  /**
-   * 处理文件选择
+   * 处理文件选择事件
    * @param {Event} e - 文件选择事件
    */
   handleFileSelect(e) {
+    console.log('文件选择事件触发');
+    
     const files = e.target.files;
-    if (files.length > 0) {
-      this.uploadFiles(files);
+    if (!files || files.length === 0) {
+      console.warn('没有选择文件');
+      return;
     }
-    // 清空 file input 的值，以便下次选择相同文件也能触发 change 事件
-    e.target.value = null;
-  },
-  
-  /**
-   * 上传文件
-   * @param {FileList|Array} files - 文件列表
-   * @returns {Promise} - 上传结果
-   */
-  async uploadFiles(files) {
-    // 定义上传结果变量
-    let result = null;
-    // 存储上传项和对应的interval ID
-    const uploadItemsMap = new Map();
+    
+    console.log(`选择了 ${files.length} 个文件`);
     
     try {
-      // 确保files是一个数组
-      const fileArray = Array.from(files || []);
-      
-      if (fileArray.length === 0) {
-        UI.Toast.show('warning', '上传失败', '没有选择任何文件');
-        return { success: false, message: '没有选择任何文件', files: [] };
-      }
-      
       // 显示上传进度条
-      if (this.uploadProgress) {
-        this.uploadProgress.style.display = 'block';
+      if (this.uploadProgressContainer) {
+        this.uploadProgressContainer.style.display = 'block';
+      } else {
+        console.warn('找不到上传进度容器元素');
       }
       
-      // 清空上传项列表
-      if (this.uploadItems) {
-        this.uploadItems.innerHTML = '';
-      }
+      // 获取当前路径
+      const currentPath = FileManager.currentPath || '/';
+      console.log('当前上传路径:', currentPath);
       
       // 创建FormData对象
       const formData = new FormData();
+      formData.append('path', currentPath);
       
-      // 添加文件到FormData，并创建上传项UI
-      fileArray.forEach(file => {
+      // 处理每个文件上传
+      Array.from(files).forEach(file => {
+        console.log('准备上传文件:', file.name, '大小:', file.size);
+        
+        // 生成唯一ID
+        const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        
+        // 添加文件到FormData - 使用'file'作为字段名，与后端匹配
         formData.append('file', file);
         
-        // 创建上传项UI
-        if (this.uploadItems) {
-          const uploadItem = this.createUploadItem(file);
-          this.uploadItems.appendChild(uploadItem);
-          uploadItemsMap.set(file, uploadItem);
+        // 添加上传项到UI
+        try {
+          this.addUploadItem(id, file.name);
           
-          // 启动模拟进度
-          this.startSimulatedProgress(uploadItem);
+          // 保存文件信息
+          this.uploadItems[id].file = file;
+        } catch (err) {
+          console.error('添加上传项到UI失败:', err);
         }
       });
       
-      // 设置上传进度回调
-      const onProgress = (percent, event) => {
-        if (event && event.lengthComputable) {
-          const file = fileArray.find(f => f.size === event.total);
-          if (file) {
-            const uploadItem = uploadItemsMap.get(file);
-            if (uploadItem) {
-              this.updateItemProgress(uploadItem, percent);
-            }
-          }
-        }
-      };
+      // 执行上传
+      console.log('开始执行上传');
+      this.performUpload(formData)
+        .then(result => {
+          console.log('文件上传成功完成:', result);
+        })
+        .catch(error => {
+          console.error('文件上传过程中发生错误:', error);
+        });
       
-      // 调用API上传文件
-      result = await CloudAPI.uploadFiles(formData, onProgress);
-      
-      // 上传成功，将所有进度设为100%
-      fileArray.forEach(file => {
-        const uploadItem = uploadItemsMap.get(file);
-        if (uploadItem) {
-          this.updateItemProgress(uploadItem, 100);
-        }
-      });
-      
-      // 上传成功
-      UI.Toast.show('success', '上传成功', `已成功上传 ${fileArray.length} 个文件`);
-      
-      // 刷新文件列表
-      FileManager.refreshFiles();
-      
-      // 延迟关闭上传进度条
-      const closeProgressTimeout = setTimeout(() => {
-        if (this.uploadProgress) {
-          this.uploadProgress.style.display = 'none';
-        }
-        // 清除定时器引用
-        this._closeProgressTimeout = null;
-      }, 2000);
-      
-      // 保存定时器引用，以便在需要时清除
-      this._closeProgressTimeout = closeProgressTimeout;
-      
-      return { success: true, message: '上传成功', files: fileArray, result };
+      // 清空文件输入框，以便可以再次选择相同的文件
+      e.target.value = '';
     } catch (error) {
-      console.error('上传过程中发生错误:', error);
+      console.error('处理文件选择事件失败:', error);
+      UI.Toast.show('error', '上传准备失败', error.message || '准备上传文件时发生错误');
       
-      // 停止所有上传项的模拟进度
-      uploadItemsMap.forEach((uploadItem) => {
-        this.stopSimulatedProgress(uploadItem);
-        
-        // 将进度条设置为错误状态
-        const progressBar = uploadItem.querySelector('.upload-progress-inner');
-        const percentage = uploadItem.querySelector('.upload-percentage');
-        if (progressBar) {
-          progressBar.style.width = '100%';
-          progressBar.style.backgroundColor = '#ff4d4f'; // 错误状态红色
-        }
-        if (percentage) {
-          percentage.textContent = '失败';
-          percentage.style.color = '#ff4d4f';
-        }
-      });
-      
-      // 解析错误信息
-      let errorMessage = '';
-      
-      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-        errorMessage = '服务器连接失败，请检查服务器是否正常运行';
-      } else if (error.message && error.message.includes('Maximum upload size exceeded')) {
-        errorMessage = '文件大小超过限制，请上传小于100MB的文件';
-      } else if (error.message && error.message.includes('Unsupported file type')) {
-        errorMessage = '不支持的文件类型，请上传允许的文件格式';
-      } else if (error.message && error.message.includes('Insufficient storage')) {
-        errorMessage = '存储空间不足，请清理空间后再试';
-      } else if (error.message && error.message.includes('Permission denied')) {
-        errorMessage = '权限不足，无法上传文件';
-      } else if (error.message && error.message.includes('File already exists')) {
-        errorMessage = '文件已存在，请重命名后再试';
-      } else {
-        // 如果后端返回了具体错误信息，优先使用后端消息
-        errorMessage = error.message || '上传失败，请稍后重试';
-      }
-      
-      // 显示错误信息
-      UI.Toast.error('上传失败', errorMessage, 8000, {
-        priority: UI.Toast.PRIORITY.HIGH
-      });
-      
-      return { success: false, message: errorMessage, error, files: Array.from(files || []) };
+      // 清空文件输入框
+      if (e.target) e.target.value = '';
     }
-  },
+  }
   
   /**
-   * 创建上传项UI
-   * @param {File} file - 文件对象
-   * @returns {HTMLElement} 上传项元素
+   * 执行上传操作
+   * @param {FormData} formData - 包含文件的FormData对象
+   * @returns {Promise} - 上传操作的Promise
    */
-  createUploadItem(file) {
-    const item = document.createElement('div');
-    item.className = 'upload-item';
+  async performUpload(formData) {
+    console.log('开始执行文件上传操作');
     
-    const fileIcon = this.getFileIcon(file.name);
-    const fileSize = this.formatFileSize(file.size);
+    // 验证FormData参数
+    if (!formData) {
+      console.error('上传失败: FormData对象为空');
+      throw new Error('上传参数无效');
+    }
     
-    item.innerHTML = `
-      <div class="upload-item-info">
-        <i class="${fileIcon}"></i>
-        <span class="upload-filename">${file.name}</span>
-        <span class="upload-filesize">${fileSize}</span>
-      </div>
-      <div class="upload-item-progress">
-        <div class="upload-progress-bar">
-          <div class="upload-progress-inner" style="width: 0%"></div>
+    try {
+      // 获取所有上传项ID
+      const uploadIds = Object.keys(this.uploadItems).filter(id => 
+        this.uploadItems[id].status === 'pending');
+      
+      console.log(`找到${uploadIds.length}个待上传项`);
+      
+      if (uploadIds.length === 0) {
+        console.warn('没有待上传的文件');
+        return;
+      }
+      
+      // 更新所有上传项状态为上传中
+      uploadIds.forEach(id => {
+        const item = this.uploadItems[id];
+        if (item && item.element) {
+          const statusElement = item.element.querySelector('.upload-item-status');
+          if (statusElement) {
+            statusElement.textContent = '上传中...';
+          }
+        }
+      });
+      
+      console.log('开始调用CloudAPI.uploadFiles');
+      
+      // 调用API上传文件
+      await CloudAPI.uploadFiles(formData, (progress, event, isError) => {
+        console.log(`上传进度: ${progress}%, 错误状态: ${isError ? 'true' : 'false'}`);
+        
+        // 如果是错误状态，直接标记为错误
+        if (isError) {
+          console.error('上传过程中收到错误信号');
+          uploadIds.forEach(id => {
+            this.updateProgress(id, progress, false); // 标记为错误
+          });
+          return;
+        }
+        
+        // 确保进度不超过99%，只有在明确成功后才显示100%
+        const displayProgress = Math.min(progress, 99);
+        
+        // 更新所有上传项的进度
+        uploadIds.forEach(id => {
+          this.updateProgress(id, displayProgress);
+        });
+      });
+      
+      console.log('CloudAPI.uploadFiles调用成功完成');
+      
+      // 上传成功后更新所有项的状态为成功
+      uploadIds.forEach(id => {
+        this.updateProgress(id, 100, true); // 明确标记为成功
+      });
+      
+      // 上传成功后刷新文件列表
+      console.log('刷新文件列表');
+      await FileManager.refreshFiles();
+      
+      // 显示成功通知
+      UI.Toast.show('success', '上传成功', `成功上传了 ${uploadIds.length} 个文件`);
+      
+      return { success: true, count: uploadIds.length };
+      
+    } catch (error) {
+      console.error('上传文件失败:', error);
+      
+      // 更新所有上传项为错误状态
+      const failedItems = Object.keys(this.uploadItems)
+        .filter(id => this.uploadItems[id].status === 'uploading' || this.uploadItems[id].status === 'pending');
+      
+      console.log(`标记 ${failedItems.length} 个项目为失败状态`);
+      
+      failedItems.forEach(id => {
+        this.setError(id, error.message || '上传失败');
+      });
+      
+      // 显示错误通知
+      UI.Toast.show('error', '上传失败', error.message || '文件上传失败');
+      
+      // 重新抛出错误，让调用者可以处理
+      throw error;
+    }
+  }
+  
+  /**
+   * 销毁上传管理器
+   */
+  destroy() {
+    // 清理资源
+    console.log('上传管理器资源已清理');
+  }
+  
+  /**
+   * 从本地存储加载历史记录
+   */
+  loadHistoryFromStorage() {
+    try {
+      const savedHistory = localStorage.getItem('uploadHistory');
+      if (savedHistory) {
+        this.uploadHistory = JSON.parse(savedHistory);
+        // 限制历史记录数量，最多保留20条
+        if (this.uploadHistory.length > 20) {
+          this.uploadHistory = this.uploadHistory.slice(0, 20);
+        }
+      }
+    } catch (error) {
+      console.error('加载上传历史记录失败:', error);
+      this.uploadHistory = [];
+    }
+  }
+  
+  /**
+   * 保存历史记录到本地存储
+   */
+  saveHistoryToStorage() {
+    try {
+      localStorage.setItem('uploadHistory', JSON.stringify(this.uploadHistory));
+    } catch (error) {
+      console.error('保存上传历史记录失败:', error);
+    }
+  }
+  
+  /**
+   * 添加上传记录到历史
+   * @param {string} name - 文件名
+   * @param {string} status - 上传状态 ('success', 'error')
+   * @param {string} message - 状态信息
+   */
+  addToHistory(name, status, message) {
+    // 创建新的历史记录
+    const historyItem = {
+      id: Date.now().toString(),
+      name,
+      status,
+      message,
+      timestamp: new Date().toISOString()
+    };
+    
+    // 添加到历史记录开头
+    this.uploadHistory.unshift(historyItem);
+    
+    // 限制历史记录数量，最多保留20条
+    if (this.uploadHistory.length > 20) {
+      this.uploadHistory = this.uploadHistory.slice(0, 20);
+    }
+    
+    // 保存到本地存储
+    this.saveHistoryToStorage();
+    
+    // 更新历史记录视图
+    this.updateHistoryView();
+  }
+  
+  /**
+   * 初始化历史记录视图
+   */
+  initHistoryView() {
+    // 如果容器存在，则创建历史记录视图
+    if (this.uploadProgressContainer) {
+      // 检查是否已存在历史记录标签页
+      if (!this.uploadProgressContainer.querySelector('.upload-tabs')) {
+        // 创建标签页
+        const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'upload-tabs';
+        tabsContainer.innerHTML = `
+          <button class="tab-btn active" data-tab="current">当前上传</button>
+          <button class="tab-btn" data-tab="history">上传历史</button>
+        `;
+        
+        // 创建历史记录容器
+        const historyContainer = document.createElement('div');
+        historyContainer.className = 'upload-history';
+        historyContainer.id = 'uploadHistory';
+        historyContainer.style.display = 'none';
+        
+        // 插入到DOM中
+        this.uploadProgressContainer.querySelector('.upload-header').after(tabsContainer);
+        this.uploadItemsContainer.after(historyContainer);
+        
+        // 绑定标签页切换事件
+        const tabBtns = tabsContainer.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            // 更新标签页激活状态
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // 切换显示内容
+            const tabType = btn.dataset.tab;
+            if (tabType === 'current') {
+              this.uploadItemsContainer.style.display = 'block';
+              document.getElementById('uploadHistory').style.display = 'none';
+            } else {
+              this.uploadItemsContainer.style.display = 'none';
+              document.getElementById('uploadHistory').style.display = 'block';
+            }
+          });
+        });
+        
+        // 更新历史记录视图
+        this.updateHistoryView();
+      }
+    }
+  }
+  
+  /**
+   * 更新历史记录视图
+   */
+  updateHistoryView() {
+    const historyContainer = document.getElementById('uploadHistory');
+    if (!historyContainer) return;
+    
+    // 如果没有历史记录，显示空状态
+    if (this.uploadHistory.length === 0) {
+      historyContainer.innerHTML = `
+        <div class="empty-history">
+          <i class="fas fa-history"></i>
+          <p>暂无上传记录</p>
         </div>
-        <span class="upload-percentage">0%</span>
+      `;
+      return;
+    }
+    
+    // 添加清空历史按钮
+    let historyContent = `
+      <div class="history-actions">
+        <button class="btn btn-sm btn-danger clear-history-btn">
+          <i class="fas fa-trash"></i> 清空历史
+        </button>
       </div>
     `;
     
-    return item;
-  },
+    // 渲染历史记录
+    historyContent += this.uploadHistory.map(item => {
+      const date = new Date(item.timestamp);
+      const formattedDate = date.toLocaleString('zh-CN');
+      const statusClass = item.status === 'success' ? 'success' : 'error';
+      const statusIcon = item.status === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+      
+      return `
+        <div class="history-item ${statusClass}" data-id="${item.id}">
+          <div class="history-item-info">
+            <div class="history-item-name" title="${item.name}">${item.name}</div>
+            <div class="history-item-time">${formattedDate}</div>
+          </div>
+          <div class="history-item-status">
+            <i class="fas ${statusIcon}"></i> ${item.message}
+          </div>
+          <div class="history-item-actions">
+            <button class="history-item-delete" title="删除记录">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    historyContainer.innerHTML = historyContent;
+    
+    // 绑定删除按钮事件
+    historyContainer.querySelectorAll('.history-item-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const historyItem = e.target.closest('.history-item');
+        if (historyItem) {
+          const id = historyItem.dataset.id;
+          this.removeHistoryItem(id);
+        }
+      });
+    });
+    
+    // 绑定清空历史按钮事件
+    const clearBtn = historyContainer.querySelector('.clear-history-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        UI.Modal.confirm(
+          '<i class="fas fa-trash"></i> 清空历史',
+          '确定要清空所有上传历史记录吗？此操作不可撤销。',
+          () => this.clearHistory()
+        );
+      });
+    }
+  }
   
   /**
-   * 更新上传项进度
-   * @param {HTMLElement} item - 上传项元素
-   * @param {number} percent - 进度百分比
+   * 删除历史记录项
+   * @param {string} id - 历史记录ID
    */
-  updateItemProgress(item, percent) {
+  removeHistoryItem(id) {
+    // 从数组中删除
+    this.uploadHistory = this.uploadHistory.filter(item => item.id !== id);
+    
+    // 保存到本地存储
+    this.saveHistoryToStorage();
+    
+    // 更新历史记录视图
+    this.updateHistoryView();
+  }
+  
+  /**
+   * 清空历史记录
+   */
+  clearHistory() {
+    this.uploadHistory = [];
+    this.saveHistoryToStorage();
+    this.updateHistoryView();
+  }
+  
+  /**
+   * 绑定关闭按钮事件
+   */
+  bindCloseButton() {
+    // 上传进度条关闭按钮
+    if (this.uploadProgressContainer) {
+      const uploadCloseBtn = this.uploadProgressContainer.querySelector('.upload-close');
+      if (uploadCloseBtn) {
+        uploadCloseBtn.addEventListener('click', () => {
+          this.uploadProgressContainer.style.display = 'none';
+        });
+      }
+    }
+  }
+  
+  /**
+   * 创建上传项元素
+   * @param {string} id - 上传项ID
+   * @param {string} name - 文件名
+   * @returns {HTMLElement} 上传项元素
+   */
+  createUploadItem(id, name) {
+    const item = document.createElement('div');
+    item.className = 'upload-item';
+    item.setAttribute('data-id', id);
+    
+    item.innerHTML = `
+      <div class="upload-item-info">
+        <div class="upload-item-name" title="${name}">${name}</div>
+        <div class="upload-item-status">准备中...</div>
+      </div>
+      <div class="upload-item-progress">
+        <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="upload-item-actions">
+        <button class="upload-item-cancel" title="取消" aria-label="取消上传">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    `;
+    
+    // 绑定取消按钮事件
+    const cancelBtn = item.querySelector('.upload-item-cancel');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        this.cancelUpload(id);
+      });
+    }
+    
+    return item;
+  }
+  
+  /**
+   * 添加上传项
+   * @param {string} id - 上传项ID
+   * @param {string} name - 文件名
+   */
+  addUploadItem(id, name) {
+    // 创建上传项元素
+    const item = this.createUploadItem(id, name);
+    
+    // 存储上传项信息
+    this.uploadItems[id] = {
+      element: item,
+      name,
+      status: 'pending',
+      progress: 0
+    };
+    
+    // 添加到容器
+    if (this.uploadItemsContainer) {
+      this.uploadItemsContainer.appendChild(item);
+      this.uploadProgressContainer.style.display = 'block';
+      
+      // 如果有标签页，确保当前上传标签页处于激活状态
+      const currentTabBtn = this.uploadProgressContainer.querySelector('.tab-btn[data-tab="current"]');
+      if (currentTabBtn) {
+        currentTabBtn.click();
+      }
+    }
+    
+    // 初始化历史记录视图（如果尚未初始化）
+    this.initHistoryView();
+  }
+  
+  /**
+   * 更新上传进度
+   * @param {string} id - 上传项ID
+   * @param {number} progress - 进度百分比 (0-100)
+   * @param {boolean} isSuccess - 是否上传成功，默认为undefined（表示进行中）
+   */
+  updateProgress(id, progress, isSuccess) {
+    const item = this.uploadItems[id];
     if (!item) return;
     
-    // 停止模拟进度
-    this.stopSimulatedProgress(item);
+    // 更新状态
+    item.progress = progress;
     
-    const progressBar = item.querySelector('.upload-progress-inner');
-    const percentage = item.querySelector('.upload-percentage');
+    // 根据进度和成功标志确定状态
+    if (isSuccess === false) {
+      item.status = 'error';
+    } else if (isSuccess === true) {
+      item.status = 'completed';
+    } else {
+      item.status = 'uploading';
+    }
     
-    if (progressBar) progressBar.style.width = `${percent}%`;
-    if (percentage) percentage.textContent = `${Math.round(percent)}%`;
-  },
-  
-  /**
-   * 启动模拟进度
-   * @param {HTMLElement} item - 上传项元素
-   */
-  startSimulatedProgress(item) {
-    let progress = 0;
-    const progressBar = item.querySelector('.upload-progress-inner');
-    const percentage = item.querySelector('.upload-percentage');
-    
-    const interval = setInterval(() => {
-      // 根据当前进度调整增量，使进度条增长速度逐渐减慢
-      let increment;
-      if (progress < 30) {
-        increment = 1 + Math.random() * 2; // 快速增长到30%
-      } else if (progress < 70) {
-        increment = 0.5 + Math.random() * 1; // 中速增长到70%
-      } else if (progress < 90) {
-        increment = 0.1 + Math.random() * 0.3; // 慢速增长到90%
-      } else {
-        increment = 0.01 + Math.random() * 0.05; // 非常慢地增长到接近但不到100%
+    // 更新DOM
+    const element = item.element;
+    if (element) {
+      // 更新进度条
+      const progressBar = element.querySelector('.progress');
+      if (progressBar) {
+        progressBar.style.width = `${progress}%`;
       }
       
-      progress += increment;
-      
-      // 确保模拟进度不会到达100%（留给实际完成事件）
-      if (progress >= 99) {
-        progress = 99;
-        clearInterval(interval);
+      // 更新状态文本
+      const statusElement = element.querySelector('.upload-item-status');
+      if (statusElement) {
+        if (isSuccess === false) {
+          // 上传失败
+          statusElement.textContent = '上传失败';
+          statusElement.classList.add('error');
+          element.classList.add('error');
+        } else if (isSuccess === true) {
+          // 上传完成
+          statusElement.textContent = '完成';
+          statusElement.classList.add('success');
+          
+          // 上传完成，添加到历史记录
+          this.addToHistory(item.name, 'success', '上传成功');
+          
+          // 2秒后从当前上传列表中移除
+          setTimeout(() => {
+            if (element.parentNode === this.uploadItemsContainer) {
+              this.uploadItemsContainer.removeChild(element);
+              delete this.uploadItems[id];
+            }
+          }, 2000);
+        } else {
+          // 上传中
+          statusElement.textContent = `${Math.round(progress)}%`;
+        }
       }
-      
-      if (progressBar) progressBar.style.width = `${progress}%`;
-      if (percentage) percentage.textContent = `${Math.round(progress)}%`;
-    }, 200);
-    
-    // 保存interval ID以便后续清除
-    item._simulationInterval = interval;
-  },
-  
-  /**
-   * 停止模拟进度
-   * @param {HTMLElement} item - 上传项元素
-   */
-  stopSimulatedProgress(item) {
-    if (item && item._simulationInterval) {
-      clearInterval(item._simulationInterval);
-      item._simulationInterval = null;
     }
-  },
-  
-  /**
-   * 获取文件图标
-   * @param {string} fileName - 文件名
-   * @returns {string} 图标类名
-   */
-  getFileIcon(fileName) {
-    const extension = fileName.split('.').pop().toLowerCase();
-    
-    switch(extension) {
-      case 'pdf':
-        return 'fas fa-file-pdf';
-      case 'doc':
-      case 'docx':
-        return 'fas fa-file-word';
-      case 'xls':
-      case 'xlsx':
-        return 'fas fa-file-excel';
-      case 'ppt':
-      case 'pptx':
-        return 'fas fa-file-powerpoint';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-      case 'bmp':
-        return 'fas fa-file-image';
-      case 'mp3':
-      case 'wav':
-      case 'ogg':
-        return 'fas fa-file-audio';
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-        return 'fas fa-file-video';
-      case 'zip':
-      case 'rar':
-      case '7z':
-        return 'fas fa-file-archive';
-      case 'txt':
-        return 'fas fa-file-alt';
-      case 'html':
-      case 'css':
-      case 'js':
-        return 'fas fa-file-code';
-      default:
-        return 'fas fa-file';
-    }
-  },
-  
-  /**
-   * 格式化文件大小
-   * @param {number} bytes - 文件大小（字节）
-   * @returns {string} 格式化后的文件大小
-   */
-  formatFileSize(bytes) {
-    if (bytes === 0) return '0 B';
-    
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  },
-  
-  /**
-   * 清理资源
-   */
-  destroy() {
-    // 清除可能存在的定时器
-    if (this._closeProgressTimeout) {
-      clearTimeout(this._closeProgressTimeout);
-      this._closeProgressTimeout = null;
-    }
-    
-    // 移除事件监听器
-    const dropZone = document.querySelector('.file-container');
-    if (dropZone) {
-      dropZone.classList.remove('drag-over');
-    }
-    
-    console.log('上传管理器资源已清理');
   }
-};
+  
+  /**
+   * 设置上传错误
+   * @param {string} id - 上传项ID
+   * @param {string} errorMessage - 错误信息
+   */
+  setError(id, errorMessage) {
+    const item = this.uploadItems[id];
+    if (!item) return;
+    
+    // 使用updateProgress方法更新状态为错误
+    const currentProgress = item.progress || 0;
+    this.updateProgress(id, currentProgress, false);
+    
+    // 更新DOM中的错误消息
+    const element = item.element;
+    if (element) {
+      const statusElement = element.querySelector('.upload-item-status');
+      if (statusElement) {
+        statusElement.textContent = errorMessage || '上传失败';
+      }
+    }
+    
+    // 添加到历史记录
+    this.addToHistory(item.name, 'error', errorMessage || '上传失败');
+  }
+  
+  /**
+   * 取消上传
+   * @param {string} id - 上传项ID
+   */
+  cancelUpload(id) {
+    const item = this.uploadItems[id];
+    if (!item) return;
+    
+    // 更新状态
+    item.status = 'cancelled';
+    
+    // 更新DOM
+    const element = item.element;
+    if (element && this.uploadItemsContainer) {
+      // 从DOM中移除
+      this.uploadItemsContainer.removeChild(element);
+    }
+    
+    // 从列表中删除
+    delete this.uploadItems[id];
+    
+    // 添加到历史记录
+    this.addToHistory(item.name, 'error', '上传已取消');
+  }
+  
+  /**
+   * 开始上传文件
+   * @param {string} id - 上传项ID
+   * @param {string} name - 文件名
+   * @param {Function} uploadFunction - 上传函数
+   * @returns {Promise} - 上传结果
+   */
+  async uploadFile(id, name, uploadFunction) {
+    // 添加上传项
+    this.addUploadItem(id, name);
+    
+    try {
+      // 执行上传，传入进度回调
+      return await uploadFunction(progress => {
+        this.updateProgress(id, progress);
+      });
+    } catch (error) {
+      this.setError(id, error.message || '上传失败');
+      throw error;
+    }
+  }
+}
 
-export default UploadManager; 
+// 创建全局实例
+const uploadManager = new UploadManager();
+
+export default uploadManager; 

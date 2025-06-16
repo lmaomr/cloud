@@ -13,11 +13,13 @@ import cn.lmao.cloud.repository.FileRepository;
 import cn.lmao.cloud.util.FileHashUtil;
 import cn.lmao.cloud.util.FileUtil;
 import cn.lmao.cloud.util.LogUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -119,6 +121,42 @@ public class FileService {
         } finally {
             fileLock.unlock(); // 释放锁
         }
+    }
+
+    /**
+     * 下载文件
+     * @param cloud
+     * @return
+     */
+    @Transactional
+    public void downloadFile(Long fileId, Long userId, HttpServletResponse response) throws IOException {
+        // 1. 验证用户云盘是否存在
+        Cloud cloud = userService.getCloud(userId);
+        if (cloud == null) {
+            throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+        }
+
+        // 2. 验证文件是否存在
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
+
+        // 3. 验证文件是否属于当前用户
+        if (!file.getCloud().getUser().getId().equals(userId)) {
+            throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
+        }
+
+        Path filePath = file.getPath() == null ? null : Path.of(file.getPath());
+        log.info("下载文件: 文件ID={}, 文件名={}", fileId, file.getName());
+        // 3. 验证文件状态
+        if (file.getStatus() != File.FileStatus.ACTIVE) {
+            log.error("文件状态异常: 文件ID={}, 状态={}", fileId, file.getStatus());
+            throw new CustomException(ExceptionCodeMsg.FILE_NOT_FOUND);
+        }
+
+        log.info("文件下载准备就绪: 文件ID={}, 路径={}", fileId, file.getPath());
+        // 5. 返回文件下载响应
+        // 这里可以根据需要返回文件的下载链接或直接返回文件内容
+        fileUtil.downloadFile(filePath, userId, file.getName(), response);
     }
 
     /**
@@ -369,5 +407,8 @@ public class FileService {
                 .sorted(Comparator.comparing(File::getCreateTime).reversed())
                 .toList();
     }   
+
+
+
     
 }

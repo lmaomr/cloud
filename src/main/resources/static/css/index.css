@@ -934,26 +934,28 @@ nav {
     background-color: rgba(96, 125, 139, 0.1);
 }
 
-/* 上传进度条 */
+/* 上传进度条样式 */
 .upload-progress {
     position: fixed;
-    bottom: 16px;
-    right: 16px;
+    bottom: 20px;
+    right: 20px;
     width: 320px;
-    background: var(--card-bg);
+    max-height: 400px;
+    background-color: var(--card-bg);
     border-radius: 8px;
-    box-shadow: var(--shadow-md);
-    z-index: 1020;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
     overflow: hidden;
-    border: 1px solid var(--border-color);
+    display: none;
 }
 
 .upload-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 10px 15px;
+    background-color: var(--primary-color);
+    color: white;
 }
 
 .upload-title {
@@ -966,83 +968,228 @@ nav {
 .upload-close {
     background: transparent;
     border: none;
+    color: white;
     cursor: pointer;
-    color: var(--text-secondary);
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: all 0.2s;
+    padding: 0;
+    font-size: 16px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
 }
 
 .upload-close:hover {
-    background: #f0f2f5;
-    color: var(--text-color);
+    opacity: 1;
 }
 
 .upload-items {
-    max-height: 300px;
+    padding: 10px;
+    max-height: 320px;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .upload-item {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    background-color: var(--hover-bg);
+    transition: background-color 0.2s;
 }
 
 .upload-item:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .upload-item-info {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    justify-content: space-between;
+    margin-bottom: 6px;
 }
 
-.upload-filename {
+.upload-item-name {
     font-size: 14px;
-    flex: 1;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 200px;
 }
 
-.upload-filesize {
+.upload-item-status {
     font-size: 12px;
     color: var(--text-secondary);
-    margin-left: 8px;
-    white-space: nowrap;
+}
+
+.upload-item-status.success {
+    color: var(--success-color);
+}
+
+.upload-item-status.error {
+    color: var(--danger-color);
 }
 
 .upload-item-progress {
+    margin-bottom: 6px;
+}
+
+.upload-item-actions {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    justify-content: flex-end;
 }
 
-.upload-progress-bar {
+.upload-item-cancel {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 12px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.upload-item-cancel:hover {
+    opacity: 1;
+    color: var(--danger-color);
+}
+
+.upload-item.error {
+    background-color: rgba(var(--danger-color-rgb), 0.1);
+}
+
+/* 上传标签页样式 */
+.upload-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+}
+
+.upload-tabs .tab-btn {
     flex: 1;
-    height: 4px;
-    background: #f0f2f5;
-    border-radius: 2px;
+    padding: 8px 0;
+    text-align: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.upload-tabs .tab-btn:hover {
+    color: var(--text-primary);
+    background-color: var(--hover-bg);
+}
+
+.upload-tabs .tab-btn.active {
+    color: var(--primary-color);
+    font-weight: 500;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+/* 上传历史记录样式 */
+.upload-history {
+    padding: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.history-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}
+
+.history-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    background-color: var(--hover-bg);
+    border-left: 3px solid var(--text-secondary);
+}
+
+.history-item.success {
+    border-left-color: var(--success-color);
+}
+
+.history-item.error {
+    border-left-color: var(--danger-color);
+}
+
+.history-item-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.history-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
 }
 
-.upload-progress-inner {
-    height: 100%;
-    background: var(--primary-color);
-    border-radius: 2px;
-}
-
-.upload-percentage {
+.history-item-time {
     font-size: 12px;
     color: var(--text-secondary);
-    min-width: 36px;
-    text-align: right;
+}
+
+.history-item-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.history-item.success .history-item-status {
+    color: var(--success-color);
+}
+
+.history-item.error .history-item-status {
+    color: var(--danger-color);
+}
+
+.history-item-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.history-item-delete {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 12px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.history-item-delete:hover {
+    opacity: 1;
+    color: var(--danger-color);
+}
+
+.empty-history {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+    color: var(--text-secondary);
+}
+
+.empty-history i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-history p {
+    font-size: 16px;
 }
 
 /* 新建菜单 */

@@ -351,7 +351,7 @@ export class CloudAPI {
   /**
    * 上传文件
    * @param {FormData} formData - 包含文件的FormData对象
-   * @param {Function} onProgress - 进度回调函数
+   * @param {Function} onProgress - 进度回调函数，接收参数(progress, event, isError)
    * @returns {Promise} - 返回Promise对象
    */
   static async uploadFiles(formData, onProgress) {
@@ -381,26 +381,46 @@ export class CloudAPI {
             
             // 检查业务状态码
             if (result.code !== 200) {
+              // 如果有进度回调，通知上传失败
+              if (typeof onProgress === 'function') {
+                onProgress(100, null, true); // 标记为错误
+              }
               reject(new Error(result.msg || '上传失败'));
               return;
             }
             
             resolve(result);
           } catch (error) {
+            // 如果有进度回调，通知上传失败
+            if (typeof onProgress === 'function') {
+              onProgress(100, null, true); // 标记为错误
+            }
             reject(new Error('解析响应失败'));
           }
         } else {
+          // 如果有进度回调，通知上传失败
+          if (typeof onProgress === 'function') {
+            onProgress(100, null, true); // 标记为错误
+          }
           reject(new Error(`HTTP错误: ${xhr.status}`));
         }
       });
       
       // 监听错误
       xhr.addEventListener('error', () => {
+        // 如果有进度回调，通知上传失败
+        if (typeof onProgress === 'function') {
+          onProgress(100, null, true); // 标记为错误
+        }
         reject(new Error('网络错误'));
       });
       
       // 监听中止
       xhr.addEventListener('abort', () => {
+        // 如果有进度回调，通知上传取消
+        if (typeof onProgress === 'function') {
+          onProgress(100, null, true); // 标记为错误
+        }
         reject(new Error('上传已取消'));
       });
       
@@ -429,6 +449,25 @@ export class CloudAPI {
    */
   static async getSharedWithMe() {
     return await this.request('/share/received');
+  }
+
+  /**
+   * 获取文件下载链接
+   * @param {string} fileId - 文件ID
+   * @returns {string} - 下载链接
+   */
+  static async getFileDownloadUrl(fileId) {
+    // 确保有认证令牌
+    const token = this.getAuthToken();
+    // 构建下载URL，包含认证信息
+    // return `${API_BASE_URL}/file/download/${fileId}${token ? `?token=${encodeURIComponent(token.replace('Bearer ', ''))}` : ''}`;
+    return await this.request(`/file/download/${fileId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': token || '',
+        'X-Request-ID': generateUUID(),
+      },
+    });
   }
 }
 

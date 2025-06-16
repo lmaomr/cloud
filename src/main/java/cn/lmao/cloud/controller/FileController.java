@@ -8,6 +8,7 @@ import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import cn.lmao.cloud.services.FileService;
 import cn.lmao.cloud.services.UserService;
 import cn.lmao.cloud.util.LogUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
@@ -47,6 +48,30 @@ public class FileController {
         Long userId = userService.getUserByName(username).getId();
         // 3. 处理文件上传
         return ApiResponse.success(fileService.uploadFile(file, userId));
+    }
+
+    /**
+     * 文件下载接口
+     * 
+     * @param fileId 文件ID
+     * @return 文件下载响应
+     */
+    @GetMapping("/download/{fileId}")
+    public ApiResponse<String> downloadFile(@PathVariable String fileId, HttpServletResponse response) throws IOException {
+        log.info("下载文件: 文件ID={}", fileId);
+
+        if (fileId == null || fileId.trim().isEmpty()) {
+            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+        }
+
+        // 从安全上下文中获取当前用户
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+
+        // 下载文件
+        fileService.downloadFile(Long.parseLong(fileId), userId, response);
+        
+        return ApiResponse.success("下载成功");
     }
 
     /**
