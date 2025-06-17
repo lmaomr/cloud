@@ -467,7 +467,7 @@ export class CloudAPI {
    * @returns {Promise} - 返回Promise对象
    */
   static async restoreFile(fileId) {
-    return await this.request('/file/restore', {
+    return await this.request('/file/trash/restore', {
       method: 'POST',
       body: JSON.stringify({ fileId }),
     });
@@ -479,7 +479,7 @@ export class CloudAPI {
    * @returns {Promise} - 返回Promise对象
    */
   static async deletePermanentFile(fileId) {
-    return await this.request('/file/delete-permanent', {
+    return await this.request('/file/trash/delete', {
       method: 'POST',
       body: JSON.stringify({ fileId }),
     });

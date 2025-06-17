@@ -22,10 +22,18 @@ const SidebarManager = {
     // 绑定侧边栏切换按钮事件
     this.bindEvents();
     
-    // 设置默认激活项
-    const defaultActiveItem = document.querySelector('.nav-group li[data-section="my-files"]');
-    if (defaultActiveItem) {
-      this.setActiveNavItem('my-files');
+    // 从localStorage读取上次选中的部分
+    const savedSection = localStorage.getItem('activeSection');
+    
+    // 如果有保存的部分，则激活它，否则使用默认的"my-files"
+    if (savedSection) {
+      this.setActiveNavItem(savedSection);
+    } else {
+      // 设置默认激活项
+      const defaultActiveItem = document.querySelector('.nav-group li[data-section="my-files"]');
+      if (defaultActiveItem) {
+        this.setActiveNavItem('my-files');
+      }
     }
     
     console.log('侧边栏初始化完成');
@@ -210,6 +218,9 @@ const SidebarManager = {
     this.navItems.forEach(item => {
       item.classList.toggle('active', item.dataset.section === section);
     });
+    
+    // 保存当前选中的部分到localStorage
+    localStorage.setItem('activeSection', section);
   }
 };
 

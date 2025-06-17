@@ -90,6 +90,16 @@ class CloudApp {
       this.initialized = true;
       Logger.info('应用初始化完成');
       
+      // 从localStorage读取当前选中的部分并加载相应内容
+      const activeSection = localStorage.getItem('activeSection') || 'my-files';
+      
+      // 触发部分切换事件以加载正确的内容
+      document.dispatchEvent(new CustomEvent('section:change', { 
+        detail: { section: activeSection },
+        bubbles: true,
+        cancelable: true
+      }));
+      
       // 隐藏页面加载指示器
       setTimeout(() => UI.Loader.hidePageLoader(), 800);
     } catch (error) {

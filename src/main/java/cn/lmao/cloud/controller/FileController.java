@@ -174,6 +174,56 @@ public class FileController {
     }
 
     /**
+     * 删除回收站文件
+     */
+    @PostMapping("/trash/delete")
+    public ApiResponse<String> deleteTrashFile(@RequestBody Map<String, String> requestBody) {
+        try {
+            String fileId = requestBody.get("fileId");
+
+            log.info("删除回收站文件: 文件ID={}", fileId);
+
+            if (fileId == null || fileId.trim().isEmpty()) {
+                return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+            }
+
+            // 从安全上下文中获取当前用户
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            Long userId = userService.getUserByName(username).getId();
+
+            // 删除回收站文件
+            fileService.deleteTrashFile(Long.parseLong(fileId), userId);
+            return ApiResponse.success("删除成功");
+        } catch (Exception e) {
+            log.error("删除回收站文件请求异常: {}", e.getMessage());
+            return ApiResponse.exception(ExceptionCodeMsg.DELETE_FILE_FAIL);
+        }
+    }
+
+    /**
+     * 恢复回收站文件
+     * @return
+     */
+    @PostMapping("/trash/restore")
+    public ApiResponse<String> restoreTrashFile(@RequestBody Map<String, String> requestBody) {
+        String fileId = requestBody.get("fileId");
+
+        log.info("恢复回收站文件: 文件ID={}", fileId);
+
+        if (fileId == null || fileId.trim().isEmpty()) {
+            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+        }
+
+        // 从安全上下文中获取当前用户
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+
+        // 恢复回收站文件
+        fileService.restoreTrashFile(Long.parseLong(fileId), userId);
+        return ApiResponse.success("恢复成功: " + fileId);
+    }
+
+    /**
      * 获取回收站文件列表
      */
     @GetMapping("/trash")

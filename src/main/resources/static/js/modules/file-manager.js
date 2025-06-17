@@ -75,7 +75,7 @@ export const FileManager = {
           }
         }
       },
-      fileAction: (e) => this.handleFileAction(e),
+      // 移除fileAction事件处理程序，不再需要
       sectionChange: (e) => {
         console.log('文件管理器接收到部分切换事件:', e.detail);
         if (e.detail && e.detail.section) {
@@ -139,8 +139,8 @@ export const FileManager = {
     // 文件项复选框点击处理
     document.addEventListener('change', this._eventHandlers.checkboxChange);
 
-    // 文件操作按钮
-    document.addEventListener('click', this._eventHandlers.fileAction);
+    // 移除文件操作按钮事件监听，不再需要
+    // document.addEventListener('click', this._eventHandlers.fileAction);
 
     // 批量操作按钮
     document.querySelectorAll('.toolbar-btn').forEach(btn => {
@@ -173,7 +173,8 @@ export const FileManager = {
     if (this._eventHandlers) {
       document.removeEventListener('click', this._eventHandlers.fileItemClick);
       document.removeEventListener('change', this._eventHandlers.checkboxChange);
-      document.removeEventListener('click', this._eventHandlers.fileAction);
+      // 移除fileAction事件监听器，不再需要
+      // document.removeEventListener('click', this._eventHandlers.fileAction);
       document.removeEventListener('section:change', this._eventHandlers.sectionChange);
       document.removeEventListener('search:perform', this._eventHandlers.searchPerform);
 
@@ -223,6 +224,9 @@ export const FileManager = {
       case 'my-files':
         this.refreshFiles();
         break;
+      case 'images':
+        this.loadFilteredContent('images');
+        break;
       case 'videos':
         this.loadFilteredContent('video');
         break;
@@ -231,6 +235,9 @@ export const FileManager = {
         break;
       case 'documents':
         this.loadFilteredContent('document');
+        break;
+      case 'others':
+        this.loadFilteredContent('others');
         break;
       case 'shared':
         this.loadSharedContent();
@@ -307,6 +314,9 @@ export const FileManager = {
     try {
       // 显示加载指示器
       UI.Loader.showContentLoader('fileContainer');
+
+      // 重新绑定拖放事件监听器（以防在回收站页面解绑过）
+      this._reattachDropEventListeners();
 
       // 调用API获取文件列表
       const response = await CloudAPI.getFileList(this.currentPath, this.currentSort);
@@ -451,8 +461,40 @@ export const FileManager = {
     // 清除选择
     this.clearFileSelection();
 
-    // 重新加载文件
-    await this.loadFiles();
+    // 获取当前选中的部分
+    const activeSection = localStorage.getItem('activeSection') || 'my-files';
+    
+    // 根据当前部分刷新相应内容
+    switch (activeSection) {
+      case 'my-files':
+        // 重新加载文件
+        await this.loadFiles();
+        break;
+      case 'images':
+        this.loadFilteredContent('images');
+        break;
+      case 'videos':
+        this.loadFilteredContent('video');
+        break;
+      case 'music':
+        this.loadFilteredContent('audio');
+        break;
+      case 'documents':
+        this.loadFilteredContent('document');
+        break;
+      case 'others':
+        this.loadFilteredContent('others');
+        break;
+      case 'shared':
+        this.loadSharedContent();
+        break;
+      case 'trash':
+        this.loadTrashContent();
+        break;
+      default:
+        // 默认刷新当前文件列表
+        await this.loadFiles();
+    }
 
     // 显示刷新提示
     UI.Toast.success('已刷新', '文件列表已更新', 3000, {
@@ -939,26 +981,27 @@ export const FileManager = {
    * @param {Event} e - 点击事件
    * @deprecated 请使用_handleContextMenuAction方法代替
    */
-  handleFileAction(e) {
-    console.warn('使用已弃用的handleFileAction方法，请改用_handleContextMenuAction');
-    const actionBtn = e.target.closest('[data-action]');
-    if (!actionBtn) return;
+  // handleFileAction(e) {
+  //   // 删除警告日志
+  //   console.warn('handleFileAction方法已弃用，请使用_handleContextMenuAction方法代替');
+  //   const actionBtn = e.target.closest('[data-action]');
+  //   if (!actionBtn) return;
 
-    e.stopPropagation();
-    const action = actionBtn.dataset.action;
-    const fileItem = actionBtn.closest('.file-item');
+  //   e.stopPropagation();
+  //   const action = actionBtn.dataset.action;
+  //   const fileItem = actionBtn.closest('.file-item');
 
-    // 确保fileItem存在
-    if (!fileItem) {
-      console.error('找不到文件项元素');
-      return;
-    }
+  //   // 确保fileItem存在
+  //   if (!fileItem) {
+  //     console.error('找不到文件项元素');
+  //     return;
+  //   }
 
-    const fileName = fileItem.getAttribute('data-name');
-    const fileId = fileItem.dataset.id;
+  //   const fileName = fileItem.getAttribute('data-name');
+  //   const fileId = fileItem.dataset.id;
 
-    this._handleContextMenuAction(action, fileName, fileItem);
-  },
+  //   this._handleContextMenuAction(action, fileName, fileItem);
+  // },
 
   /**
    * 从回收站恢复文件
@@ -1324,6 +1367,9 @@ export const FileManager = {
 
     // 清除选中状态
     this.clearFileSelection();
+    
+    // 移除拖放事件监听器，开发中页面不需要上传功能
+    this._removeDropEventListeners();
 
     // 显示空文件列表提示（用于显示"开发中"信息）
     if (this.emptyFileList) {
@@ -1414,6 +1460,9 @@ export const FileManager = {
     // 显示加载指示器
     UI.Loader.showContentLoader('fileContainer');
 
+    // 重新绑定拖放事件监听器（以防在回收站页面解绑过）
+    this._reattachDropEventListeners();
+
     // 清除选中状态
     this.clearFileSelection();
 
@@ -1436,6 +1485,10 @@ export const FileManager = {
           filteredFiles = allFiles.filter(file =>
             file.type !== 'folder' && this.isVideoFile(file.name)
           );
+        } else if (type === 'images') {
+          filteredFiles = allFiles.filter(file =>
+            file.type !== 'folder' && this.isImageFile(file.name)
+          );
         } else if (type === 'audio') {
           filteredFiles = allFiles.filter(file =>
             file.type !== 'folder' && this.isAudioFile(file.name)
@@ -1443,6 +1496,10 @@ export const FileManager = {
         } else if (type === 'document') {
           filteredFiles = allFiles.filter(file =>
             file.type !== 'folder' && this.isDocumentFile(file.name)
+          );
+        } else if (type === 'others') {
+          filteredFiles = allFiles.filter(file =>
+            file.type !== 'folder' && this.isOtherFile(file.name)
           );
         }
 
@@ -1533,6 +1590,12 @@ export const FileManager = {
                 description = '您可以拖拽视频文件至此上传，或点击下方按钮选择文件';
                 buttonText = '上传视频';
                 break;
+              case 'images':
+                iconClass = 'fas fa-image';
+                title = '暂无图片';
+                description = '您可以拖拽图片文件至此上传，或点击下方按钮选择文件';
+                buttonText = '上传图片';
+                break;
               case 'audio':
                 iconClass = 'fas fa-music';
                 title = '暂无音乐';
@@ -1544,6 +1607,12 @@ export const FileManager = {
                 title = '暂无文档';
                 description = '您可以拖拽文档文件至此上传，或点击下方按钮选择文件';
                 buttonText = '上传文档';
+                break;
+              case 'others':
+                iconClass = 'fas fa-file-archive';
+                title = '暂无其他文件';
+                description = '您可以拖拽其他类型文件至此上传，或点击下方按钮选择文件';
+                buttonText = '上传文件';
                 break;
               default:
                 iconClass = 'fas fa-file';
@@ -1565,12 +1634,49 @@ export const FileManager = {
               </div>
             `;
 
-            // 绑定上传按钮事件
+            // 绑定上传按钮事件，添加文件类型验证
             const uploadBtn = this.emptyFileList.querySelector('.upload-btn');
             if (uploadBtn) {
               uploadBtn.addEventListener('click', () => {
                 const fileInput = document.getElementById('fileInput');
-                if (fileInput) fileInput.click();
+                if (fileInput) {
+                  // 设置接受的文件类型
+                  switch (type) {
+                    case 'video':
+                      fileInput.setAttribute('accept', '.mp4,.avi,.mov,.wmv,.flv,.mkv,.webm,.3gp,.mpeg,.mpg');
+                      break;
+                    case 'images':
+                      fileInput.setAttribute('accept', '.jpg,.jpeg,.png,.gif,.bmp,.svg,.webp,.tiff,.ico');
+                      break;
+                    case 'audio':
+                      fileInput.setAttribute('accept', '.mp3,.wav,.ogg,.flac,.aac,.m4a,.wma,.aiff,.alac');
+                      break;
+                    case 'document':
+                      fileInput.setAttribute('accept', '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.odt,.ods,.odp,.md,.markdown');
+                      break;
+                    default:
+                      fileInput.removeAttribute('accept');
+                  }
+                  
+                  // 为fileInput添加一次性事件监听器，用于验证文件类型
+                  const fileTypeCheckListener = () => {
+                    if (fileInput.files && fileInput.files.length > 0) {
+                      if (this._shouldRedirectUpload(fileInput.files)) {
+                        // 如果文件类型不匹配，则跳转到"我的文件"页面
+                        this._redirectToMyFiles(fileInput.files);
+                      }
+                    }
+                    
+                    // 移除事件监听器
+                    fileInput.removeEventListener('change', fileTypeCheckListener);
+                  };
+                  
+                  // 添加事件监听器
+                  fileInput.addEventListener('change', fileTypeCheckListener);
+                  
+                  // 触发文件选择对话框
+                  fileInput.click();
+                }
               });
             }
           }
@@ -1666,6 +1772,16 @@ export const FileManager = {
   },
 
   /**
+   * 判断文件是否为图片文件
+   * @param {string} fileName - 文件名
+   * @returns {boolean} 是否为图片文件
+   */
+  isImageFile(fileName) {
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico'];
+    return this.checkFileType(fileName, imageExtensions, '图片');
+  },
+
+  /**
    * 判断文件是否为音频文件
    * @param {string} fileName - 文件名
    * @returns {boolean} 是否为音频文件
@@ -1686,6 +1802,21 @@ export const FileManager = {
   },
 
   /**
+   * 判断文件是否为其他类型文件（非视频、音频、文档、图片的文件）
+   * @param {string} fileName - 文件名
+   * @returns {boolean} 是否为其他类型文件
+   */
+  isOtherFile(fileName) {
+    // 首先检查是否为视频、音频、文档或图片文件
+    if (this.isVideoFile(fileName) || this.isAudioFile(fileName) || 
+        this.isDocumentFile(fileName) || this.isImageFile(fileName)) {
+      return false;
+    }
+    // 如果不是上述任何类型，则视为其他类型
+    return true;
+  },
+
+  /**
    * 获取类型名称
    * @param {string} type - 文件类型
    * @returns {string} 类型名称
@@ -1695,6 +1826,8 @@ export const FileManager = {
       case 'video': return '视频';
       case 'audio': return '音乐';
       case 'document': return '文档';
+      case 'images': return '图片';
+      case 'others': return '其他';
       default: return '文件';
     }
   },
@@ -1710,6 +1843,9 @@ export const FileManager = {
 
     // 清除选中状态
     this.clearFileSelection();
+
+    // 移除拖放事件监听器，共享视图不需要上传功能
+    this._removeDropEventListeners();
 
     // 创建一个Promise数组，同时获取我的分享和他人分享给我的内容
     Promise.all([
@@ -1781,6 +1917,9 @@ export const FileManager = {
               </div>
             `;
 
+            // 添加复制链接按钮的事件处理
+            this._setupCopyLinkButtons();
+
             // 绑定标签页切换事件
             const tabBtns = this.fileList.querySelectorAll('.tab-btn');
             tabBtns.forEach(btn => {
@@ -1805,6 +1944,9 @@ export const FileManager = {
                 const container = this.fileList.querySelector('.shared-content-container');
                 if (container) {
                   container.innerHTML = this.renderSharedContent(filteredContent);
+                  
+                  // 重新绑定复制链接按钮
+                  this._setupCopyLinkButtons();
                 }
               });
             });
@@ -1906,6 +2048,49 @@ export const FileManager = {
           group: 'shareOperations'
         });
       });
+  },
+  
+  /**
+   * 设置复制链接按钮的事件处理
+   * @private
+   */
+  _setupCopyLinkButtons() {
+    const copyButtons = document.querySelectorAll('.copy-link-btn');
+    copyButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const link = btn.getAttribute('data-link');
+        if (link) {
+          // 创建临时输入框
+          const tempInput = document.createElement('input');
+          tempInput.value = link;
+          document.body.appendChild(tempInput);
+          
+          // 选中并复制
+          tempInput.select();
+          tempInput.setSelectionRange(0, 99999);
+          
+          try {
+            // 使用现代clipboard API
+            navigator.clipboard.writeText(link)
+              .then(() => {
+                UI.Toast.success('复制成功', '分享链接已复制到剪贴板', 3000);
+              })
+              .catch(err => {
+                // 如果clipboard API不可用，使用传统方法
+                document.execCommand('copy');
+                UI.Toast.success('复制成功', '分享链接已复制到剪贴板', 3000);
+              });
+          } catch (err) {
+            console.error('复制失败:', err);
+            UI.Toast.error('复制失败', '无法复制到剪贴板，请手动复制', 5000);
+          }
+          
+          // 移除临时输入框
+          document.body.removeChild(tempInput);
+        }
+      });
+    });
   },
 
   /**
@@ -2193,7 +2378,7 @@ export const FileManager = {
             <label for="shareLink" class="form-label">分享链接</label>
             <div class="input-group">
               <input type="text" id="shareLink" class="form-input" value="${shareLink}" readonly>
-              <button class="btn btn-primary copy-btn" data-clipboard-target="#shareLink">复制</button>
+              <button class="btn btn-primary copy-btn" id="copyLinkBtn">复制</button>
             </div>
             <div class="form-hint">此链接有效期为7天</div>
           </div>
@@ -2213,6 +2398,36 @@ export const FileManager = {
           if (input) {
             input.focus();
             input.select();
+          }
+          
+          // 添加复制功能
+          const copyBtn = document.getElementById('copyLinkBtn');
+          if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+              const linkInput = document.getElementById('shareLink');
+              if (linkInput) {
+                // 选中文本
+                linkInput.select();
+                linkInput.setSelectionRange(0, 99999); // 适用于移动设备
+                
+                // 复制文本
+                try {
+                  // 使用现代clipboard API
+                  navigator.clipboard.writeText(linkInput.value)
+                    .then(() => {
+                      UI.Toast.success('复制成功', '分享链接已复制到剪贴板', 3000);
+                    })
+                    .catch(err => {
+                      // 如果clipboard API不可用，使用传统方法
+                      document.execCommand('copy');
+                      UI.Toast.success('复制成功', '分享链接已复制到剪贴板', 3000);
+                    });
+                } catch (err) {
+                  console.error('复制失败:', err);
+                  UI.Toast.error('复制失败', '无法复制到剪贴板，请手动复制', 5000);
+                }
+              }
+            });
           }
         }, 100);
       }, 800);
@@ -2251,7 +2466,7 @@ export const FileManager = {
           <label for="shareLink" class="form-label">分享链接 (${fileNames.length}个文件)</label>
           <div class="input-group">
             <input type="text" id="shareLink" class="form-input" value="${shareLink}" readonly>
-            <button class="btn btn-primary copy-btn" data-clipboard-target="#shareLink">复制</button>
+            <button class="btn btn-primary copy-btn" id="copyLinkBtn">复制</button>
           </div>
           <div class="form-hint">此链接有效期为7天</div>
         </div>
@@ -2271,6 +2486,36 @@ export const FileManager = {
         if (input) {
           input.focus();
           input.select();
+        }
+        
+        // 添加复制功能
+        const copyBtn = document.getElementById('copyLinkBtn');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', () => {
+            const linkInput = document.getElementById('shareLink');
+            if (linkInput) {
+              // 选中文本
+              linkInput.select();
+              linkInput.setSelectionRange(0, 99999); // 适用于移动设备
+              
+              // 复制文本
+              try {
+                // 使用现代clipboard API
+                navigator.clipboard.writeText(linkInput.value)
+                  .then(() => {
+                    UI.Toast.success('复制成功', '批量分享链接已复制到剪贴板', 3000);
+                  })
+                  .catch(err => {
+                    // 如果clipboard API不可用，使用传统方法
+                    document.execCommand('copy');
+                    UI.Toast.success('复制成功', '批量分享链接已复制到剪贴板', 3000);
+                  });
+              } catch (err) {
+                console.error('复制失败:', err);
+                UI.Toast.error('复制失败', '无法复制到剪贴板，请手动复制', 5000);
+              }
+            }
+          });
         }
       }, 100);
     }, 800);
@@ -2555,6 +2800,9 @@ export const FileManager = {
     // 移除可能存在的旧回收站操作栏
     this.removeTrashActionBar();
 
+    // 移除回收站页面的拖动上传功能
+    this._removeDropEventListeners();
+
     // 调用API获取回收站列表
     CloudAPI.getTrashList()
       .then(response => {
@@ -2648,7 +2896,7 @@ export const FileManager = {
             this.emptyFileList.style.display = 'flex';
             this.emptyFileList.className = 'empty-file-list trash-empty';
 
-            // 更新提示内容
+            // 更新提示内容 - 移除上传按钮
             this.emptyFileList.innerHTML = `
               <div class="empty-file-icon">
                 <i class="fas fa-trash"></i>
@@ -2726,6 +2974,41 @@ export const FileManager = {
         });
       });
   },
+  
+  /**
+   * 移除拖放事件监听器
+   * @private
+   */
+  _removeDropEventListeners() {
+    const dropTargets = [this.fileList, this.emptyFileList];
+    dropTargets.forEach(target => {
+      if (target) {
+        target.removeEventListener('dragover', this._eventHandlers.dragOver);
+        target.removeEventListener('dragenter', this._eventHandlers.dragEnter);
+        target.removeEventListener('dragleave', this._eventHandlers.dragLeave);
+        target.removeEventListener('drop', this._eventHandlers.drop);
+        
+        // 移除拖放样式类
+        target.classList.remove('drag-over');
+      }
+    });
+  },
+  
+  /**
+   * 重新绑定拖放事件监听器
+   * @private
+   */
+  _reattachDropEventListeners() {
+    const dropTargets = [this.fileList, this.emptyFileList];
+    dropTargets.forEach(target => {
+      if (target) {
+        target.addEventListener('dragover', this._eventHandlers.dragOver);
+        target.addEventListener('dragenter', this._eventHandlers.dragEnter);
+        target.addEventListener('dragleave', this._eventHandlers.dragLeave);
+        target.addEventListener('drop', this._eventHandlers.drop);
+      }
+    });
+  },
 
   /**
    * 处理拖拽悬停事件
@@ -2788,7 +3071,86 @@ export const FileManager = {
     // 获取拖拽的文件
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      this.uploadDroppedFiles(files);
+      // 检查当前页面类型和文件类型是否匹配
+      if (this._shouldRedirectUpload(files)) {
+        // 如果文件类型不匹配当前页面，重定向到"我的文件"页面
+        this._redirectToMyFiles(files);
+      } else {
+        // 如果类型匹配，直接上传
+        this.uploadDroppedFiles(files);
+      }
+    }
+  },
+
+  /**
+   * 检查是否应该重定向上传
+   * @param {FileList} files - 文件列表
+   * @returns {boolean} 是否需要重定向
+   * @private
+   */
+  _shouldRedirectUpload(files) {
+    // 获取当前活跃的部分
+    const activeSection = document.querySelector('.nav-group li.active');
+    if (!activeSection) return false;
+    
+    const section = activeSection.dataset.section;
+    
+    // 只有在特定页面才需要检查文件类型
+    switch (section) {
+      case 'videos':
+        // 检查是否所有文件都是视频
+        return !Array.from(files).every(file => this.isVideoFile(file.name));
+      
+      case 'images':
+        // 检查是否所有文件都是图片
+        return !Array.from(files).every(file => this.isImageFile(file.name));
+      
+      case 'music':
+        // 检查是否所有文件都是音频
+        return !Array.from(files).every(file => this.isAudioFile(file.name));
+      
+      case 'documents':
+        // 检查是否所有文件都是文档
+        return !Array.from(files).every(file => this.isDocumentFile(file.name));
+      
+      case 'others':
+        // 检查是否所有文件都是其他类型
+        return !Array.from(files).every(file => this.isOtherFile(file.name));
+      
+      default:
+        // 在其他页面不需要重定向
+        return false;
+    }
+  },
+
+  /**
+   * 重定向到我的文件页面进行上传
+   * @param {FileList} files - 文件列表
+   * @private
+   */
+  _redirectToMyFiles(files) {
+    // 显示提示信息
+    UI.Toast.info('文件类型不匹配', '已自动切换到"我的文件"页面进行上传', 5000);
+    
+    // 找到"我的文件"导航项并手动点击它
+    const myFilesNavItem = document.querySelector('.nav-group li[data-section="my-files"]');
+    if (myFilesNavItem) {
+      myFilesNavItem.click();
+      
+      // 延迟一下再上传文件，确保页面已经切换
+      setTimeout(() => {
+        this.uploadDroppedFiles(files);
+      }, 500);
+    } else {
+      // 如果找不到导航项，退回到触发事件的方式
+      document.dispatchEvent(new CustomEvent('section:change', { 
+        detail: { section: 'my-files' } 
+      }));
+      
+      // 延迟一下再上传文件，确保页面已经切换
+      setTimeout(() => {
+        this.uploadDroppedFiles(files);
+      }, 500);
     }
   },
 

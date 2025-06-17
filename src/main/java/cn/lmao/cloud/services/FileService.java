@@ -86,7 +86,7 @@ public class FileService {
                             File newFile = new File(f);
                             newFile.setCloud(cloud); // 关联云盘
                             // 确保文件路径是根目录（默认上传到根目录）
-                            newFile.setPath("/" + newFile.getName());
+                            newFile.setPath(f.getPath());
                             return fileRepository.save(newFile);
                         })
                         .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
@@ -382,7 +382,6 @@ public class FileService {
             // 2. 验证文件是否属于当前用户
             File file = fileRepository.findById(fileId)
                     .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
-
             if (!file.getCloud().getUser().getId().equals(userId)) {
                 throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
             }
@@ -399,36 +398,77 @@ public class FileService {
     /**
      * 删除回收站文件
      * 
+     * @param fileId 文件ID
      * @param userId 用户ID
      */
-    // @Transactional
-    // public void deleteTrashFile(Long fileId, Long userId) {
-    //     fileLock.lock(); // 获取锁，保证线程安全
-    //     try {
-    //         // 1. 验证用户云盘是否存在
-    //         Cloud cloud = userService.getCloud(userId);
-    //         if (cloud == null) {
-    //             throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
-    //         }
+    @Transactional
+    public void deleteTrashFile(Long fileId, Long userId) {
+        fileLock.lock(); // 获取锁，保证线程安全
+        try {
+            // 1. 验证用户云盘是否存在
+            Cloud cloud = userService.getCloud(userId);
+            if (cloud == null) {
+                throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+            }
 
-    //         // 2. 验证文件是否属于当前用户
-    //         File file = fileRepository.findById(fileId)
-    //                 .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
+            // 2. 验证文件是否属于当前用户
+            File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
+            if (!file.getCloud().getUser().getId().equals(userId)) {
+                throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
+            }
 
-    //         if (!file.getCloud().getUser().getId().equals(userId)) {
-    //             throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
-    //         }
+            //3. 删除数据库文件
+            fileRepository.delete(file);
 
-    //         log.info("彻底删除回收站文件: 文件ID={}, 文件名={}", fileId, file.getName());
-    //         // 3. 删除物理文件
-    //         fileUtil.deleteFile();
+            //4. 验证文件是否有其他用户在使用
+            if(fileRepository.existsByHashAndOtherCloud(file.getHash(), cloud)) {
+                log.error("文件正在被其他用户使用，无法删除物理文件: 文件ID={}, 文件名={}", fileId, file.getName());
+                cloudService.updateCloudCapacity(cloud.getId(), file.getSize(), false);
+                return;
+            }
 
-    //         // 4. 从数据库中删除文件记录
-    //         fileRepository.delete(file);
-    //     } finally {
-    //         fileLock.unlock(); // 释放锁
-    //     }
-    // }
+            log.info("删除回收站文件: 文件ID={}, 文件名={}", fileId, file.getName());
+            // 5. 删除物理文件
+            fileUtil.deleteFile(Path.of(file.getPath()));
+        } catch (IOException e) {
+            log.error("删除回收站文件失败: 文件ID={}, 错误={}", fileId, e.getMessage());
+            e.printStackTrace();
+        } finally {
+            fileLock.unlock(); // 释放锁
+        }
+    }
+
+    /**
+     * 恢复回收站文件
+     * @param userId
+     * @return
+     */
+    @Transactional
+    public void restoreTrashFile(Long fileId, Long userId) {
+        fileLock.lock(); // 获取锁，保证线程安全
+        try {
+            // 1. 验证用户云盘是否存在
+            Cloud cloud = userService.getCloud(userId);
+            if (cloud == null) {
+                throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+            }
+
+            // 2. 验证文件是否属于当前用户
+            File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
+            if (!file.getCloud().getUser().getId().equals(userId)) {
+                throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
+            }
+
+            // 3. 恢复文件状态
+            log.info("恢复回收站文件: 文件ID={}, 文件名={}", fileId, file.getName());
+            file.setStatus(File.FileStatus.ACTIVE);
+            fileRepository.save(file);
+        } finally {
+            fileLock.unlock(); // 释放锁
+        }
+    }
 
     /**
      * 获取回收站列表
