@@ -7,6 +7,101 @@ import { CloudAPI } from '../api/cloud-api.js';
 import { UI } from './ui.js';
 
 /**
+ * 创建防抖函数
+ * @param {Function} func - 要执行的函数
+ * @param {number} wait - 等待时间（毫秒）
+ * @returns {Function} 防抖处理后的函数
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
+/**
+ * 创建节流函数
+ * @param {Function} func - 要执行的函数
+ * @param {number} limit - 限制时间（毫秒）
+ * @returns {Function} 节流处理后的函数
+ */
+function throttle(func, limit) {
+  let inThrottle;
+  return function(...args) {
+    const context = this;
+    if (!inThrottle) {
+      func.apply(context, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
+/**
+ * 文件类型扩展名映射
+ */
+const FILE_TYPE_EXTENSIONS = {
+  video: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', '3gp', 'mpeg', 'mpg'],
+  image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico'],
+  audio: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'alac'],
+  document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'odt', 'ods', 'odp', 'md', 'markdown']
+};
+
+/**
+ * 文件类型对应的accept属性
+ */
+const FILE_TYPE_ACCEPT = {
+  video: '.mp4,.avi,.mov,.wmv,.flv,.mkv,.webm,.3gp,.mpeg,.mpg',
+  images: '.jpg,.jpeg,.png,.gif,.bmp,.svg,.webp,.tiff,.ico',
+  audio: '.mp3,.wav,.ogg,.flac,.aac,.m4a,.wma,.aiff,.alac',
+  document: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.odt,.ods,.odp,.md,.markdown'
+};
+
+/**
+ * 文件类型对应的空状态配置
+ */
+const EMPTY_STATE_CONFIG = {
+  video: {
+    iconClass: 'fas fa-film',
+    title: '暂无视频',
+    description: '您可以拖拽视频文件至此上传，或点击下方按钮选择文件',
+    buttonText: '上传视频'
+  },
+  images: {
+    iconClass: 'fas fa-image',
+    title: '暂无图片',
+    description: '您可以拖拽图片文件至此上传，或点击下方按钮选择文件',
+    buttonText: '上传图片'
+  },
+  audio: {
+    iconClass: 'fas fa-music',
+    title: '暂无音乐',
+    description: '您可以拖拽音频文件至此上传，或点击下方按钮选择文件',
+    buttonText: '上传音乐'
+  },
+  document: {
+    iconClass: 'fas fa-file-alt',
+    title: '暂无文档',
+    description: '您可以拖拽文档文件至此上传，或点击下方按钮选择文件',
+    buttonText: '上传文档'
+  },
+  others: {
+    iconClass: 'fas fa-file-archive',
+    title: '暂无其他文件',
+    description: '您可以拖拽其他类型文件至此上传，或点击下方按钮选择文件',
+    buttonText: '上传文件'
+  },
+  default: {
+    iconClass: 'fas fa-file',
+    title: '暂无文件',
+    description: '您可以拖拽文件至此上传，或点击下方按钮选择文件',
+    buttonText: '上传文件'
+  }
+};
+
+/**
  * 文件管理器
  */
 export const FileManager = {
@@ -75,18 +170,16 @@ export const FileManager = {
           }
         }
       },
-      // 移除fileAction事件处理程序，不再需要
       sectionChange: (e) => {
-        console.log('文件管理器接收到部分切换事件:', e.detail);
         if (e.detail && e.detail.section) {
           this.handleSectionChange(e.detail.section);
         }
       },
-      searchPerform: (e) => {
+      searchPerform: debounce((e) => {
         if (e.detail && e.detail.query) {
           this.searchFiles(e.detail.query);
         }
-      },
+      }, 300),
       // 拖放事件处理
       dragOver: (e) => this.handleDragOver(e),
       dragEnter: (e) => this.handleDragEnter(e),
@@ -103,8 +196,6 @@ export const FileManager = {
     // 初始化右键菜单
     this._initContextMenu();
 
-    console.log('文件管理器初始化完成');
-
     // 加载文件列表
     this.loadFiles();
   },
@@ -120,9 +211,9 @@ export const FileManager = {
       });
     });
 
-    // 刷新按钮
+    // 刷新按钮 - 添加节流处理，防止频繁刷新
     if (this.refreshBtn) {
-      this.refreshBtn.addEventListener('click', () => this.refreshFiles());
+      this.refreshBtn.addEventListener('click', throttle(() => this.refreshFiles(), 1000));
     }
 
     // 排序选项
@@ -138,9 +229,6 @@ export const FileManager = {
 
     // 文件项复选框点击处理
     document.addEventListener('change', this._eventHandlers.checkboxChange);
-
-    // 移除文件操作按钮事件监听，不再需要
-    // document.addEventListener('click', this._eventHandlers.fileAction);
 
     // 批量操作按钮
     document.querySelectorAll('.toolbar-btn').forEach(btn => {
@@ -173,8 +261,6 @@ export const FileManager = {
     if (this._eventHandlers) {
       document.removeEventListener('click', this._eventHandlers.fileItemClick);
       document.removeEventListener('change', this._eventHandlers.checkboxChange);
-      // 移除fileAction事件监听器，不再需要
-      // document.removeEventListener('click', this._eventHandlers.fileAction);
       document.removeEventListener('section:change', this._eventHandlers.sectionChange);
       document.removeEventListener('search:perform', this._eventHandlers.searchPerform);
 
@@ -188,8 +274,6 @@ export const FileManager = {
           target.removeEventListener('drop', this._eventHandlers.drop);
         }
       });
-
-      console.log('文件管理器事件监听器已移除');
     }
   },
 
@@ -211,6 +295,9 @@ export const FileManager = {
       if (this.fileActionsToolbar.classList.contains('trash-toolbar-styled')) {
         this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
       }
+
+      // 强制重置工具栏状态，确保切换部分时工具栏总是正确的
+      this._resetToolbar();
     }
 
     // 重置当前路径
@@ -393,7 +480,6 @@ export const FileManager = {
 
     if (files.length > 0) {
       // 有文件，显示文件列表
-      console.log(localStorage.getItem('view'));
       this.fileList.style.display = localStorage.getItem('view') === 'list' ? 'flex' : 'grid';
       this.fileList.className = 'file-list';
       this.fileList.classList.add(`${this.currentView}-view`);
@@ -403,11 +489,17 @@ export const FileManager = {
         this.emptyFileList.style.display = 'none';
       }
 
+      // 使用文档片段减少DOM重绘次数
+      const fragment = document.createDocumentFragment();
+      
       // 创建文件项
       files.forEach(file => {
         const fileItem = this.createFileItem(file);
-        this.fileList.appendChild(fileItem);
+        fragment.appendChild(fileItem);
       });
+      
+      // 一次性将所有文件项添加到DOM
+      this.fileList.appendChild(fragment);
       
       // 启用视图切换按钮
       this._enableViewToggleButtons();
@@ -519,6 +611,15 @@ export const FileManager = {
    */
   createFileItem(file, isTrash = false) {
     const isFolder = file.type === 'folder';
+    const fileIcon = this.getFileIcon(file.name);
+    const fileSize = isFolder ? '' : this.formatFileSize(file.size);
+    const fileDate = new Date(file.createTime).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    // 创建文件项元素
     const fileItem = document.createElement('div');
     fileItem.className = `file-item ${isFolder ? 'folder' : 'file'}`;
     fileItem.setAttribute('tabindex', '0');
@@ -530,14 +631,7 @@ export const FileManager = {
     fileItem.setAttribute('data-type', file.type);
     fileItem.setAttribute('data-is-trash', isTrash.toString());
 
-    const fileIcon = this.getFileIcon(file.name);
-    const fileSize = isFolder ? '' : this.formatFileSize(file.size);
-    const fileDate = new Date(file.createTime).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
-
+    // 使用模板字符串设置内容
     fileItem.innerHTML = `
       <div class="file-checkbox">
         <input type="checkbox" class="item-checkbox" aria-label="选择${file.name}">
@@ -558,7 +652,7 @@ export const FileManager = {
     if (checkbox) {
       checkbox.checked = false;
     }
-
+    
     return fileItem;
   },
 
@@ -569,46 +663,92 @@ export const FileManager = {
    */
   getFileIcon(fileName) {
     const extension = fileName.split('.').pop().toLowerCase();
-
-    switch (extension) {
-      case 'pdf':
-        return 'fas fa-file-pdf';
-      case 'doc':
-      case 'docx':
-        return 'fas fa-file-word';
-      case 'xls':
-      case 'xlsx':
-        return 'fas fa-file-excel';
-      case 'ppt':
-      case 'pptx':
-        return 'fas fa-file-powerpoint';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-      case 'bmp':
-        return 'fas fa-file-image';
-      case 'mp3':
-      case 'wav':
-      case 'ogg':
-        return 'fas fa-file-audio';
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-        return 'fas fa-file-video';
-      case 'zip':
-      case 'rar':
-      case '7z':
-        return 'fas fa-file-archive';
-      case 'txt':
-        return 'fas fa-file-alt';
-      case 'html':
-      case 'css':
-      case 'js':
-        return 'fas fa-file-code';
-      default:
-        return 'fas fa-file';
-    }
+    
+    // 使用对象映射代替switch语句
+    const iconMap = {
+      // 文档类
+      'pdf': 'fas fa-file-pdf',
+      'doc': 'fas fa-file-word',
+      'docx': 'fas fa-file-word',
+      'xls': 'fas fa-file-excel',
+      'xlsx': 'fas fa-file-excel',
+      'ppt': 'fas fa-file-powerpoint',
+      'pptx': 'fas fa-file-powerpoint',
+      'txt': 'fas fa-file-alt',
+      'rtf': 'fas fa-file-alt',
+      'odt': 'fas fa-file-alt',
+      'ods': 'fas fa-file-excel',
+      'odp': 'fas fa-file-powerpoint',
+      'md': 'fas fa-file-alt',
+      'markdown': 'fas fa-file-alt',
+      'csv': 'fas fa-file-csv',
+      
+      // 图像类
+      'jpg': 'fas fa-file-image',
+      'jpeg': 'fas fa-file-image',
+      'png': 'fas fa-file-image',
+      'gif': 'fas fa-file-image',
+      'bmp': 'fas fa-file-image',
+      'svg': 'fas fa-file-image',
+      'webp': 'fas fa-file-image',
+      'tiff': 'fas fa-file-image',
+      'ico': 'fas fa-file-image',
+      
+      // 音频类
+      'mp3': 'fas fa-file-audio',
+      'wav': 'fas fa-file-audio',
+      'ogg': 'fas fa-file-audio',
+      'flac': 'fas fa-file-audio',
+      'aac': 'fas fa-file-audio',
+      'm4a': 'fas fa-file-audio',
+      'wma': 'fas fa-file-audio',
+      'aiff': 'fas fa-file-audio',
+      'alac': 'fas fa-file-audio',
+      
+      // 视频类
+      'mp4': 'fas fa-file-video',
+      'avi': 'fas fa-file-video',
+      'mov': 'fas fa-file-video',
+      'wmv': 'fas fa-file-video',
+      'flv': 'fas fa-file-video',
+      'mkv': 'fas fa-file-video',
+      'webm': 'fas fa-file-video',
+      '3gp': 'fas fa-file-video',
+      'mpeg': 'fas fa-file-video',
+      'mpg': 'fas fa-file-video',
+      
+      // 压缩文件类
+      'zip': 'fas fa-file-archive',
+      'rar': 'fas fa-file-archive',
+      '7z': 'fas fa-file-archive',
+      'tar': 'fas fa-file-archive',
+      'gz': 'fas fa-file-archive',
+      
+      // 代码类
+      'html': 'fas fa-file-code',
+      'css': 'fas fa-file-code',
+      'js': 'fas fa-file-code',
+      'ts': 'fas fa-file-code',
+      'jsx': 'fas fa-file-code',
+      'tsx': 'fas fa-file-code',
+      'php': 'fas fa-file-code',
+      'py': 'fas fa-file-code',
+      'java': 'fas fa-file-code',
+      'c': 'fas fa-file-code',
+      'cpp': 'fas fa-file-code',
+      'h': 'fas fa-file-code',
+      'cs': 'fas fa-file-code',
+      'rb': 'fas fa-file-code',
+      'go': 'fas fa-file-code',
+      'swift': 'fas fa-file-code',
+      'json': 'fas fa-file-code',
+      'xml': 'fas fa-file-code',
+      'yml': 'fas fa-file-code',
+      'yaml': 'fas fa-file-code',
+    };
+    
+    // 返回匹配的图标或默认图标
+    return iconMap[extension] || 'fas fa-file';
   },
 
   /**
@@ -618,12 +758,21 @@ export const FileManager = {
    */
   formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
-
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    const base = 1024;
+    const unitIndex = Math.floor(Math.log(bytes) / Math.log(base));
+    
+    // 限制单位索引不超过数组长度
+    const safeUnitIndex = Math.min(unitIndex, units.length - 1);
+    
+    // 计算大小并保留两位小数
+    const size = bytes / Math.pow(base, safeUnitIndex);
+    
+    // 如果是整数，不显示小数点
+    return size % 1 === 0 
+      ? `${size} ${units[safeUnitIndex]}`
+      : `${size.toFixed(2)} ${units[safeUnitIndex]}`;
   },
 
   /**
@@ -737,7 +886,7 @@ export const FileManager = {
           <div class="toolbar-actions">
             <button class="toolbar-btn" title="下载"><i class="fas fa-download"></i></button>
             <button class="toolbar-btn" title="分享"><i class="fas fa-share-alt"></i></button>
-            <button class="toolbar-btn" title="移动"><i class="fas fa-folder-open"></i></button>
+            <button class="toolbar-btn" title="移动"><i class="fas fa-arrows-alt"></i></button>
             <button class="toolbar-btn" title="删除"><i class="fas fa-trash"></i></button>
           </div>
         `;
@@ -966,7 +1115,7 @@ export const FileManager = {
           <div class="toolbar-actions">
             <button class="toolbar-btn" title="下载"><i class="fas fa-download"></i></button>
             <button class="toolbar-btn" title="分享"><i class="fas fa-share-alt"></i></button>
-            <button class="toolbar-btn" title="移动"><i class="fas fa-folder-open"></i></button>
+            <button class="toolbar-btn" title="移动"><i class="fas fa-arrows-alt"></i></button>
             <button class="toolbar-btn" title="删除"><i class="fas fa-trash"></i></button>
           </div>
         `;
@@ -1004,6 +1153,44 @@ export const FileManager = {
   // },
 
   /**
+   * 重置文件操作工具栏为默认状态
+   * @private
+   */
+  _resetToolbar() {
+    console.log('重置工具栏到默认状态');
+    
+    if (!this.fileActionsToolbar) return;
+    
+    // 移除回收站特定样式
+    this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
+    
+    // 清空工具栏内容
+    this.fileActionsToolbar.innerHTML = '';
+    
+    // 恢复默认工具栏内容
+    const defaultToolbarHTML = `
+      <div class="selected-count">已选择 <span id="selectedCount">0</span> 项</div>
+      <div class="toolbar-actions">
+        <button class="toolbar-btn" title="下载"><i class="fas fa-download"></i></button>
+        <button class="toolbar-btn" title="分享"><i class="fas fa-share-alt"></i></button>
+        <button class="toolbar-btn" title="移动"><i class="fas fa-arrows-alt"></i></button>
+        <button class="toolbar-btn" title="删除"><i class="fas fa-trash"></i></button>
+      </div>
+    `;
+    this.fileActionsToolbar.innerHTML = defaultToolbarHTML;
+    this.selectedCountElement = document.getElementById('selectedCount');
+    
+    // 确保工具栏隐藏
+    this.fileActionsToolbar.style.display = 'none';
+    
+    // 重新绑定工具栏按钮事件
+    const toolbarBtns = this.fileActionsToolbar.querySelectorAll('.toolbar-btn');
+    toolbarBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => this.handleBulkAction(e));
+    });
+  },
+
+  /**
    * 从回收站恢复文件
    * @param {string} fileName - 文件名
    * @param {string} fileId - 文件ID
@@ -1025,6 +1212,9 @@ export const FileManager = {
           
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
+          
+          // 重置工具栏到默认状态
+          this._resetToolbar();
           
           // 刷新回收站
           this.loadTrashContent();
@@ -1173,6 +1363,9 @@ export const FileManager = {
 
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
+
+          // 重置工具栏到默认状态
+          this._resetToolbar();
 
           // 刷新回收站
           this.loadTrashContent();
@@ -1455,8 +1648,6 @@ export const FileManager = {
    * @param {string} type - 文件类型
    */
   loadFilteredContent(type) {
-    console.log(`加载${this.getTypeName(type)}内容，类型:`, type);
-
     // 显示加载指示器
     UI.Loader.showContentLoader('fileContainer');
 
@@ -1476,37 +1667,23 @@ export const FileManager = {
     CloudAPI.getFileList('/', this.currentSort)
       .then(response => {
         const allFiles = response.data || [];
-        console.log(`API返回的所有文件数量:`, allFiles.length);
-
-        // 根据类型过滤文件
+        
+        // 根据类型过滤文件，使用更简洁的过滤逻辑
         let filteredFiles = [];
-
-        if (type === 'video') {
-          filteredFiles = allFiles.filter(file =>
-            file.type !== 'folder' && this.isVideoFile(file.name)
-          );
-        } else if (type === 'images') {
-          filteredFiles = allFiles.filter(file =>
-            file.type !== 'folder' && this.isImageFile(file.name)
-          );
-        } else if (type === 'audio') {
-          filteredFiles = allFiles.filter(file =>
-            file.type !== 'folder' && this.isAudioFile(file.name)
-          );
-        } else if (type === 'document') {
-          filteredFiles = allFiles.filter(file =>
-            file.type !== 'folder' && this.isDocumentFile(file.name)
-          );
-        } else if (type === 'others') {
-          filteredFiles = allFiles.filter(file =>
-            file.type !== 'folder' && this.isOtherFile(file.name)
-          );
+        
+        // 使用映射表简化过滤逻辑
+        const filterFunctions = {
+          'video': file => file.type !== 'folder' && this.isVideoFile(file.name),
+          'images': file => file.type !== 'folder' && this.isImageFile(file.name),
+          'audio': file => file.type !== 'folder' && this.isAudioFile(file.name),
+          'document': file => file.type !== 'folder' && this.isDocumentFile(file.name),
+          'others': file => file.type !== 'folder' && this.isOtherFile(file.name)
+        };
+        
+        // 使用对应的过滤函数
+        if (filterFunctions[type]) {
+          filteredFiles = allFiles.filter(filterFunctions[type]);
         }
-
-        console.log(`过滤后的${this.getTypeName(type)}文件数量:`, filteredFiles.length);
-        filteredFiles.forEach(file => {
-          console.log(`- ${file.name}`);
-        });
 
         // 缓存当前文件列表
         this.currentFiles = filteredFiles;
@@ -1545,16 +1722,23 @@ export const FileManager = {
         if (filteredFiles.length > 0) {
           // 有文件，显示文件列表
           if (this.fileList) {
-            this.fileList.style.display = 'grid';
+            // 根据用户保存的视图模式设置显示方式，保持与主页面一致
+            this.fileList.style.display = localStorage.getItem('view') === 'list' ? 'flex' : 'grid';
             this.fileList.className = 'file-list';
             this.fileList.classList.add(`${this.currentView}-view`);
             this.fileList.innerHTML = ''; // 清空现有内容
 
+            // 使用文档片段减少DOM重绘次数
+            const fragment = document.createDocumentFragment();
+            
             // 创建文件项
             filteredFiles.forEach(file => {
               const fileItem = this.createFileItem(file);
-              this.fileList.appendChild(fileItem);
+              fragment.appendChild(fileItem);
             });
+            
+            // 一次性将所有文件项添加到DOM
+            this.fileList.appendChild(fragment);
           }
 
           // 隐藏空状态
@@ -1581,55 +1765,18 @@ export const FileManager = {
             this.emptyFileList.style.display = 'flex';
             this.emptyFileList.className = `empty-file-list ${type}-empty`;
 
-            // 根据类型设置不同的提示信息
-            let iconClass, title, description, buttonText;
-            switch (type) {
-              case 'video':
-                iconClass = 'fas fa-film';
-                title = '暂无视频';
-                description = '您可以拖拽视频文件至此上传，或点击下方按钮选择文件';
-                buttonText = '上传视频';
-                break;
-              case 'images':
-                iconClass = 'fas fa-image';
-                title = '暂无图片';
-                description = '您可以拖拽图片文件至此上传，或点击下方按钮选择文件';
-                buttonText = '上传图片';
-                break;
-              case 'audio':
-                iconClass = 'fas fa-music';
-                title = '暂无音乐';
-                description = '您可以拖拽音频文件至此上传，或点击下方按钮选择文件';
-                buttonText = '上传音乐';
-                break;
-              case 'document':
-                iconClass = 'fas fa-file-alt';
-                title = '暂无文档';
-                description = '您可以拖拽文档文件至此上传，或点击下方按钮选择文件';
-                buttonText = '上传文档';
-                break;
-              case 'others':
-                iconClass = 'fas fa-file-archive';
-                title = '暂无其他文件';
-                description = '您可以拖拽其他类型文件至此上传，或点击下方按钮选择文件';
-                buttonText = '上传文件';
-                break;
-              default:
-                iconClass = 'fas fa-file';
-                title = '暂无文件';
-                description = '您可以拖拽文件至此上传，或点击下方按钮选择文件';
-                buttonText = '上传文件';
-            }
+            // 使用配置对象获取空状态信息
+            const emptyConfig = EMPTY_STATE_CONFIG[type] || EMPTY_STATE_CONFIG.default;
 
             this.emptyFileList.innerHTML = `
               <div class="empty-file-icon">
-                <i class="${iconClass}"></i>
+                <i class="${emptyConfig.iconClass}"></i>
               </div>
-              <div class="empty-file-title">${title}</div>
-              <div class="empty-file-description">${description}</div>
+              <div class="empty-file-title">${emptyConfig.title}</div>
+              <div class="empty-file-description">${emptyConfig.description}</div>
               <div class="empty-file-actions">
                 <button class="btn btn-primary upload-btn" data-type="${type}">
-                  <i class="fas fa-upload"></i> ${buttonText}
+                  <i class="fas fa-upload"></i> ${emptyConfig.buttonText}
                 </button>
               </div>
             `;
@@ -1641,21 +1788,11 @@ export const FileManager = {
                 const fileInput = document.getElementById('fileInput');
                 if (fileInput) {
                   // 设置接受的文件类型
-                  switch (type) {
-                    case 'video':
-                      fileInput.setAttribute('accept', '.mp4,.avi,.mov,.wmv,.flv,.mkv,.webm,.3gp,.mpeg,.mpg');
-                      break;
-                    case 'images':
-                      fileInput.setAttribute('accept', '.jpg,.jpeg,.png,.gif,.bmp,.svg,.webp,.tiff,.ico');
-                      break;
-                    case 'audio':
-                      fileInput.setAttribute('accept', '.mp3,.wav,.ogg,.flac,.aac,.m4a,.wma,.aiff,.alac');
-                      break;
-                    case 'document':
-                      fileInput.setAttribute('accept', '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.odt,.ods,.odp,.md,.markdown');
-                      break;
-                    default:
-                      fileInput.removeAttribute('accept');
+                  const acceptType = FILE_TYPE_ACCEPT[type];
+                  if (acceptType) {
+                    fileInput.setAttribute('accept', acceptType);
+                  } else {
+                    fileInput.removeAttribute('accept');
                   }
                   
                   // 为fileInput添加一次性事件监听器，用于验证文件类型
@@ -1685,8 +1822,6 @@ export const FileManager = {
           // 禁用视图切换按钮
           this._disableViewToggleButtons();
 
-          console.log(`未找到${this.getTypeName(type)}，显示空状态`);
-
           // 显示无内容提示
           UI.Toast.info('无内容', `未找到${this.getTypeName(type)}文件`, 5000, {
             group: 'fileOperations'
@@ -1694,8 +1829,6 @@ export const FileManager = {
         }
       })
       .catch(error => {
-        console.error(`加载${this.getTypeName(type)}失败:`, error);
-
         // 隐藏加载指示器
         UI.Loader.hideContentLoader();
 
@@ -1738,28 +1871,28 @@ export const FileManager = {
   /**
    * 检查文件类型
    * @param {string} fileName - 文件名
-   * @param {Array<string>} extensions - 扩展名数组
-   * @param {string} fileType - 文件类型名称（用于日志）
+   * @param {string} fileType - 文件类型（video, image, audio, document）
    * @returns {boolean} 是否为指定类型的文件
    */
-  checkFileType(fileName, extensions, fileType) {
+  checkFileType(fileName, fileType) {
     if (!fileName || typeof fileName !== 'string') {
-      console.error('无效的文件名:', fileName);
       return false;
     }
 
     // 确保文件名包含扩展名
     const parts = fileName.split('.');
     if (parts.length < 2) {
-      console.log('文件没有扩展名:', fileName);
       return false;
     }
 
     const extension = parts[parts.length - 1].toLowerCase();
-    const isMatchType = extensions.includes(extension);
-
-    console.log(`${fileType}检查: ${fileName}, 扩展名: ${extension}, 是${fileType}: ${isMatchType}`);
-    return isMatchType;
+    const extensions = FILE_TYPE_EXTENSIONS[fileType];
+    
+    if (!extensions) {
+      return false;
+    }
+    
+    return extensions.includes(extension);
   },
 
   /**
@@ -1768,8 +1901,7 @@ export const FileManager = {
    * @returns {boolean} 是否为视频文件
    */
   isVideoFile(fileName) {
-    const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', '3gp', 'mpeg', 'mpg'];
-    return this.checkFileType(fileName, videoExtensions, '视频');
+    return this.checkFileType(fileName, 'video');
   },
 
   /**
@@ -1778,8 +1910,7 @@ export const FileManager = {
    * @returns {boolean} 是否为图片文件
    */
   isImageFile(fileName) {
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico'];
-    return this.checkFileType(fileName, imageExtensions, '图片');
+    return this.checkFileType(fileName, 'image');
   },
 
   /**
@@ -1788,8 +1919,7 @@ export const FileManager = {
    * @returns {boolean} 是否为音频文件
    */
   isAudioFile(fileName) {
-    const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'alac'];
-    return this.checkFileType(fileName, audioExtensions, '音频');
+    return this.checkFileType(fileName, 'audio');
   },
 
   /**
@@ -1798,8 +1928,7 @@ export const FileManager = {
    * @returns {boolean} 是否为文档文件
    */
   isDocumentFile(fileName) {
-    const docExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'odt', 'ods', 'odp', 'md', 'markdown'];
-    return this.checkFileType(fileName, docExtensions, '文档');
+    return this.checkFileType(fileName, 'document');
   },
 
   /**
@@ -1809,12 +1938,8 @@ export const FileManager = {
    */
   isOtherFile(fileName) {
     // 首先检查是否为视频、音频、文档或图片文件
-    if (this.isVideoFile(fileName) || this.isAudioFile(fileName) || 
-        this.isDocumentFile(fileName) || this.isImageFile(fileName)) {
-      return false;
-    }
-    // 如果不是上述任何类型，则视为其他类型
-    return true;
+    return !(this.isVideoFile(fileName) || this.isAudioFile(fileName) || 
+             this.isDocumentFile(fileName) || this.isImageFile(fileName));
   },
 
   /**
@@ -1905,7 +2030,8 @@ export const FileManager = {
 
           // 创建共享内容视图
           if (this.fileList) {
-            this.fileList.style.display = 'flex';
+            // 根据用户保存的视图模式设置显示方式，保持与主页面一致
+            this.fileList.style.display = localStorage.getItem('view') === 'list' ? 'flex' : 'grid';
             this.fileList.className = 'file-list shared-content-view';
             this.fileList.innerHTML = `
               <div class="shared-content-tabs">
@@ -2229,13 +2355,8 @@ export const FileManager = {
    * @returns {HTMLElement|null} 文件项元素
    */
   findFileItemByName(fileName) {
-    const fileItems = document.querySelectorAll('.file-item');
-    for (const item of fileItems) {
-      if (item.getAttribute('data-name') === fileName) {
-        return item;
-      }
-    }
-    return null;
+    // 使用属性选择器直接查找匹配的文件项，避免遍历所有文件项
+    return document.querySelector(`.file-item[data-name="${CSS.escape(fileName)}"]`);
   },
 
   /**
@@ -2861,7 +2982,8 @@ export const FileManager = {
 
           // 创建回收站内容视图
           if (this.fileList) {
-            this.fileList.style.display = 'grid';
+            // 根据用户保存的视图模式设置显示方式，保持与主页面一致
+            this.fileList.style.display = localStorage.getItem('view') === 'list' ? 'flex' : 'grid';
             this.fileList.className = 'file-list trash-content-view';
             this.fileList.classList.add(`${this.currentView}-view`);
             this.fileList.innerHTML = '';
@@ -3107,80 +3229,43 @@ export const FileManager = {
       return { shouldRedirect: true, targetSection: 'my-files' };
     }
     
-    // 判断文件类型和当前页面是否匹配
-    let allFilesMatch = true;
-    let targetSection = 'my-files'; // 默认目标部分
+    // 文件类型检查函数映射
+    const typeCheckers = {
+      'videos': this.isVideoFile.bind(this),
+      'images': this.isImageFile.bind(this),
+      'music': this.isAudioFile.bind(this),
+      'documents': this.isDocumentFile.bind(this),
+      'others': this.isOtherFile.bind(this)
+    };
     
-    // 检查所有文件
+    // 获取当前部分的检查函数
+    const currentChecker = typeCheckers[section];
+    if (!currentChecker) {
+      return { shouldRedirect: false };
+    }
+    
+    // 检查所有文件是否匹配当前部分
     for (const file of Array.from(files)) {
       const fileName = file.name;
       
-      // 根据当前部分检查文件类型是否匹配
-      switch (section) {
-        case 'videos':
-          if (!this.isVideoFile(fileName)) {
-            allFilesMatch = false;
-            // 确定最适合的目标部分
-            if (this.isImageFile(fileName)) targetSection = 'images';
-            else if (this.isAudioFile(fileName)) targetSection = 'music';
-            else if (this.isDocumentFile(fileName)) targetSection = 'documents';
-            else if (this.isOtherFile(fileName)) targetSection = 'others';
-          }
-          break;
+      // 如果文件类型与当前部分不匹配
+      if (!currentChecker(fileName)) {
+        // 确定最适合的目标部分
+        let targetSection = 'my-files';
         
-        case 'images':
-          if (!this.isImageFile(fileName)) {
-            allFilesMatch = false;
-            // 确定最适合的目标部分
-            if (this.isVideoFile(fileName)) targetSection = 'videos';
-            else if (this.isAudioFile(fileName)) targetSection = 'music';
-            else if (this.isDocumentFile(fileName)) targetSection = 'documents';
-            else if (this.isOtherFile(fileName)) targetSection = 'others';
-          }
-          break;
+        // 检查文件类型并确定目标部分
+        if (this.isVideoFile(fileName)) targetSection = 'videos';
+        else if (this.isImageFile(fileName)) targetSection = 'images';
+        else if (this.isAudioFile(fileName)) targetSection = 'music';
+        else if (this.isDocumentFile(fileName)) targetSection = 'documents';
+        else if (this.isOtherFile(fileName)) targetSection = 'others';
         
-        case 'music':
-          if (!this.isAudioFile(fileName)) {
-            allFilesMatch = false;
-            // 确定最适合的目标部分
-            if (this.isVideoFile(fileName)) targetSection = 'videos';
-            else if (this.isImageFile(fileName)) targetSection = 'images';
-            else if (this.isDocumentFile(fileName)) targetSection = 'documents';
-            else if (this.isOtherFile(fileName)) targetSection = 'others';
-          }
-          break;
-        
-        case 'documents':
-          if (!this.isDocumentFile(fileName)) {
-            allFilesMatch = false;
-            // 确定最适合的目标部分
-            if (this.isVideoFile(fileName)) targetSection = 'videos';
-            else if (this.isImageFile(fileName)) targetSection = 'images';
-            else if (this.isAudioFile(fileName)) targetSection = 'music';
-            else if (this.isOtherFile(fileName)) targetSection = 'others';
-          }
-          break;
-        
-        case 'others':
-          if (!this.isOtherFile(fileName)) {
-            allFilesMatch = false;
-            // 确定最适合的目标部分
-            if (this.isVideoFile(fileName)) targetSection = 'videos';
-            else if (this.isImageFile(fileName)) targetSection = 'images';
-            else if (this.isAudioFile(fileName)) targetSection = 'music';
-            else if (this.isDocumentFile(fileName)) targetSection = 'documents';
-          }
-          break;
+        return { shouldRedirect: true, targetSection };
       }
-      
-      // 如果找到不匹配的文件，停止检查
-      if (!allFilesMatch) break;
     }
     
-    return { 
-      shouldRedirect: !allFilesMatch,
-      targetSection: targetSection
-    };
+    // 所有文件都匹配当前部分
+    return { shouldRedirect: false };
   },
 
   /**
@@ -3199,39 +3284,23 @@ export const FileManager = {
     }
     
     // 获取目标部分的名称
-    let sectionName = "我的文件";
-    document.querySelectorAll('.nav-group li').forEach(item => {
-      if (item.dataset.section === targetSection) {
-        const spanElement = item.querySelector('span');
-        if (spanElement) {
-          sectionName = spanElement.textContent.trim();
-        }
-      }
-    });
+    const targetNavItem = document.querySelector(`.nav-group li[data-section="${targetSection}"]`);
+    const sectionName = targetNavItem ? 
+      (targetNavItem.querySelector('span')?.textContent.trim() || targetSection) : 
+      targetSection;
     
     // 显示提示信息
     UI.Toast.info('文件类型不匹配', `已自动切换到"${sectionName}"页面进行上传`, 5000);
     
-    // 找到目标导航项并手动点击它
-    const targetNavItem = document.querySelector(`.nav-group li[data-section="${targetSection}"]`);
-    if (targetNavItem) {
-      targetNavItem.click();
-      
-      // 延迟一下再上传文件，确保页面已经切换
-      setTimeout(() => {
-        this.uploadDroppedFiles(files);
-      }, 500);
-    } else {
-      // 如果找不到导航项，退回到触发事件的方式
-      document.dispatchEvent(new CustomEvent('section:change', { 
-        detail: { section: targetSection } 
-      }));
-      
-      // 延迟一下再上传文件，确保页面已经切换
-      setTimeout(() => {
-        this.uploadDroppedFiles(files);
-      }, 500);
-    }
+    // 触发部分切换事件
+    document.dispatchEvent(new CustomEvent('section:change', { 
+      detail: { section: targetSection } 
+    }));
+    
+    // 延迟一下再上传文件，确保页面已经切换
+    setTimeout(() => {
+      this.uploadDroppedFiles(files);
+    }, 500);
   },
 
   /**
@@ -3239,18 +3308,14 @@ export const FileManager = {
    * @param {FileList} files - 文件列表
    */
   uploadDroppedFiles(files) {
-    console.log('开始处理拖放文件上传，文件数量:', files.length);
-
     // 确保有文件需要上传
     if (!files || files.length === 0) {
-      console.warn('没有可上传的文件');
       return;
     }
 
     // 动态导入上传管理器
     import('./upload-manager.js')
       .then(module => {
-        console.log('上传管理器模块加载成功');
         const uploadManager = module.default;
 
         if (!uploadManager) {
@@ -3261,13 +3326,10 @@ export const FileManager = {
         const uploadProgressContainer = document.getElementById('uploadProgress');
         if (uploadProgressContainer) {
           uploadProgressContainer.style.display = 'block';
-        } else {
-          console.warn('找不到上传进度容器元素');
         }
 
         // 获取当前路径
         const currentPath = this.currentPath || '/';
-        console.log('当前上传路径:', currentPath);
 
         // 创建FormData对象
         const formData = new FormData();
@@ -3275,35 +3337,33 @@ export const FileManager = {
 
         // 处理每个文件上传
         const uploadIds = [];
-        Array.from(files).forEach(file => {
-          console.log('准备上传文件:', file.name, '大小:', file.size);
-
+        
+        // 使用Promise.all处理文件添加
+        const addFilePromises = Array.from(files).map(file => {
           // 生成唯一ID
           const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
           uploadIds.push(id);
 
-          // 添加文件到FormData - 使用'file'作为字段名，与后端匹配
+          // 添加文件到FormData
           formData.append('file', file);
 
           // 添加上传项到UI
-          try {
-            uploadManager.addUploadItem(id, file.name);
-          } catch (err) {
-            console.error('添加上传项到UI失败:', err);
-            throw err;
-          }
+          return uploadManager.addUploadItem(id, file.name)
+            .catch(err => {
+              UI.Toast.error('上传准备失败', `文件 ${file.name} 添加失败: ${err.message}`, 5000);
+              throw err;
+            });
         });
 
-        // 执行上传
-        console.log('开始执行上传，文件数量:', uploadIds.length);
-        return uploadManager.performUpload(formData);
+        // 等待所有文件添加完成后执行上传
+        return Promise.all(addFilePromises)
+          .then(() => uploadManager.performUpload(formData));
       })
       .then(result => {
-        console.log('拖放文件上传成功完成:', result);
+        // 上传成功，不需要额外操作，uploadManager会处理UI更新
       })
       .catch(error => {
-        console.error('拖放上传失败:', error);
-        UI.Toast.show('error', '上传失败', error.message || '文件上传过程中发生错误');
+        UI.Toast.error('上传失败', error.message || '文件上传过程中发生错误', 5000);
       });
   },
 
@@ -3319,6 +3379,21 @@ export const FileManager = {
       contextMenu.className = 'context-menu';
       contextMenu.style.display = 'none';
       document.body.appendChild(contextMenu);
+      
+      // 使用事件委托处理菜单项点击，减少事件监听器数量
+      contextMenu.addEventListener('click', (e) => {
+        const menuItem = e.target.closest('.menu-item');
+        if (!menuItem) return;
+        
+        const action = menuItem.dataset.action;
+        const fileName = menuItem.dataset.file;
+        const fileItem = document.querySelector(`.file-item[data-name="${CSS.escape(fileName)}"]`);
+        
+        if (action && fileName && fileItem) {
+          this._handleContextMenuAction(action, fileName, fileItem);
+          this._hideContextMenu();
+        }
+      });
     }
 
     // 为文档添加点击事件，点击其他区域时隐藏右键菜单
@@ -3347,26 +3422,34 @@ export const FileManager = {
    */
   _addLongPressHandler() {
     let longPressTimer;
+    let touchStartTarget = null;
     const longPressDuration = 500; // 长按时间（毫秒）
 
-    // 触摸开始
+    // 触摸开始 - 使用passive: true提高性能
     document.addEventListener('touchstart', (e) => {
       const fileItem = e.target.closest('.file-item');
       if (!fileItem) return;
-
+      
+      touchStartTarget = fileItem;
+      
       longPressTimer = setTimeout(() => {
         // 长按触发"右键菜单"
-        this._showContextMenu(e, fileItem);
+        if (touchStartTarget === fileItem) {
+          this._showContextMenu(e, fileItem);
+        }
       }, longPressDuration);
     }, { passive: true });
 
-    // 触摸结束或移动时清除定时器
+    // 触摸结束 - 使用passive: true提高性能
     document.addEventListener('touchend', () => {
       clearTimeout(longPressTimer);
+      touchStartTarget = null;
     }, { passive: true });
 
+    // 触摸移动 - 使用passive: true提高性能
     document.addEventListener('touchmove', () => {
       clearTimeout(longPressTimer);
+      touchStartTarget = null;
     }, { passive: true });
   },
 
@@ -3382,16 +3465,15 @@ export const FileManager = {
 
     // 获取文件信息
     const fileName = fileItem.getAttribute('data-name');
-    const fileType = fileItem.getAttribute('data-type');
     const isTrash = fileItem.getAttribute('data-is-trash') === 'true';
     const isFolder = fileItem.classList.contains('folder');
 
     // 创建右键菜单内容
-    let menuContent = '';
+    let menuHTML = '';
 
     if (isTrash) {
       // 回收站文件菜单
-      menuContent = `
+      menuHTML = `
         <div class="menu-item" data-action="restore" data-file="${fileName}">
           <i class="fas fa-trash-restore"></i> 恢复
         </div>
@@ -3402,14 +3484,14 @@ export const FileManager = {
     } else {
       // 普通文件菜单
       if (!isFolder) {
-        menuContent += `
+        menuHTML += `
           <div class="menu-item" data-action="download" data-file="${fileName}">
             <i class="fas fa-download"></i> 下载
           </div>
         `;
       }
       
-      menuContent += `
+      menuHTML += `
         <div class="menu-item" data-action="share" data-file="${fileName}">
           <i class="fas fa-share-alt"></i> 分享
         </div>
@@ -3423,38 +3505,23 @@ export const FileManager = {
     }
 
     // 更新菜单内容
-    contextMenu.innerHTML = menuContent;
+    contextMenu.innerHTML = menuHTML;
 
-    // 绑定菜单项点击事件
-    contextMenu.querySelectorAll('.menu-item').forEach(item => {
-      item.addEventListener('click', (event) => {
-        const action = event.currentTarget.getAttribute('data-action');
-        const targetFileName = event.currentTarget.getAttribute('data-file');
-        this._handleContextMenuAction(action, targetFileName, fileItem);
-        this._hideContextMenu();
-      });
-    });
-
-    // 定位菜单
-    // 获取鼠标或触摸位置
-    let posX, posY;
-    if (e.type.startsWith('touch')) {
-      // 触摸事件
-      const touch = e.touches[0] || e.changedTouches[0];
-      posX = touch.clientX;
-      posY = touch.clientY;
-    } else {
-      // 鼠标事件
-      posX = e.clientX;
-      posY = e.clientY;
-    }
+    // 定位菜单 - 获取鼠标或触摸位置
+    const posX = e.type.startsWith('touch') ? 
+      (e.touches[0] || e.changedTouches[0]).clientX : e.clientX;
+    const posY = e.type.startsWith('touch') ? 
+      (e.touches[0] || e.changedTouches[0]).clientY : e.clientY;
 
     // 设置菜单位置
     contextMenu.style.left = `${posX}px`;
     contextMenu.style.top = `${posY}px`;
+    
+    // 显示菜单
+    contextMenu.style.display = 'block';
 
     // 确保菜单不超出视口
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       const rect = contextMenu.getBoundingClientRect();
       if (rect.right > window.innerWidth) {
         contextMenu.style.left = `${posX - rect.width}px`;
@@ -3462,10 +3529,7 @@ export const FileManager = {
       if (rect.bottom > window.innerHeight) {
         contextMenu.style.top = `${posY - rect.height}px`;
       }
-    }, 0);
-
-    // 显示菜单
-    contextMenu.style.display = 'block';
+    });
   },
 
   /**
