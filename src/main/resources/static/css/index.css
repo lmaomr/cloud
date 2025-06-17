@@ -436,6 +436,11 @@ nav {
     overflow: hidden;
 }
 
+/* 按钮禁用状态 */
+.icon-btn.disabled {
+    cursor: not-allowed;
+}
+
 .icon-btn {
     width: 36px;
     height: 36px;

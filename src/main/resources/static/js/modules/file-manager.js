@@ -276,6 +276,28 @@ export const FileManager = {
   },
 
   /**
+   * 禁用视图切换按钮
+   * @private
+   */
+  _disableViewToggleButtons() {
+    this.viewBtns.forEach(btn => {
+      btn.disabled = true;
+      btn.classList.add('disabled');
+    });
+  },
+
+  /**
+   * 启用视图切换按钮
+   * @private
+   */
+  _enableViewToggleButtons() {
+    this.viewBtns.forEach(btn => {
+      btn.disabled = false;
+      btn.classList.remove('disabled');
+    });
+  },
+
+  /**
    * 加载文件列表
    */
   async loadFiles() {
@@ -298,6 +320,9 @@ export const FileManager = {
 
       // 更新面包屑导航
       this.updateBreadcrumb();
+      
+      // 启用视图切换按钮
+      this._enableViewToggleButtons();
     } catch (error) {
       console.error('加载文件列表失败:', error);
 
@@ -329,6 +354,9 @@ export const FileManager = {
       if (this.emptyFileList) {
         this.emptyFileList.style.display = 'none';
       }
+
+      // 禁用视图切换按钮
+      this._disableViewToggleButtons();
 
       // 显示错误提示
       UI.Toast.error('加载失败', error.message || '无法加载文件列表', 8000, {
@@ -367,6 +395,9 @@ export const FileManager = {
         const fileItem = this.createFileItem(file);
         this.fileList.appendChild(fileItem);
       });
+      
+      // 启用视图切换按钮
+      this._enableViewToggleButtons();
     } else {
       // 没有文件，显示空状态
       this.fileList.style.display = 'none';
@@ -399,6 +430,9 @@ export const FileManager = {
           });
         }
       }
+      
+      // 禁用视图切换按钮
+      this._disableViewToggleButtons();
     }
   },
 
@@ -1421,6 +1455,9 @@ export const FileManager = {
         currentItem.textContent = sectionName || '功能';
         breadcrumb.appendChild(currentItem);
       }
+      
+      // 禁用视图切换按钮
+      this._disableViewToggleButtons();
     }
   },
 
@@ -1525,6 +1562,9 @@ export const FileManager = {
             this.emptyFileList.style.display = 'none';
           }
 
+          // 启用视图切换按钮
+          this._enableViewToggleButtons();
+
           // 显示加载完成提示
           UI.Toast.success('加载完成', `已加载 ${filteredFiles.length} 个${this.getTypeName(type)}文件`, 5000, {
             group: 'fileOperations'
@@ -1592,6 +1632,9 @@ export const FileManager = {
             }
           }
 
+          // 禁用视图切换按钮
+          this._disableViewToggleButtons();
+
           console.log(`未找到${this.getTypeName(type)}，显示空状态`);
 
           // 显示无内容提示
@@ -1631,6 +1674,9 @@ export const FileManager = {
         if (this.emptyFileList) {
           this.emptyFileList.style.display = 'none';
         }
+
+        // 禁用视图切换按钮
+        this._disableViewToggleButtons();
 
         // 显示错误提示
         UI.Toast.error('加载失败', `无法加载${this.getTypeName(type)}文件`, 8000, {
@@ -1821,6 +1867,9 @@ export const FileManager = {
             });
           }
 
+          // 禁用视图切换按钮，因为共享内容有自己的视图模式
+          this._disableViewToggleButtons();
+
           // 显示加载完成提示
           UI.Toast.success('加载完成', `已加载 ${allSharedContent.length} 个共享内容`, 5000, {
             group: 'shareOperations'
@@ -1865,6 +1914,9 @@ export const FileManager = {
             }
           }
 
+          // 禁用视图切换按钮
+          this._disableViewToggleButtons();
+
           // 显示加载完成提示
           UI.Toast.info('无内容', '未找到共享内容', 5000, {
             group: 'shareOperations'
@@ -1902,6 +1954,9 @@ export const FileManager = {
         if (this.emptyFileList) {
           this.emptyFileList.style.display = 'none';
         }
+
+        // 禁用视图切换按钮
+        this._disableViewToggleButtons();
 
         // 显示错误提示
         UI.Toast.error('加载失败', error.message || '无法加载共享内容', 8000, {
@@ -2629,6 +2684,9 @@ export const FileManager = {
             // 注意：工具栏样式已移至updateToolbar方法中
           }
 
+          // 启用视图切换按钮
+          this._enableViewToggleButtons();
+
           // 显示加载完成提示
           UI.Toast.success('加载完成', `已加载 ${trashFiles.length} 个回收站文件`, 5000, {
             group: 'trashOperations'
@@ -2676,6 +2734,9 @@ export const FileManager = {
             }
           }
 
+          // 禁用视图切换按钮
+          this._disableViewToggleButtons();
+
           // 显示空回收站提示
           UI.Toast.info('回收站为空', '回收站中没有任何文件', 5000, {
             group: 'trashOperations'
@@ -2713,6 +2774,9 @@ export const FileManager = {
         if (this.emptyFileList) {
           this.emptyFileList.style.display = 'none';
         }
+
+        // 禁用视图切换按钮
+        this._disableViewToggleButtons();
 
         // 显示错误提示
         UI.Toast.error('加载失败', error.message || '无法加载回收站内容', 8000, {
