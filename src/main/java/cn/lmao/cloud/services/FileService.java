@@ -397,6 +397,40 @@ public class FileService {
     }
 
     /**
+     * 删除回收站文件
+     * 
+     * @param userId 用户ID
+     */
+    // @Transactional
+    // public void deleteTrashFile(Long fileId, Long userId) {
+    //     fileLock.lock(); // 获取锁，保证线程安全
+    //     try {
+    //         // 1. 验证用户云盘是否存在
+    //         Cloud cloud = userService.getCloud(userId);
+    //         if (cloud == null) {
+    //             throw new CustomException(ExceptionCodeMsg.CLOUD_NOT_FOUND);
+    //         }
+
+    //         // 2. 验证文件是否属于当前用户
+    //         File file = fileRepository.findById(fileId)
+    //                 .orElseThrow(() -> new CustomException(ExceptionCodeMsg.FILE_EMPTY));
+
+    //         if (!file.getCloud().getUser().getId().equals(userId)) {
+    //             throw new CustomException(ExceptionCodeMsg.FILE_EMPTY);
+    //         }
+
+    //         log.info("彻底删除回收站文件: 文件ID={}, 文件名={}", fileId, file.getName());
+    //         // 3. 删除物理文件
+    //         fileUtil.deleteFile();
+
+    //         // 4. 从数据库中删除文件记录
+    //         fileRepository.delete(file);
+    //     } finally {
+    //         fileLock.unlock(); // 释放锁
+    //     }
+    // }
+
+    /**
      * 获取回收站列表
      * 
      * @param userId 用户ID

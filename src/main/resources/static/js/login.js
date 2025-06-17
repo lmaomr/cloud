@@ -51,7 +51,7 @@ class LoginController {
         const token = CloudAPI.getAuthToken();
         if (token) {
             // 已登录，跳转到主页
-            window.location.href = 'index.html';
+            window.location.href = '/';
         }
     }
     
@@ -140,7 +140,7 @@ class LoginController {
             
             // 跳转到主页
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = '/';
             }, 1000);
         } catch (error) {
             console.error('登录失败:', error);

@@ -1,9 +1,21 @@
 /* 列表视图容器 */
 .list-view {
-  display: flex !important;
+  display: flex;
   flex-direction: column;
-  padding: 5px;
   padding: 8px;
+}
+
+/* 错误视图样式 */
+.error-view {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.error-view .error-message {
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 /* 列表视图中的文件项 */
@@ -14,11 +26,6 @@
   border-radius: 6px;
   transition: all 0.2s ease;
 }
-
-/* 列表视图中的最后一个文件项不需要底部边框 */
-/* .list-view .file-item:last-child {
-  margin-bottom: 0;
-} */
 
 /* 列表视图中的复选框容器 */
 .list-view .file-checkbox {
@@ -133,7 +140,6 @@
 .list-view .file-item.selected {
   background-color: var(--selected-bg);
   border-left: 3px solid var(--primary-color);
-  padding-left: 13px; /* 补偿边框宽度 */
 }
 
 /* 列表视图中的删除按钮悬停效果 */

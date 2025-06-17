@@ -2068,7 +2068,7 @@ li[data-section="admin-panel"] {
 
 /* 共享内容视图样式 */
 .shared-content-view {
-  display: flex !important;
+  display: flex;
   flex-direction: column;
   padding: 0;
   overflow: hidden;
@@ -2222,16 +2222,17 @@ body.dark-mode .shared-item {
   color: var(--text-color);
   background-color: transparent;
   border-radius: 8px;
-  margin: 16px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  max-width: 400px;
+  width: 100%;
 }
 
 .error-message i {
   font-size: 48px;
-  margin-bottom: 8px;
   color: #ff4d4f;
   opacity: 0.8;
   width: 80px;
@@ -2241,6 +2242,7 @@ body.dark-mode .shared-item {
   justify-content: center;
   background-color: rgba(255, 77, 79, 0.1);
   border-radius: 50%;
+  margin-bottom: 8px;
 }
 
 .error-message h3 {

@@ -51,6 +51,7 @@ export const FileManager = {
     this.selectedCountElement = document.getElementById('selectedCount');
     this.viewBtns = document.querySelectorAll('.view-btn');
     this.refreshBtn = document.getElementById('refreshBtn');
+    this.listView = document.getElementsByClassName('list-view');
 
     // 加载保存的视图类型
     const savedView = localStorage.getItem('view');
@@ -255,6 +256,7 @@ export const FileManager = {
    * @param {string} view - 视图类型：grid或list
    */
   setView(view) {
+    console.log(view);
     this.currentView = view;
 
     // 更新视图按钮状态
@@ -270,6 +272,7 @@ export const FileManager = {
 
     // 保存用户偏好
     localStorage.setItem('view', view);
+    this.renderFiles(this.currentFiles);
   },
 
   /**
@@ -303,8 +306,7 @@ export const FileManager = {
 
       // 显示错误提示
       if (this.fileList) {
-        this.fileList.style.display = 'block';
-        this.fileList.className = 'file-list';
+        this.fileList.className = 'file-list error-view';
         this.fileList.innerHTML = `
           <div class="error-message">
             <i class="fas fa-exclamation-circle"></i>
@@ -350,7 +352,8 @@ export const FileManager = {
 
     if (files.length > 0) {
       // 有文件，显示文件列表
-      this.fileList.style.display = 'grid';
+      console.log(localStorage.getItem('view'));
+      this.fileList.style.display = localStorage.getItem('view') === 'list' ? 'flex' : 'grid';
       this.fileList.className = 'file-list';
       this.fileList.classList.add(`${this.currentView}-view`);
 
@@ -1605,8 +1608,7 @@ export const FileManager = {
 
         // 显示错误提示
         if (this.fileList) {
-          this.fileList.style.display = 'block';
-          this.fileList.className = 'file-list';
+          this.fileList.className = 'file-list error-view';
           this.fileList.innerHTML = `
             <div class="error-message">
               <i class="fas fa-exclamation-circle"></i>
@@ -1877,8 +1879,7 @@ export const FileManager = {
 
         // 显示错误提示
         if (this.fileList) {
-          this.fileList.style.display = 'block';
-          this.fileList.className = 'file-list';
+          this.fileList.className = 'file-list error-view';
           this.fileList.innerHTML = `
             <div class="error-message">
               <i class="fas fa-exclamation-circle"></i>
@@ -2689,8 +2690,7 @@ export const FileManager = {
 
         // 显示错误提示
         if (this.fileList) {
-          this.fileList.style.display = 'block';
-          this.fileList.className = 'file-list';
+          this.fileList.className = 'file-list error-view';
           this.fileList.innerHTML = `
             <div class="error-message">
               <i class="fas fa-exclamation-circle"></i>

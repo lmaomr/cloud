@@ -28,6 +28,7 @@ public class SecurityConfig {
 
         // 公共路径常量
         private static final String[] PUBLIC_URLS = {
+                        "/",
                         "/api/auth/**",
                         "/login.html",
                         "/index.html",
