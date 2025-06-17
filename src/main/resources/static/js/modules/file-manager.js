@@ -1661,8 +1661,9 @@ export const FileManager = {
                   // 为fileInput添加一次性事件监听器，用于验证文件类型
                   const fileTypeCheckListener = () => {
                     if (fileInput.files && fileInput.files.length > 0) {
-                      if (this._shouldRedirectUpload(fileInput.files)) {
-                        // 如果文件类型不匹配，则跳转到"我的文件"页面
+                      const { shouldRedirect } = this._shouldRedirectUpload(fileInput.files);
+                      if (shouldRedirect) {
+                        // 如果文件类型不匹配，则跳转到适当的页面
                         this._redirectToMyFiles(fileInput.files);
                       }
                     }
@@ -3072,8 +3073,9 @@ export const FileManager = {
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       // 检查当前页面类型和文件类型是否匹配
-      if (this._shouldRedirectUpload(files)) {
-        // 如果文件类型不匹配当前页面，重定向到"我的文件"页面
+      const { shouldRedirect } = this._shouldRedirectUpload(files);
+      if (shouldRedirect) {
+        // 如果文件类型不匹配当前页面，重定向到适当的页面
         this._redirectToMyFiles(files);
       } else {
         // 如果类型匹配，直接上传
@@ -3085,57 +3087,135 @@ export const FileManager = {
   /**
    * 检查是否应该重定向上传
    * @param {FileList} files - 文件列表
-   * @returns {boolean} 是否需要重定向
+   * @returns {Object} 包含是否需要重定向和目标部分的对象
    * @private
    */
   _shouldRedirectUpload(files) {
     // 获取当前活跃的部分
     const activeSection = document.querySelector('.nav-group li.active');
-    if (!activeSection) return false;
+    if (!activeSection) return { shouldRedirect: false };
     
     const section = activeSection.dataset.section;
     
-    // 只有在特定页面才需要检查文件类型
-    switch (section) {
-      case 'videos':
-        // 检查是否所有文件都是视频
-        return !Array.from(files).every(file => this.isVideoFile(file.name));
-      
-      case 'images':
-        // 检查是否所有文件都是图片
-        return !Array.from(files).every(file => this.isImageFile(file.name));
-      
-      case 'music':
-        // 检查是否所有文件都是音频
-        return !Array.from(files).every(file => this.isAudioFile(file.name));
-      
-      case 'documents':
-        // 检查是否所有文件都是文档
-        return !Array.from(files).every(file => this.isDocumentFile(file.name));
-      
-      case 'others':
-        // 检查是否所有文件都是其他类型
-        return !Array.from(files).every(file => this.isOtherFile(file.name));
-      
-      default:
-        // 在其他页面不需要重定向
-        return false;
+    // 如果是在"我的文件"页面，不需要重定向
+    if (section === 'my-files') {
+      return { shouldRedirect: false };
     }
+    
+    // 检查是否在回收站或共享页面，这些页面不允许上传
+    if (section === 'trash' || section === 'shared') {
+      return { shouldRedirect: true, targetSection: 'my-files' };
+    }
+    
+    // 判断文件类型和当前页面是否匹配
+    let allFilesMatch = true;
+    let targetSection = 'my-files'; // 默认目标部分
+    
+    // 检查所有文件
+    for (const file of Array.from(files)) {
+      const fileName = file.name;
+      
+      // 根据当前部分检查文件类型是否匹配
+      switch (section) {
+        case 'videos':
+          if (!this.isVideoFile(fileName)) {
+            allFilesMatch = false;
+            // 确定最适合的目标部分
+            if (this.isImageFile(fileName)) targetSection = 'images';
+            else if (this.isAudioFile(fileName)) targetSection = 'music';
+            else if (this.isDocumentFile(fileName)) targetSection = 'documents';
+            else if (this.isOtherFile(fileName)) targetSection = 'others';
+          }
+          break;
+        
+        case 'images':
+          if (!this.isImageFile(fileName)) {
+            allFilesMatch = false;
+            // 确定最适合的目标部分
+            if (this.isVideoFile(fileName)) targetSection = 'videos';
+            else if (this.isAudioFile(fileName)) targetSection = 'music';
+            else if (this.isDocumentFile(fileName)) targetSection = 'documents';
+            else if (this.isOtherFile(fileName)) targetSection = 'others';
+          }
+          break;
+        
+        case 'music':
+          if (!this.isAudioFile(fileName)) {
+            allFilesMatch = false;
+            // 确定最适合的目标部分
+            if (this.isVideoFile(fileName)) targetSection = 'videos';
+            else if (this.isImageFile(fileName)) targetSection = 'images';
+            else if (this.isDocumentFile(fileName)) targetSection = 'documents';
+            else if (this.isOtherFile(fileName)) targetSection = 'others';
+          }
+          break;
+        
+        case 'documents':
+          if (!this.isDocumentFile(fileName)) {
+            allFilesMatch = false;
+            // 确定最适合的目标部分
+            if (this.isVideoFile(fileName)) targetSection = 'videos';
+            else if (this.isImageFile(fileName)) targetSection = 'images';
+            else if (this.isAudioFile(fileName)) targetSection = 'music';
+            else if (this.isOtherFile(fileName)) targetSection = 'others';
+          }
+          break;
+        
+        case 'others':
+          if (!this.isOtherFile(fileName)) {
+            allFilesMatch = false;
+            // 确定最适合的目标部分
+            if (this.isVideoFile(fileName)) targetSection = 'videos';
+            else if (this.isImageFile(fileName)) targetSection = 'images';
+            else if (this.isAudioFile(fileName)) targetSection = 'music';
+            else if (this.isDocumentFile(fileName)) targetSection = 'documents';
+          }
+          break;
+      }
+      
+      // 如果找到不匹配的文件，停止检查
+      if (!allFilesMatch) break;
+    }
+    
+    return { 
+      shouldRedirect: !allFilesMatch,
+      targetSection: targetSection
+    };
   },
 
   /**
-   * 重定向到我的文件页面进行上传
+   * 重定向到适当的页面进行上传
    * @param {FileList} files - 文件列表
    * @private
    */
   _redirectToMyFiles(files) {
-    // 显示提示信息
-    UI.Toast.info('文件类型不匹配', '已自动切换到"我的文件"页面进行上传', 5000);
+    // 检查是否需要重定向以及目标部分
+    const { shouldRedirect, targetSection } = this._shouldRedirectUpload(files);
     
-    // 找到"我的文件"导航项并手动点击它
-    const myFilesNavItem = document.querySelector('.nav-group li[data-section="my-files"]');
-    if (myFilesNavItem) {
-      myFilesNavItem.click();
+    if (!shouldRedirect) {
+      // 如果不需要重定向，直接上传
+      this.uploadDroppedFiles(files);
+      return;
+    }
+    
+    // 获取目标部分的名称
+    let sectionName = "我的文件";
+    document.querySelectorAll('.nav-group li').forEach(item => {
+      if (item.dataset.section === targetSection) {
+        const spanElement = item.querySelector('span');
+        if (spanElement) {
+          sectionName = spanElement.textContent.trim();
+        }
+      }
+    });
+    
+    // 显示提示信息
+    UI.Toast.info('文件类型不匹配', `已自动切换到"${sectionName}"页面进行上传`, 5000);
+    
+    // 找到目标导航项并手动点击它
+    const targetNavItem = document.querySelector(`.nav-group li[data-section="${targetSection}"]`);
+    if (targetNavItem) {
+      targetNavItem.click();
       
       // 延迟一下再上传文件，确保页面已经切换
       setTimeout(() => {
@@ -3144,7 +3224,7 @@ export const FileManager = {
     } else {
       // 如果找不到导航项，退回到触发事件的方式
       document.dispatchEvent(new CustomEvent('section:change', { 
-        detail: { section: 'my-files' } 
+        detail: { section: targetSection } 
       }));
       
       // 延迟一下再上传文件，确保页面已经切换
