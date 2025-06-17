@@ -100,6 +100,9 @@ export const FileManager = {
     // 设置视图类型
     this.setView(this.currentView);
 
+    // 初始化右键菜单
+    this._initContextMenu();
+
     console.log('文件管理器初始化完成');
 
     // 加载文件列表
@@ -481,6 +484,9 @@ export const FileManager = {
     fileItem.setAttribute('aria-label', `${isFolder ? '文件夹: ' : '文件: '}${file.name}`);
     fileItem.setAttribute('data-id', file.id);
     fileItem.setAttribute('data-path', file.path);
+    fileItem.setAttribute('data-name', file.name);
+    fileItem.setAttribute('data-type', file.type);
+    fileItem.setAttribute('data-is-trash', isTrash.toString());
 
     const fileIcon = this.getFileIcon(file.name);
     const fileSize = isFolder ? '' : this.formatFileSize(file.size);
@@ -489,24 +495,6 @@ export const FileManager = {
       month: '2-digit',
       day: '2-digit'
     });
-
-    // 根据是否为回收站文件，显示不同的操作按钮
-    let actionButtons = '';
-    if (isTrash) {
-      // 回收站文件只显示恢复和删除按钮
-      actionButtons = `
-        <i class="fas fa-trash-restore" data-action="restore" title="恢复" role="button" tabindex="0" aria-label="恢复${file.name}"></i>
-        <i class="fas fa-trash-alt" data-action="delete-permanent" title="永久删除" role="button" tabindex="0" aria-label="永久删除${file.name}"></i>
-      `;
-    } else {
-      // 普通文件显示下载、分享、重命名和删除按钮
-      actionButtons = `
-        <i class="fas fa-download" data-action="download" title="下载" role="button" tabindex="0" aria-label="下载${file.name}"></i>
-        <i class="fas fa-share-alt" data-action="share" title="分享" role="button" tabindex="0" aria-label="分享${file.name}"></i>
-        <i class="fas fa-edit" data-action="rename" title="重命名" role="button" tabindex="0" aria-label="重命名${file.name}"></i>
-        <i class="fas fa-trash" data-action="delete" title="删除" role="button" tabindex="0" aria-label="删除${file.name}"></i>
-      `;
-    }
 
     fileItem.innerHTML = `
       <div class="file-checkbox">
@@ -520,9 +508,6 @@ export const FileManager = {
           <div class="file-name" title="${file.name}">${file.name}</div>
           <div class="file-meta">${isFolder ? '' : fileSize + ' • '}修改于 ${fileDate}</div>
         </div>
-      </div>
-      <div class="file-actions">
-        ${actionButtons}
       </div>
     `;
 
@@ -607,50 +592,25 @@ export const FileManager = {
     const fileItem = e.target.closest('.file-item');
     if (!fileItem) return;
 
-    // 如果点击的是文件操作按钮或复选框，不处理选择逻辑
-    if (e.target.closest('.file-actions') || e.target.closest('.file-checkbox')) {
+    // 如果点击的是复选框，让浏览器处理复选框的状态变化
+    if (e.target.classList.contains('item-checkbox')) {
       return;
     }
 
-    // 处理Ctrl/Cmd键多选
-    if (e.ctrlKey || e.metaKey) {
-      this.toggleFileSelection(fileItem);
+    // 如果是文件夹并且是双击，则进入文件夹
+    if (fileItem.classList.contains('folder') && e.detail === 2) {
+      this.navigateToFolder(fileItem);
+      return;
     }
-    // 处理Shift键范围选择
-    else if (e.shiftKey && this.selectedFiles.length > 0) {
-      const allItems = Array.from(document.querySelectorAll('.file-item'));
-      const lastSelected = document.querySelector('.file-item.selected');
-      if (lastSelected) {
-        const start = allItems.indexOf(lastSelected);
-        const end = allItems.indexOf(fileItem);
-        const range = allItems.slice(
-          Math.min(start, end),
-          Math.max(start, end) + 1
-        );
 
-        // 清除之前的选择
-        this.clearFileSelection();
-
-        // 选择范围内的所有文件
-        range.forEach(item => {
-          this.selectFile(item);
-        });
-      }
-    }
-    // 普通点击
-    else {
-      // 如果是文件夹，导航进入
-      if (fileItem.classList.contains('folder')) {
-        this.navigateToFolder(fileItem);
-      }
-      // 如果是文件，选择
-      else {
-        // 清除之前的选择
-        this.clearFileSelection();
-
-        // 选择当前文件
-        this.selectFile(fileItem);
-      }
+    // 其他情况下，切换选择状态
+    const checkbox = fileItem.querySelector('.item-checkbox');
+    if (checkbox) {
+      checkbox.checked = !checkbox.checked;
+      
+      // 触发change事件，以便更新选择状态
+      const changeEvent = new Event('change', { bubbles: true });
+      checkbox.dispatchEvent(changeEvent);
     }
 
     // 更新工具栏状态
@@ -679,7 +639,7 @@ export const FileManager = {
     if (checkbox) checkbox.checked = true;
 
     // 添加到选中文件数组
-    const fileName = fileItem.querySelector('.file-name').textContent;
+    const fileName = fileItem.getAttribute('data-name');
     if (!this.selectedFiles.includes(fileName)) {
       this.selectedFiles.push(fileName);
     }
@@ -695,7 +655,7 @@ export const FileManager = {
     if (checkbox) checkbox.checked = false;
 
     // 从选中文件数组中移除
-    const fileName = fileItem.querySelector('.file-name').textContent;
+    const fileName = fileItem.getAttribute('data-name');
     this.selectedFiles = this.selectedFiles.filter(name => name !== fileName);
   },
 
@@ -975,10 +935,12 @@ export const FileManager = {
   },
 
   /**
-   * 处理文件操作
+   * 处理文件操作 (已弃用，仅保留以防其他地方调用)
    * @param {Event} e - 点击事件
+   * @deprecated 请使用_handleContextMenuAction方法代替
    */
   handleFileAction(e) {
+    console.warn('使用已弃用的handleFileAction方法，请改用_handleContextMenuAction');
     const actionBtn = e.target.closest('[data-action]');
     if (!actionBtn) return;
 
@@ -992,29 +954,10 @@ export const FileManager = {
       return;
     }
 
-    const fileName = fileItem.querySelector('.file-name').textContent;
+    const fileName = fileItem.getAttribute('data-name');
     const fileId = fileItem.dataset.id;
 
-    switch (action) {
-      case 'download':
-        this.downloadFile(fileName);
-        break;
-      case 'share':
-        this.shareFile(fileName);
-        break;
-      case 'rename':
-        this.renameFile(fileName);
-        break;
-      case 'delete':
-        this.deleteFile(fileName);
-        break;
-      case 'restore':
-        this.restoreFile(fileName, fileId);
-        break;
-      case 'delete-permanent':
-        this.deletePermanentFile(fileName, fileId);
-        break;
-    }
+    this._handleContextMenuAction(action, fileName, fileItem);
   },
 
   /**
@@ -2102,8 +2045,7 @@ export const FileManager = {
   findFileItemByName(fileName) {
     const fileItems = document.querySelectorAll('.file-item');
     for (const item of fileItems) {
-      const nameElement = item.querySelector('.file-name');
-      if (nameElement && nameElement.textContent === fileName) {
+      if (item.getAttribute('data-name') === fileName) {
         return item;
       }
     }
@@ -2921,5 +2863,209 @@ export const FileManager = {
         console.error('拖放上传失败:', error);
         UI.Toast.show('error', '上传失败', error.message || '文件上传过程中发生错误');
       });
+  },
+
+  /**
+   * 初始化右键菜单
+   * @private
+   */
+  _initContextMenu() {
+    // 创建右键菜单元素
+    if (!document.getElementById('fileContextMenu')) {
+      const contextMenu = document.createElement('div');
+      contextMenu.id = 'fileContextMenu';
+      contextMenu.className = 'context-menu';
+      contextMenu.style.display = 'none';
+      document.body.appendChild(contextMenu);
+    }
+
+    // 为文档添加点击事件，点击其他区域时隐藏右键菜单
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#fileContextMenu')) {
+        this._hideContextMenu();
+      }
+    });
+
+    // 为文档添加右键菜单事件
+    document.addEventListener('contextmenu', (e) => {
+      const fileItem = e.target.closest('.file-item');
+      if (fileItem) {
+        e.preventDefault(); // 阻止默认的右键菜单
+        this._showContextMenu(e, fileItem);
+      }
+    });
+
+    // 为移动设备添加长按事件
+    this._addLongPressHandler();
+  },
+
+  /**
+   * 添加长按事件处理
+   * @private
+   */
+  _addLongPressHandler() {
+    let longPressTimer;
+    const longPressDuration = 500; // 长按时间（毫秒）
+
+    // 触摸开始
+    document.addEventListener('touchstart', (e) => {
+      const fileItem = e.target.closest('.file-item');
+      if (!fileItem) return;
+
+      longPressTimer = setTimeout(() => {
+        // 长按触发"右键菜单"
+        this._showContextMenu(e, fileItem);
+      }, longPressDuration);
+    }, { passive: true });
+
+    // 触摸结束或移动时清除定时器
+    document.addEventListener('touchend', () => {
+      clearTimeout(longPressTimer);
+    }, { passive: true });
+
+    document.addEventListener('touchmove', () => {
+      clearTimeout(longPressTimer);
+    }, { passive: true });
+  },
+
+  /**
+   * 显示右键菜单
+   * @param {Event} e - 事件对象
+   * @param {HTMLElement} fileItem - 文件项元素
+   * @private
+   */
+  _showContextMenu(e, fileItem) {
+    const contextMenu = document.getElementById('fileContextMenu');
+    if (!contextMenu) return;
+
+    // 获取文件信息
+    const fileName = fileItem.getAttribute('data-name');
+    const fileType = fileItem.getAttribute('data-type');
+    const isTrash = fileItem.getAttribute('data-is-trash') === 'true';
+    const isFolder = fileItem.classList.contains('folder');
+
+    // 创建右键菜单内容
+    let menuContent = '';
+
+    if (isTrash) {
+      // 回收站文件菜单
+      menuContent = `
+        <div class="menu-item" data-action="restore" data-file="${fileName}">
+          <i class="fas fa-trash-restore"></i> 恢复
+        </div>
+        <div class="menu-item" data-action="delete-permanent" data-file="${fileName}">
+          <i class="fas fa-trash-alt"></i> 永久删除
+        </div>
+      `;
+    } else {
+      // 普通文件菜单
+      if (!isFolder) {
+        menuContent += `
+          <div class="menu-item" data-action="download" data-file="${fileName}">
+            <i class="fas fa-download"></i> 下载
+          </div>
+        `;
+      }
+      
+      menuContent += `
+        <div class="menu-item" data-action="share" data-file="${fileName}">
+          <i class="fas fa-share-alt"></i> 分享
+        </div>
+        <div class="menu-item" data-action="rename" data-file="${fileName}">
+          <i class="fas fa-edit"></i> 重命名
+        </div>
+        <div class="menu-item" data-action="delete" data-file="${fileName}">
+          <i class="fas fa-trash"></i> 删除
+        </div>
+      `;
+    }
+
+    // 更新菜单内容
+    contextMenu.innerHTML = menuContent;
+
+    // 绑定菜单项点击事件
+    contextMenu.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', (event) => {
+        const action = event.currentTarget.getAttribute('data-action');
+        const targetFileName = event.currentTarget.getAttribute('data-file');
+        this._handleContextMenuAction(action, targetFileName, fileItem);
+        this._hideContextMenu();
+      });
+    });
+
+    // 定位菜单
+    // 获取鼠标或触摸位置
+    let posX, posY;
+    if (e.type.startsWith('touch')) {
+      // 触摸事件
+      const touch = e.touches[0] || e.changedTouches[0];
+      posX = touch.clientX;
+      posY = touch.clientY;
+    } else {
+      // 鼠标事件
+      posX = e.clientX;
+      posY = e.clientY;
+    }
+
+    // 设置菜单位置
+    contextMenu.style.left = `${posX}px`;
+    contextMenu.style.top = `${posY}px`;
+
+    // 确保菜单不超出视口
+    setTimeout(() => {
+      const rect = contextMenu.getBoundingClientRect();
+      if (rect.right > window.innerWidth) {
+        contextMenu.style.left = `${posX - rect.width}px`;
+      }
+      if (rect.bottom > window.innerHeight) {
+        contextMenu.style.top = `${posY - rect.height}px`;
+      }
+    }, 0);
+
+    // 显示菜单
+    contextMenu.style.display = 'block';
+  },
+
+  /**
+   * 隐藏右键菜单
+   * @private
+   */
+  _hideContextMenu() {
+    const contextMenu = document.getElementById('fileContextMenu');
+    if (contextMenu) {
+      contextMenu.style.display = 'none';
+    }
+  },
+
+  /**
+   * 处理右键菜单操作
+   * @param {string} action - 操作类型
+   * @param {string} fileName - 文件名
+   * @param {HTMLElement} fileItem - 文件项元素
+   * @private
+   */
+  _handleContextMenuAction(action, fileName, fileItem) {
+    const fileId = fileItem.getAttribute('data-id');
+
+    switch (action) {
+      case 'download':
+        this.downloadFile(fileName);
+        break;
+      case 'share':
+        this.shareFile(fileName);
+        break;
+      case 'rename':
+        this.renameFile(fileName);
+        break;
+      case 'delete':
+        this.deleteFile(fileName);
+        break;
+      case 'restore':
+        this.restoreFile(fileName, fileId);
+        break;
+      case 'delete-permanent':
+        this.deletePermanentFile(fileName, fileId);
+        break;
+    }
   },
 }
