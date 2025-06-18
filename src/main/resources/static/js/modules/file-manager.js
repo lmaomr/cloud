@@ -43,10 +43,16 @@ function throttle(func, limit) {
  * 文件类型扩展名映射
  */
 const FILE_TYPE_EXTENSIONS = {
-  video: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', '3gp', 'mpeg', 'mpg'],
-  image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico'],
-  audio: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'alac'],
-  document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'odt', 'ods', 'odp', 'md', 'markdown']
+  // 使用与侧边栏data-section属性一致的键名
+  videos: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', '3gp', 'mpeg', 'mpg'],
+  images: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico'],
+  music: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'alac'],
+  documents: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'odt', 'ods', 'odp', 'md', 'markdown'],
+  // // 兼容旧版本的键名
+  // video: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', '3gp', 'mpeg', 'mpg'],
+  // image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico'],
+  // audio: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'alac'],
+  // document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'odt', 'ods', 'odp', 'md', 'markdown']
 };
 
 /**
@@ -1795,22 +1801,7 @@ export const FileManager = {
                     fileInput.removeAttribute('accept');
                   }
                   
-                  // 为fileInput添加一次性事件监听器，用于验证文件类型
-                  const fileTypeCheckListener = () => {
-                    if (fileInput.files && fileInput.files.length > 0) {
-                      const { shouldRedirect } = this._shouldRedirectUpload(fileInput.files);
-                      if (shouldRedirect) {
-                        // 如果文件类型不匹配，则跳转到适当的页面
-                        this._redirectToMyFiles(fileInput.files);
-                      }
-                    }
-                    
-                    // 移除事件监听器
-                    fileInput.removeEventListener('change', fileTypeCheckListener);
-                  };
-                  
-                  // 添加事件监听器
-                  fileInput.addEventListener('change', fileTypeCheckListener);
+                  // 直接触发文件选择，不进行文件类型检查和跳转
                   
                   // 触发文件选择对话框
                   fileInput.click();
@@ -1901,7 +1892,7 @@ export const FileManager = {
    * @returns {boolean} 是否为视频文件
    */
   isVideoFile(fileName) {
-    return this.checkFileType(fileName, 'video');
+    return this.checkFileType(fileName, 'videos');
   },
 
   /**
@@ -1910,7 +1901,7 @@ export const FileManager = {
    * @returns {boolean} 是否为图片文件
    */
   isImageFile(fileName) {
-    return this.checkFileType(fileName, 'image');
+    return this.checkFileType(fileName, 'images');
   },
 
   /**
@@ -1919,7 +1910,7 @@ export const FileManager = {
    * @returns {boolean} 是否为音频文件
    */
   isAudioFile(fileName) {
-    return this.checkFileType(fileName, 'audio');
+    return this.checkFileType(fileName, 'music');
   },
 
   /**
@@ -1928,7 +1919,7 @@ export const FileManager = {
    * @returns {boolean} 是否为文档文件
    */
   isDocumentFile(fileName) {
-    return this.checkFileType(fileName, 'document');
+    return this.checkFileType(fileName, 'documents');
   },
 
   /**
@@ -1949,11 +1940,16 @@ export const FileManager = {
    */
   getTypeName(type) {
     switch (type) {
+      case 'videos': return '视频';
+      case 'music': return '音乐';
+      case 'documents': return '文档';
+      case 'images': return '图片';
+      case 'others': return '其他';
+      // 兼容旧版本
       case 'video': return '视频';
       case 'audio': return '音乐';
       case 'document': return '文档';
-      case 'images': return '图片';
-      case 'others': return '其他';
+      case 'image': return '图片';
       default: return '文件';
     }
   },
@@ -3194,114 +3190,22 @@ export const FileManager = {
     // 获取拖拽的文件
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      // 检查当前页面类型和文件类型是否匹配
-      const { shouldRedirect } = this._shouldRedirectUpload(files);
-      if (shouldRedirect) {
-        // 如果文件类型不匹配当前页面，重定向到适当的页面
-        this._redirectToMyFiles(files);
-      } else {
-        // 如果类型匹配，直接上传
-        this.uploadDroppedFiles(files);
+      // 检查是否在回收站或共享页面，这些页面不允许上传
+      const activeSection = document.querySelector('.nav-group li.active');
+      if (activeSection) {
+        const section = activeSection.dataset.section;
+        if (section === 'trash' || section === 'shared') {
+          UI.Toast.error('上传失败', '不能在回收站或共享页面上传文件', 3000);
+          return;
+        }
       }
-    }
-  },
-
-  /**
-   * 检查是否应该重定向上传
-   * @param {FileList} files - 文件列表
-   * @returns {Object} 包含是否需要重定向和目标部分的对象
-   * @private
-   */
-  _shouldRedirectUpload(files) {
-    // 获取当前活跃的部分
-    const activeSection = document.querySelector('.nav-group li.active');
-    if (!activeSection) return { shouldRedirect: false };
-    
-    const section = activeSection.dataset.section;
-    
-    // 如果是在"我的文件"页面，不需要重定向
-    if (section === 'my-files') {
-      return { shouldRedirect: false };
-    }
-    
-    // 检查是否在回收站或共享页面，这些页面不允许上传
-    if (section === 'trash' || section === 'shared') {
-      return { shouldRedirect: true, targetSection: 'my-files' };
-    }
-    
-    // 文件类型检查函数映射
-    const typeCheckers = {
-      'videos': this.isVideoFile.bind(this),
-      'images': this.isImageFile.bind(this),
-      'music': this.isAudioFile.bind(this),
-      'documents': this.isDocumentFile.bind(this),
-      'others': this.isOtherFile.bind(this)
-    };
-    
-    // 获取当前部分的检查函数
-    const currentChecker = typeCheckers[section];
-    if (!currentChecker) {
-      return { shouldRedirect: false };
-    }
-    
-    // 检查所有文件是否匹配当前部分
-    for (const file of Array.from(files)) {
-      const fileName = file.name;
       
-      // 如果文件类型与当前部分不匹配
-      if (!currentChecker(fileName)) {
-        // 确定最适合的目标部分
-        let targetSection = 'my-files';
-        
-        // 检查文件类型并确定目标部分
-        if (this.isVideoFile(fileName)) targetSection = 'videos';
-        else if (this.isImageFile(fileName)) targetSection = 'images';
-        else if (this.isAudioFile(fileName)) targetSection = 'music';
-        else if (this.isDocumentFile(fileName)) targetSection = 'documents';
-        else if (this.isOtherFile(fileName)) targetSection = 'others';
-        
-        return { shouldRedirect: true, targetSection };
-      }
+      // 直接上传文件
+      this.uploadDroppedFiles(files);
     }
-    
-    // 所有文件都匹配当前部分
-    return { shouldRedirect: false };
   },
 
-  /**
-   * 重定向到适当的页面进行上传
-   * @param {FileList} files - 文件列表
-   * @private
-   */
-  _redirectToMyFiles(files) {
-    // 检查是否需要重定向以及目标部分
-    const { shouldRedirect, targetSection } = this._shouldRedirectUpload(files);
-    
-    if (!shouldRedirect) {
-      // 如果不需要重定向，直接上传
-      this.uploadDroppedFiles(files);
-      return;
-    }
-    
-    // 获取目标部分的名称
-    const targetNavItem = document.querySelector(`.nav-group li[data-section="${targetSection}"]`);
-    const sectionName = targetNavItem ? 
-      (targetNavItem.querySelector('span')?.textContent.trim() || targetSection) : 
-      targetSection;
-    
-    // 显示提示信息
-    UI.Toast.info('文件类型不匹配', `已自动切换到"${sectionName}"页面进行上传`, 5000);
-    
-    // 触发部分切换事件
-    document.dispatchEvent(new CustomEvent('section:change', { 
-      detail: { section: targetSection } 
-    }));
-    
-    // 延迟一下再上传文件，确保页面已经切换
-    setTimeout(() => {
-      this.uploadDroppedFiles(files);
-    }, 500);
-  },
+
 
   /**
    * 上传拖拽的文件
@@ -3338,8 +3242,8 @@ export const FileManager = {
         // 处理每个文件上传
         const uploadIds = [];
         
-        // 使用Promise.all处理文件添加
-        const addFilePromises = Array.from(files).map(file => {
+        // 处理每个文件
+        Array.from(files).forEach(file => {
           // 生成唯一ID
           const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
           uploadIds.push(id);
@@ -3348,16 +3252,16 @@ export const FileManager = {
           formData.append('file', file);
 
           // 添加上传项到UI
-          return uploadManager.addUploadItem(id, file.name)
-            .catch(err => {
-              UI.Toast.error('上传准备失败', `文件 ${file.name} 添加失败: ${err.message}`, 5000);
-              throw err;
-            });
+          try {
+            uploadManager.addUploadItem(id, file.name);
+          } catch (err) {
+            console.error('添加上传项失败:', err);
+            UI.Toast.error('上传准备失败', `文件 ${file.name} 添加失败: ${err.message || '未知错误'}`, 5000);
+          }
         });
 
-        // 等待所有文件添加完成后执行上传
-        return Promise.all(addFilePromises)
-          .then(() => uploadManager.performUpload(formData));
+        // 直接执行上传
+        return uploadManager.performUpload(formData);
       })
       .then(result => {
         // 上传成功，不需要额外操作，uploadManager会处理UI更新

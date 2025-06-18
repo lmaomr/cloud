@@ -27,13 +27,13 @@ spring:
   #   prefix: classpath:/templates/
   #   suffix: .html
 
-  server:
-    port: 8082
-    
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+
+server:
+    port: 8080
 
 jwt:
   secret: 8Zz5tw0Ionm3XPZZfN0NOml3z9FMfmpgXwovR9fp6ryDIoGRM8EPHAB6iHsc0fb

@@ -155,8 +155,12 @@ class UploadManager {
       console.log('开始调用CloudAPI.uploadFiles');
       
       // 调用API上传文件
+      // await CloudAPI.uploadFiles(formData, (progress, event, isError) => {
+      //   console.log(`上传进度: ${progress}%, 错误状态: ${isError ? 'true' : 'false'}`);
+      // });
       await CloudAPI.uploadFiles(formData, (progress, event, isError) => {
         console.log(`上传进度: ${progress}%, 错误状态: ${isError ? 'true' : 'false'}`);
+        console.log(event);
         
         // 如果是错误状态，直接标记为错误
         if (isError) {
@@ -196,7 +200,7 @@ class UploadManager {
       
       return { success: true, count: uploadIds.length };
       
-    } catch (error) {
+    } catch(error){
       console.error('上传文件失败:', error);
       
       // 更新所有上传项为错误状态
