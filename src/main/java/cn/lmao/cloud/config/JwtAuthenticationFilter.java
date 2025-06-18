@@ -74,6 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 4. 继续执行过滤器链
             filterChain.doFilter(request, response);
         } catch (JwtException e) {
+            log.error("处理请求异常，JwtException:{}", e.getMessage());
             // 5. 如果发生异常，不调用 doFilter，直接返回错误响应
             response.setContentType("application/json;charset=UTF-8");
             response.setCharacterEncoding("UTF-8");

@@ -80,8 +80,8 @@ class UploadManager {
         // 生成唯一ID
         const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         
-        // 添加文件到FormData - 使用'file'作为字段名，与后端匹配
-        formData.append('file', file);
+        // 添加文件到FormData - 使用'files'作为字段名，与后端多文件上传接口匹配
+        formData.append('files', file);
         
         // 添加上传项到UI
         try {

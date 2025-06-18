@@ -425,7 +425,7 @@ export class CloudAPI {
       });
       
       // 发送请求
-      xhr.open('POST', `${API_BASE_URL}/file/upload`);
+      xhr.open('POST', `${API_BASE_URL}/file/upload/multiple`);
       
       // 设置请求头
       if (token) xhr.setRequestHeader('Authorization', token);

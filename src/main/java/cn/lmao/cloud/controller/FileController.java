@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,6 +50,40 @@ public class FileController {
         Long userId = userService.getUserByName(username).getId();
         // 3. 处理文件上传
         return ApiResponse.success(fileService.uploadFile(file, userId));
+    }
+    
+    /**
+     * 多文件上传接口
+     * 
+     * @throws IOException
+     */
+    @PostMapping(value = "/upload/multiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<List<FileUploadResponse>> uploadMultipleFiles(
+            @RequestParam("files") MultipartFile[] files,
+            @RequestHeader("Authorization") String authorization) throws IOException {
+        log.info("批量上传文件数量: {}", files.length);
+        
+        // 从Token中提取用户ID
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+        
+        List<FileUploadResponse> responses = new ArrayList<>();
+        
+        // 处理每个文件的上传
+        for (MultipartFile file : files) {
+            if (!file.isEmpty()) {
+                try {
+                    FileUploadResponse response = fileService.uploadFile(file, userId);
+                    responses.add(response);
+                    log.info("成功上传文件: {}", file.getOriginalFilename());
+                } catch (Exception e) {
+                    log.error("上传文件失败: {}, 错误: {}", file.getOriginalFilename(), e.getMessage());
+                    // 继续处理下一个文件，不中断批量上传
+                }
+            }
+        }
+        
+        return ApiResponse.success(responses);
     }
 
     /**

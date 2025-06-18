@@ -3248,8 +3248,8 @@ export const FileManager = {
           const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
           uploadIds.push(id);
 
-          // 添加文件到FormData
-          formData.append('file', file);
+          // 添加文件到FormData - 使用'files'作为字段名，与后端多文件上传接口匹配
+          formData.append('files', file);
 
           // 添加上传项到UI
           try {
