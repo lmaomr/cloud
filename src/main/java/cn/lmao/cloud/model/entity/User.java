@@ -32,6 +32,10 @@ public class User {
     @Column(name = "nick_name", nullable = false)
     private String nikenName;
 
+    //头像
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "user_role", nullable = false)
     private Role role = Role.USER;

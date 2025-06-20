@@ -1,0 +1,45 @@
+/* 
+ * no-select.css
+ * 禁止网页文字选中高亮的样式
+ */
+
+/* 全局禁止文本选择 */
+body {
+    -webkit-user-select: none;  /* Chrome, Safari, Opera */
+    -moz-user-select: none;     /* Firefox */
+    -ms-user-select: none;      /* Internet Explorer/Edge */
+    user-select: none;          /* 标准语法 */
+}
+
+/* 允许特定元素进行文本选择（如输入框、文本框等） */
+input, 
+textarea, 
+.allow-select,
+[contenteditable="true"] {
+    -webkit-user-select: text;  /* Chrome, Safari, Opera */
+    -moz-user-select: text;     /* Firefox */
+    -ms-user-select: text;      /* Internet Explorer/Edge */
+    user-select: text;          /* 标准语法 */
+}
+
+/* 禁止拖拽图片 */
+img {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+}
+
+/* 禁止iOS长按弹出菜单 */
+* {
+    -webkit-touch-callout: none;
+}
+
+/* 可选：添加特定类以允许文本选择 */
+.selectable-text {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+} 

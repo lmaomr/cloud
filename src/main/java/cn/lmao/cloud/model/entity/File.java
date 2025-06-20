@@ -55,6 +55,10 @@ public class File {
     @Column(name = "file_path", nullable = false)
     private String path;
 
+    //相对路径
+    @Column(name = "relative_path", nullable = false)
+    private String relativePath = "/";
+
     @Column(name = "file_hash", nullable = false, length = 64)
     private String hash;
 

@@ -14,7 +14,7 @@ import { UI } from './ui.js';
  */
 function debounce(func, wait) {
   let timeout;
-  return function(...args) {
+  return function (...args) {
     const context = this;
     clearTimeout(timeout);
     timeout = setTimeout(() => func.apply(context, args), wait);
@@ -29,7 +29,7 @@ function debounce(func, wait) {
  */
 function throttle(func, limit) {
   let inThrottle;
-  return function(...args) {
+  return function (...args) {
     const context = this;
     if (!inThrottle) {
       func.apply(context, args);
@@ -289,14 +289,14 @@ export const FileManager = {
    */
   handleSectionChange(section) {
     console.log('切换到部分:', section);
-    
+
     // 清除选择
     this.clearFileSelection();
-    
+
     // 强制隐藏工具栏，确保不会持续显示
     if (this.fileActionsToolbar) {
       this.fileActionsToolbar.style.display = 'none';
-      
+
       // 如果工具栏有回收站特定样式，重置它
       if (this.fileActionsToolbar.classList.contains('trash-toolbar-styled')) {
         this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
@@ -426,7 +426,7 @@ export const FileManager = {
 
       // 更新面包屑导航
       this.updateBreadcrumb();
-      
+
       // 启用视图切换按钮
       this._enableViewToggleButtons();
     } catch (error) {
@@ -497,16 +497,16 @@ export const FileManager = {
 
       // 使用文档片段减少DOM重绘次数
       const fragment = document.createDocumentFragment();
-      
+
       // 创建文件项
       files.forEach(file => {
         const fileItem = this.createFileItem(file);
         fragment.appendChild(fileItem);
       });
-      
+
       // 一次性将所有文件项添加到DOM
       this.fileList.appendChild(fragment);
-      
+
       // 启用视图切换按钮
       this._enableViewToggleButtons();
     } else {
@@ -541,7 +541,7 @@ export const FileManager = {
           });
         }
       }
-      
+
       // 禁用视图切换按钮
       this._disableViewToggleButtons();
     }
@@ -561,7 +561,7 @@ export const FileManager = {
 
     // 获取当前选中的部分
     const activeSection = localStorage.getItem('activeSection') || 'my-files';
-    
+
     // 根据当前部分刷新相应内容
     switch (activeSection) {
       case 'my-files':
@@ -658,7 +658,7 @@ export const FileManager = {
     if (checkbox) {
       checkbox.checked = false;
     }
-    
+
     return fileItem;
   },
 
@@ -669,7 +669,7 @@ export const FileManager = {
    */
   getFileIcon(fileName) {
     const extension = fileName.split('.').pop().toLowerCase();
-    
+
     // 使用对象映射代替switch语句
     const iconMap = {
       // 文档类
@@ -688,7 +688,7 @@ export const FileManager = {
       'md': 'fas fa-file-alt',
       'markdown': 'fas fa-file-alt',
       'csv': 'fas fa-file-csv',
-      
+
       // 图像类
       'jpg': 'fas fa-file-image',
       'jpeg': 'fas fa-file-image',
@@ -699,7 +699,7 @@ export const FileManager = {
       'webp': 'fas fa-file-image',
       'tiff': 'fas fa-file-image',
       'ico': 'fas fa-file-image',
-      
+
       // 音频类
       'mp3': 'fas fa-file-audio',
       'wav': 'fas fa-file-audio',
@@ -710,7 +710,7 @@ export const FileManager = {
       'wma': 'fas fa-file-audio',
       'aiff': 'fas fa-file-audio',
       'alac': 'fas fa-file-audio',
-      
+
       // 视频类
       'mp4': 'fas fa-file-video',
       'avi': 'fas fa-file-video',
@@ -722,14 +722,14 @@ export const FileManager = {
       '3gp': 'fas fa-file-video',
       'mpeg': 'fas fa-file-video',
       'mpg': 'fas fa-file-video',
-      
+
       // 压缩文件类
       'zip': 'fas fa-file-archive',
       'rar': 'fas fa-file-archive',
       '7z': 'fas fa-file-archive',
       'tar': 'fas fa-file-archive',
       'gz': 'fas fa-file-archive',
-      
+
       // 代码类
       'html': 'fas fa-file-code',
       'css': 'fas fa-file-code',
@@ -752,7 +752,7 @@ export const FileManager = {
       'yml': 'fas fa-file-code',
       'yaml': 'fas fa-file-code',
     };
-    
+
     // 返回匹配的图标或默认图标
     return iconMap[extension] || 'fas fa-file';
   },
@@ -764,19 +764,19 @@ export const FileManager = {
    */
   formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
-    
+
     const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const base = 1024;
     const unitIndex = Math.floor(Math.log(bytes) / Math.log(base));
-    
+
     // 限制单位索引不超过数组长度
     const safeUnitIndex = Math.min(unitIndex, units.length - 1);
-    
+
     // 计算大小并保留两位小数
     const size = bytes / Math.pow(base, safeUnitIndex);
-    
+
     // 如果是整数，不显示小数点
-    return size % 1 === 0 
+    return size % 1 === 0
       ? `${size} ${units[safeUnitIndex]}`
       : `${size.toFixed(2)} ${units[safeUnitIndex]}`;
   },
@@ -794,17 +794,50 @@ export const FileManager = {
       return;
     }
 
-    // 如果是文件夹并且是双击，则进入文件夹
-    if (fileItem.classList.contains('folder') && e.detail === 2) {
+    // 为文件夹添加双击检测
+  if (fileItem.classList.contains('folder')) {
+    // 使用自定义属性存储上次点击时间
+    const now = Date.now();
+    const lastClickTime = parseInt(fileItem.dataset.lastClickTime || 0);
+    
+    // 更新点击时间
+    fileItem.dataset.lastClickTime = now;
+    
+    // 如果两次点击间隔小于300ms，视为双击
+    if (now - lastClickTime < 300) {
+      // 双击操作：进入文件夹
       this.navigateToFolder(fileItem);
       return;
     }
+    
+    // 单击文件夹时，延迟处理选择操作，给双击留出时间
+    setTimeout(() => {
+      // 检查是否在延迟期间发生了双击
+      const currentLastClick = parseInt(fileItem.dataset.lastClickTime || 0);
+      if (currentLastClick === now) {  // 如果最后点击时间没变，说明没有发生双击
+        // 执行单击操作：切换选择状态
+        const checkbox = fileItem.querySelector('.item-checkbox');
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          
+          // 触发change事件，以便更新选择状态
+          const changeEvent = new Event('change', { bubbles: true });
+          checkbox.dispatchEvent(changeEvent);
+        }
+        
+        // 更新工具栏状态
+        this.updateToolbar();
+      }
+    }, 200);  // 延迟200ms，等待可能的双击
+    
+    return;
+  }
 
     // 其他情况下，切换选择状态
     const checkbox = fileItem.querySelector('.item-checkbox');
     if (checkbox) {
       checkbox.checked = !checkbox.checked;
-      
+
       // 触发change事件，以便更新选择状态
       const changeEvent = new Event('change', { bubbles: true });
       checkbox.dispatchEvent(changeEvent);
@@ -861,7 +894,7 @@ export const FileManager = {
    */
   clearFileSelection() {
     console.log('清除文件选择，当前已选择:', this.selectedFiles.length);
-    
+
     // 清除所有选中的文件项
     document.querySelectorAll('.file-item.selected').forEach(item => {
       this.deselectFile(item);
@@ -879,13 +912,13 @@ export const FileManager = {
     // 隐藏工具栏
     if (this.fileActionsToolbar) {
       this.fileActionsToolbar.style.display = 'none';
-      
+
       // 重置工具栏内容和样式
       if (this.fileActionsToolbar.classList.contains('trash-toolbar-styled')) {
         console.log('重置回收站特定工具栏样式');
         this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
         this.fileActionsToolbar.innerHTML = ''; // 清空回收站特定工具栏内容
-        
+
         // 恢复默认工具栏内容
         const defaultToolbarHTML = `
           <div class="selected-count">已选择 <span id="selectedCount">0</span> 项</div>
@@ -1114,7 +1147,7 @@ export const FileManager = {
         console.log('在updateToolbar中重置回收站特定样式');
         this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
         this.fileActionsToolbar.innerHTML = '';
-        
+
         // 恢复默认工具栏内容
         const defaultToolbarHTML = `
           <div class="selected-count">已选择 <span id="selectedCount">0</span> 项</div>
@@ -1164,15 +1197,15 @@ export const FileManager = {
    */
   _resetToolbar() {
     console.log('重置工具栏到默认状态');
-    
+
     if (!this.fileActionsToolbar) return;
-    
+
     // 移除回收站特定样式
     this.fileActionsToolbar.classList.remove('trash-toolbar-styled');
-    
+
     // 清空工具栏内容
     this.fileActionsToolbar.innerHTML = '';
-    
+
     // 恢复默认工具栏内容
     const defaultToolbarHTML = `
       <div class="selected-count">已选择 <span id="selectedCount">0</span> 项</div>
@@ -1185,10 +1218,10 @@ export const FileManager = {
     `;
     this.fileActionsToolbar.innerHTML = defaultToolbarHTML;
     this.selectedCountElement = document.getElementById('selectedCount');
-    
+
     // 确保工具栏隐藏
     this.fileActionsToolbar.style.display = 'none';
-    
+
     // 重新绑定工具栏按钮事件
     const toolbarBtns = this.fileActionsToolbar.querySelectorAll('.toolbar-btn');
     toolbarBtns.forEach(btn => {
@@ -1215,16 +1248,16 @@ export const FileManager = {
         try {
           // 调用API恢复文件
           await CloudAPI.restoreFile(fileId);
-          
+
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
-          
+
           // 重置工具栏到默认状态
           this._resetToolbar();
-          
+
           // 刷新回收站
           this.loadTrashContent();
-          
+
           // 恢复操作不更新存储空间信息，因为只是文件位置变化，不影响总存储量
 
           // 显示恢复成功提示
@@ -1234,7 +1267,7 @@ export const FileManager = {
         } catch (error) {
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
-          
+
           console.error('恢复文件失败:', error);
           UI.Toast.error('恢复失败', error.message || '无法恢复文件', 5000, {
             group: 'trashOperations'
@@ -1263,13 +1296,13 @@ export const FileManager = {
         try {
           // 调用API永久删除文件
           await CloudAPI.deletePermanentFile(fileId);
-          
+
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
-          
+
           // 刷新回收站
           this.loadTrashContent();
-          
+
           // 更新存储空间信息
           await this.updateStorageInfo();
 
@@ -1280,7 +1313,7 @@ export const FileManager = {
         } catch (error) {
           // 隐藏加载通知
           UI.Toast.hide(loadingToastId);
-          
+
           console.error('永久删除文件失败:', error);
           UI.Toast.error('删除失败', error.message || '无法删除文件', 5000, {
             group: 'trashOperations'
@@ -1360,7 +1393,7 @@ export const FileManager = {
 
             const fileId = fileItem.dataset.id;
             if (!fileId) return Promise.reject(new Error(`无效的文件ID: ${fileName}`));
-            
+
             return CloudAPI.restoreFile(fileId);
           });
 
@@ -1375,7 +1408,7 @@ export const FileManager = {
 
           // 刷新回收站
           this.loadTrashContent();
-          
+
           // 恢复操作不更新存储空间信息，因为只是文件位置变化，不影响总存储量
 
           // 显示恢复成功提示
@@ -1420,7 +1453,7 @@ export const FileManager = {
 
             const fileId = fileItem.dataset.id;
             if (!fileId) return Promise.reject(new Error(`无效的文件ID: ${fileName}`));
-            
+
             return CloudAPI.deletePermanentFile(fileId);
           });
 
@@ -1432,7 +1465,7 @@ export const FileManager = {
 
           // 刷新回收站
           this.loadTrashContent();
-          
+
           // 更新存储空间信息
           await this.updateStorageInfo();
 
@@ -1461,8 +1494,8 @@ export const FileManager = {
     }
 
     const folderName = folderItem.querySelector('.file-name').textContent;
-    const folderPath = folderItem.dataset.path || `${this.currentPath}${this.currentPath.endsWith('/') ? '' : '/'}${folderName}`;
-
+    // const folderPath = folderItem.dataset.path || `${this.currentPath}${this.currentPath.endsWith('/') ? '' : '/'}${folderName}`;
+    const folderPath = `${this.currentPath}${this.currentPath.endsWith('/') ? '' : '/'}${folderName}`;
     // 更新当前路径
     this.currentPath = folderPath;
 
@@ -1566,7 +1599,7 @@ export const FileManager = {
 
     // 清除选中状态
     this.clearFileSelection();
-    
+
     // 移除拖放事件监听器，开发中页面不需要上传功能
     this._removeDropEventListeners();
 
@@ -1643,7 +1676,7 @@ export const FileManager = {
         currentItem.textContent = sectionName || '功能';
         breadcrumb.appendChild(currentItem);
       }
-      
+
       // 禁用视图切换按钮
       this._disableViewToggleButtons();
     }
@@ -1673,10 +1706,10 @@ export const FileManager = {
     CloudAPI.getFileList('/', this.currentSort)
       .then(response => {
         const allFiles = response.data || [];
-        
+
         // 根据类型过滤文件，使用更简洁的过滤逻辑
         let filteredFiles = [];
-        
+
         // 使用映射表简化过滤逻辑
         const filterFunctions = {
           'video': file => file.type !== 'folder' && this.isVideoFile(file.name),
@@ -1685,7 +1718,7 @@ export const FileManager = {
           'document': file => file.type !== 'folder' && this.isDocumentFile(file.name),
           'others': file => file.type !== 'folder' && this.isOtherFile(file.name)
         };
-        
+
         // 使用对应的过滤函数
         if (filterFunctions[type]) {
           filteredFiles = allFiles.filter(filterFunctions[type]);
@@ -1736,13 +1769,13 @@ export const FileManager = {
 
             // 使用文档片段减少DOM重绘次数
             const fragment = document.createDocumentFragment();
-            
+
             // 创建文件项
             filteredFiles.forEach(file => {
               const fileItem = this.createFileItem(file);
               fragment.appendChild(fileItem);
             });
-            
+
             // 一次性将所有文件项添加到DOM
             this.fileList.appendChild(fragment);
           }
@@ -1800,9 +1833,9 @@ export const FileManager = {
                   } else {
                     fileInput.removeAttribute('accept');
                   }
-                  
+
                   // 直接触发文件选择，不进行文件类型检查和跳转
-                  
+
                   // 触发文件选择对话框
                   fileInput.click();
                 }
@@ -1878,11 +1911,11 @@ export const FileManager = {
 
     const extension = parts[parts.length - 1].toLowerCase();
     const extensions = FILE_TYPE_EXTENSIONS[fileType];
-    
+
     if (!extensions) {
       return false;
     }
-    
+
     return extensions.includes(extension);
   },
 
@@ -1929,8 +1962,8 @@ export const FileManager = {
    */
   isOtherFile(fileName) {
     // 首先检查是否为视频、音频、文档或图片文件
-    return !(this.isVideoFile(fileName) || this.isAudioFile(fileName) || 
-             this.isDocumentFile(fileName) || this.isImageFile(fileName));
+    return !(this.isVideoFile(fileName) || this.isAudioFile(fileName) ||
+      this.isDocumentFile(fileName) || this.isImageFile(fileName));
   },
 
   /**
@@ -2067,7 +2100,7 @@ export const FileManager = {
                 const container = this.fileList.querySelector('.shared-content-container');
                 if (container) {
                   container.innerHTML = this.renderSharedContent(filteredContent);
-                  
+
                   // 重新绑定复制链接按钮
                   this._setupCopyLinkButtons();
                 }
@@ -2172,7 +2205,7 @@ export const FileManager = {
         });
       });
   },
-  
+
   /**
    * 设置复制链接按钮的事件处理
    * @private
@@ -2188,11 +2221,11 @@ export const FileManager = {
           const tempInput = document.createElement('input');
           tempInput.value = link;
           document.body.appendChild(tempInput);
-          
+
           // 选中并复制
           tempInput.select();
           tempInput.setSelectionRange(0, 99999);
-          
+
           try {
             // 使用现代clipboard API
             navigator.clipboard.writeText(link)
@@ -2208,7 +2241,7 @@ export const FileManager = {
             console.error('复制失败:', err);
             UI.Toast.error('复制失败', '无法复制到剪贴板，请手动复制', 5000);
           }
-          
+
           // 移除临时输入框
           document.body.removeChild(tempInput);
         }
@@ -2278,9 +2311,9 @@ export const FileManager = {
   },
 
   /**
-   * 下载文件
-   * @param {string} fileName - 文件名
-   */
+  * 下载文件 - 兼容iOS Safari
+  * @param {string} fileName - 文件名
+  */
   async downloadFile(fileName) {
     try {
       // 获取文件项
@@ -2300,48 +2333,188 @@ export const FileManager = {
 
       // 获取下载链接
       const downloadUrl = CloudAPI.getFileDownloadUrl(fileId);
-      
+
       // 获取认证令牌
       const token = CloudAPI.getAuthToken();
-      
-      // 使用fetch API下载文件，确保包含认证信息
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': token || '',
-        },
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`下载失败: ${response.statusText}`);
+
+      // 检测是否为iOS设备
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+      if (isIOS || isSafari) {
+        // iOS Safari 特殊处理
+        await this.downloadFileForIOS(downloadUrl, token, fileName);
+      } else {
+        // 其他浏览器使用标准方法
+        await this.downloadFileStandard(downloadUrl, token, fileName);
       }
-      
-      // 将响应转换为blob
-      const blob = await response.blob();
-      
-      // 创建blob URL
-      const objectUrl = URL.createObjectURL(blob);
-      
-      // 使用a标签下载文件
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = fileName;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      
-      // 清理
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(objectUrl); // 释放blob URL
-      }, 100);
 
       UI.Toast.success('下载开始', `文件 ${fileName} 开始下载`, 3000);
 
     } catch (error) {
       console.error('下载文件失败:', error);
       UI.Toast.error('下载失败', error.message || '下载文件时出错', 5000);
+    }
+  },
+
+  /**
+   * iOS Safari 专用下载方法
+   * @param {string} downloadUrl - 下载链接
+   * @param {string} token - 认证令牌
+   * @param {string} fileName - 文件名
+   */
+  async downloadFileForIOS(downloadUrl, token, fileName) {
+    try {
+      // 方法1: 尝试直接跳转下载（适用于支持直接下载的文件类型）
+      const directDownloadUrl = `${downloadUrl}${downloadUrl.includes('?') ? '&' : '?'}download=1`;
+
+      // 创建一个隐藏的iframe来处理下载
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = directDownloadUrl;
+      document.body.appendChild(iframe);
+
+      // 设置超时清理iframe
+      setTimeout(() => {
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe);
+        }
+      }, 3000);
+
+      // 同时尝试新窗口打开（作为备选方案）
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = directDownloadUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+
+        // 尝试触发下载
+        if (token) {
+          // 如果需要认证，构造包含token的URL
+          const urlWithAuth = `${directDownloadUrl}&token=${encodeURIComponent(token)}`;
+          link.href = urlWithAuth;
+        }
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, 500);
+
+    } catch (error) {
+      // 如果直接下载失败，尝试blob方法
+      await this.downloadFileStandard(downloadUrl, token, fileName);
+    }
+  },
+
+  /**
+   * 标准浏览器下载方法
+   * @param {string} downloadUrl - 下载链接
+   * @param {string} token - 认证令牌
+   * @param {string} fileName - 文件名
+   */
+  async downloadFileStandard(downloadUrl, token, fileName) {
+    // 使用fetch API下载文件，确保包含认证信息
+    const response = await fetch(downloadUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': token || '',
+        'Content-Type': 'application/octet-stream',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error(`下载失败: ${response.statusText}`);
+    }
+
+    // 将响应转换为blob
+    const blob = await response.blob();
+
+    // 检测浏览器支持情况
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+      // IE浏览器
+      window.navigator.msSaveOrOpenBlob(blob, fileName);
+    } else {
+      // 现代浏览器
+      const objectUrl = URL.createObjectURL(blob);
+
+      // 使用a标签下载文件
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = fileName;
+      a.style.display = 'none';
+
+      // 添加到DOM并触发点击
+      document.body.appendChild(a);
+
+      // 使用用户交互事件触发点击（重要：iOS需要）
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true
+      });
+
+      a.dispatchEvent(clickEvent);
+
+      // 延迟清理，给iOS更多时间处理
+      setTimeout(() => {
+        try {
+          if (a.parentNode) {
+            document.body.removeChild(a);
+          }
+          URL.revokeObjectURL(objectUrl);
+        } catch (cleanupError) {
+          console.warn('清理下载元素时出错:', cleanupError);
+        }
+      }, 1000); // 增加延迟时间
+    }
+  },
+
+  /**
+   * 备选下载方法 - 打开新窗口
+   * @param {string} fileName - 文件名
+   */
+  openDownloadInNewWindow(fileName) {
+    try {
+      const fileItem = this.findFileItemByName(fileName);
+      if (!fileItem) {
+        throw new Error(`找不到文件: ${fileName}`);
+      }
+
+      const fileId = fileItem.dataset.id;
+      if (!fileId) {
+        throw new Error(`无效的文件ID: ${fileName}`);
+      }
+
+      const downloadUrl = CloudAPI.getFileDownloadUrl(fileId);
+      const token = CloudAPI.getAuthToken();
+
+      // 构造包含认证信息的URL
+      let finalUrl = downloadUrl;
+      if (token) {
+        const separator = downloadUrl.includes('?') ? '&' : '?';
+        finalUrl = `${downloadUrl}${separator}token=${encodeURIComponent(token)}&download=1`;
+      }
+
+      // 在新窗口中打开下载链接
+      const newWindow = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+
+      if (!newWindow) {
+        UI.Toast.warning('弹窗被阻止', '请允许弹窗后重试，或手动复制链接下载', 5000);
+
+        // 提供复制链接的选项
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(finalUrl).then(() => {
+            UI.Toast.info('链接已复制', '下载链接已复制到剪贴板', 3000);
+          }).catch(() => {
+            console.warn('复制到剪贴板失败');
+          });
+        }
+      }
+
+    } catch (error) {
+      console.error('新窗口下载失败:', error);
+      UI.Toast.error('下载失败', error.message || '打开下载链接时出错', 5000);
     }
   },
 
@@ -2517,7 +2690,7 @@ export const FileManager = {
             input.focus();
             input.select();
           }
-          
+
           // 添加复制功能
           const copyBtn = document.getElementById('copyLinkBtn');
           if (copyBtn) {
@@ -2527,7 +2700,7 @@ export const FileManager = {
                 // 选中文本
                 linkInput.select();
                 linkInput.setSelectionRange(0, 99999); // 适用于移动设备
-                
+
                 // 复制文本
                 try {
                   // 使用现代clipboard API
@@ -2605,7 +2778,7 @@ export const FileManager = {
           input.focus();
           input.select();
         }
-        
+
         // 添加复制功能
         const copyBtn = document.getElementById('copyLinkBtn');
         if (copyBtn) {
@@ -2615,7 +2788,7 @@ export const FileManager = {
               // 选中文本
               linkInput.select();
               linkInput.setSelectionRange(0, 99999); // 适用于移动设备
-              
+
               // 复制文本
               try {
                 // 使用现代clipboard API
@@ -2789,7 +2962,7 @@ export const FileManager = {
 
           // 刷新文件列表
           this.refreshFiles();
-          
+
           // 普通删除不更新存储空间信息，因为文件只是移动到回收站而非真正删除
 
           // 显示删除成功提示
@@ -2805,7 +2978,7 @@ export const FileManager = {
       }
     );
   },
-  
+
   /**
    * 更新存储空间使用情况
    */
@@ -2821,25 +2994,25 @@ export const FileManager = {
       // 获取云盘信息
       const username = userInfo.data.username;
       const cloudInfo = await CloudAPI.getUserCloud(username);
-      
+
       if (cloudInfo && cloudInfo.data) {
         // 更新存储空间信息
         const usedCapacity = cloudInfo.data.usedCapacity;
         const totalCapacity = cloudInfo.data.totalCapacity;
         const usedPercentage = (usedCapacity / totalCapacity) * 100;
-        
+
         // 更新存储空间进度条
         const storageProgress = document.querySelector('.storage-progress');
         if (storageProgress) {
           const progressBar = storageProgress.querySelector('.progress-bar');
           const progress = progressBar.querySelector('.progress');
           const storageText = storageProgress.querySelector('.storage-text span');
-          
+
           progressBar.setAttribute('aria-valuenow', usedPercentage);
           progress.style.width = `${usedPercentage}%`;
           storageText.textContent = `${this.formatFileSize(usedCapacity)} / ${this.formatFileSize(totalCapacity)}`;
         }
-        
+
         console.log('存储空间信息已更新');
       }
     } catch (error) {
@@ -2886,7 +3059,7 @@ export const FileManager = {
 
           // 刷新文件列表
           this.refreshFiles();
-          
+
           // 普通删除不更新存储空间信息，因为文件只是移动到回收站而非真正删除
 
           // 显示删除成功提示
@@ -3093,7 +3266,7 @@ export const FileManager = {
         });
       });
   },
-  
+
   /**
    * 移除拖放事件监听器
    * @private
@@ -3106,13 +3279,13 @@ export const FileManager = {
         target.removeEventListener('dragenter', this._eventHandlers.dragEnter);
         target.removeEventListener('dragleave', this._eventHandlers.dragLeave);
         target.removeEventListener('drop', this._eventHandlers.drop);
-        
+
         // 移除拖放样式类
         target.classList.remove('drag-over');
       }
     });
   },
-  
+
   /**
    * 重新绑定拖放事件监听器
    * @private
@@ -3199,7 +3372,7 @@ export const FileManager = {
           return;
         }
       }
-      
+
       // 直接上传文件
       this.uploadDroppedFiles(files);
     }
@@ -3241,7 +3414,7 @@ export const FileManager = {
 
         // 处理每个文件上传
         const uploadIds = [];
-        
+
         // 处理每个文件
         Array.from(files).forEach(file => {
           // 生成唯一ID
@@ -3283,16 +3456,16 @@ export const FileManager = {
       contextMenu.className = 'context-menu';
       contextMenu.style.display = 'none';
       document.body.appendChild(contextMenu);
-      
+
       // 使用事件委托处理菜单项点击，减少事件监听器数量
       contextMenu.addEventListener('click', (e) => {
         const menuItem = e.target.closest('.menu-item');
         if (!menuItem) return;
-        
+
         const action = menuItem.dataset.action;
         const fileName = menuItem.dataset.file;
         const fileItem = document.querySelector(`.file-item[data-name="${CSS.escape(fileName)}"]`);
-        
+
         if (action && fileName && fileItem) {
           this._handleContextMenuAction(action, fileName, fileItem);
           this._hideContextMenu();
@@ -3333,9 +3506,9 @@ export const FileManager = {
     document.addEventListener('touchstart', (e) => {
       const fileItem = e.target.closest('.file-item');
       if (!fileItem) return;
-      
+
       touchStartTarget = fileItem;
-      
+
       longPressTimer = setTimeout(() => {
         // 长按触发"右键菜单"
         if (touchStartTarget === fileItem) {
@@ -3394,7 +3567,7 @@ export const FileManager = {
           </div>
         `;
       }
-      
+
       menuHTML += `
         <div class="menu-item" data-action="share" data-file="${fileName}">
           <i class="fas fa-share-alt"></i> 分享
@@ -3412,15 +3585,15 @@ export const FileManager = {
     contextMenu.innerHTML = menuHTML;
 
     // 定位菜单 - 获取鼠标或触摸位置
-    const posX = e.type.startsWith('touch') ? 
+    const posX = e.type.startsWith('touch') ?
       (e.touches[0] || e.changedTouches[0]).clientX : e.clientX;
-    const posY = e.type.startsWith('touch') ? 
+    const posY = e.type.startsWith('touch') ?
       (e.touches[0] || e.changedTouches[0]).clientY : e.clientY;
 
     // 设置菜单位置
     contextMenu.style.left = `${posX}px`;
     contextMenu.style.top = `${posY}px`;
-    
+
     // 显示菜单
     contextMenu.style.display = 'block';
 

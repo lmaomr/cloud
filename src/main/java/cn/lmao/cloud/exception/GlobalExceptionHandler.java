@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.io.IOException;
 import java.util.stream.Collectors;
 
 import org.springframework.security.core.AuthenticationException;
@@ -209,6 +210,15 @@ public class GlobalExceptionHandler {
     public ApiResponse<?> handleOptimisticLockingFailure(ObjectOptimisticLockingFailureException ex) {
         log.warn("乐观锁冲突: {}", ex.getMessage());
         return ApiResponse.exception(ExceptionCodeMsg.OPTIMISTIC_LOCK_CONFLICT);
+    }
+
+    /**
+     * 处理文件IO异常
+     */
+    @ExceptionHandler(IOException.class)
+    public <T> ApiResponse<T> handleIOException(IOException e) {
+        log.error("文件IO异常: {}", e.getMessage(), e);
+        return ApiResponse.exception(ExceptionCodeMsg.FILE_IO_ERROR);
     }
 
     /**

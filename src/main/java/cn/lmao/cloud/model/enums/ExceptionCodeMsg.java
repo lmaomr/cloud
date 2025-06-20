@@ -70,6 +70,9 @@ public enum ExceptionCodeMsg {
     CLOUD_NOT_FOUND(10212, "云盘不存在或已被删除"),
     CLOUD_ALREADY_EXISTS(10213, "云盘名称已存在"),
     CLOUD_QUOTA_EXCEEDED(10214, "云盘容量配额不足"),
+    FILE_IO_ERROR(10215, "文件读写失败"),
+    FILE_PERMISSION_DENIED(10216, "文件访问权限不足"),
+    FILE_EXISTS(10217, "文件或目录已存在"),
 
     // 系统/数据相关
     DATA_INTEGRITY_VIOLATION(10301, "数据完整性冲突"),

@@ -41,15 +41,22 @@ public class FileController {
     public ApiResponse<FileUploadResponse> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestHeader("Authorization") String authorization) throws IOException {
-        log.info("上传文件: {}", file.getOriginalFilename());
-        if (file.isEmpty()) {
-            return ApiResponse.exception(ExceptionCodeMsg.FILE_EMPTY);
-        }
-        // 2. 从Token中提取用户ID
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        // 3. 处理文件上传
-        return ApiResponse.success(fileService.uploadFile(file, userId));
+        
+        log.info("接收到文件上传请求: fileName={}, size={}, username={}", 
+                file.getOriginalFilename(), file.getSize(), username);
+        
+        if (file.isEmpty()) {
+            log.warn("文件上传失败: 文件为空, username={}", username);
+            return ApiResponse.exception(ExceptionCodeMsg.FILE_EMPTY);
+        }
+        
+        // 处理文件上传
+        FileUploadResponse response = fileService.uploadFile(file, userId);
+        log.info("文件上传请求处理完成: fileName={}, fileId={}, username={}", 
+                file.getOriginalFilename(), response.getFileId(), username);
+        return ApiResponse.success(response);
     }
     
     /**
@@ -61,28 +68,37 @@ public class FileController {
     public ApiResponse<List<FileUploadResponse>> uploadMultipleFiles(
             @RequestParam("files") MultipartFile[] files,
             @RequestHeader("Authorization") String authorization) throws IOException {
-        log.info("批量上传文件数量: {}", files.length);
-        
-        // 从Token中提取用户ID
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
         
+        log.info("接收到批量文件上传请求: fileCount={}, username={}", files.length, username);
+        
         List<FileUploadResponse> responses = new ArrayList<>();
         
+        int requestCount = 0;
+        int successCount = 0;
+        int failCount = 0;
         // 处理每个文件的上传
         for (MultipartFile file : files) {
+            requestCount++;
             if (!file.isEmpty()) {
                 try {
                     FileUploadResponse response = fileService.uploadFile(file, userId);
                     responses.add(response);
-                    log.info("成功上传文件: {}", file.getOriginalFilename());
+                    successCount++;
+                    log.debug("批量上传-单个文件成功: fileName={}, fileId={}", 
+                            file.getOriginalFilename(), response.getFileId());
                 } catch (Exception e) {
-                    log.error("上传文件失败: {}, 错误: {}", file.getOriginalFilename(), e.getMessage());
-                    // 继续处理下一个文件，不中断批量上传
+                    log.error("批量上传-单个文件失败: fileName={}, error={}", 
+                            file.getOriginalFilename(), e.getMessage());
+                    failCount++;
+                    return ApiResponse.exception(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
                 }
             }
         }
         
+        log.info("文件上传所有请求处理完成: 总共处理请求数量={}, 成功数量={}, 失败数量={}, username={}", 
+                requestCount, successCount, failCount, username);
         return ApiResponse.success(responses);
     }
 
@@ -94,18 +110,19 @@ public class FileController {
      */
     @GetMapping("/download/{fileId}")
     public void downloadFile(@PathVariable String fileId, HttpServletResponse response) throws IOException {
-        log.info("下载文件: 文件ID={}", fileId);
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+        
+        log.info("接收到文件下载请求: fileId={}, username={}", fileId, username);
 
         if (fileId == null || fileId.trim().isEmpty()) {
+            log.warn("文件下载失败: 文件ID为空, username={}", username);
             throw new CustomException(ExceptionCodeMsg.FILE_NOT_FOUND);
         }
 
-        // 从安全上下文中获取当前用户
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = userService.getUserByName(username).getId();
-
         // 下载文件
         fileService.downloadFile(Long.parseLong(fileId), userId, response);
+        // 注意: 下载完成的日志已在FileService中记录
     }
 
     /**
@@ -119,14 +136,16 @@ public class FileController {
     public ApiResponse<List<File>> getFileList(
             @RequestParam(value = "path", defaultValue = "/") String path,
             @RequestParam(value = "sort", defaultValue = "name-asc") String sort) {
-        log.info("获取文件列表: 路径={}, 排序方式={}", path, sort);
-
-        // 从安全上下文中获取当前用户
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        Cloud userCloud = userService.getCloud(userId);
+        
+        log.info("接收到获取文件列表请求: path={}, sort={}, username={}", path, sort, username);
 
-        return ApiResponse.success(fileService.getFileList(userCloud, path, sort));
+        Cloud userCloud = userService.getCloud(userId);
+        List<File> files = fileService.getFileList(userCloud, path, sort);
+        
+        log.info("文件列表获取成功: path={}, fileCount={}, username={}", path, files.size(), username);
+        return ApiResponse.success(files);
     }
 
     /**
@@ -139,20 +158,20 @@ public class FileController {
     public ApiResponse<File> createFolder(@RequestBody Map<String, String> requestBody) {
         String path = requestBody.get("path");
         String name = requestBody.get("name");
-
-        log.info("创建文件夹: 路径={}, 名称={}", path, name);
-
-        if (name == null || name.trim().isEmpty()) {
-            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
-        }
-
-        // 从安全上下文中获取当前用户
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
 
+        log.info("接收到创建文件夹请求: path={}, name={}, username={}", path, name, username);
+
+        if (name == null || name.trim().isEmpty()) {
+            log.warn("创建文件夹失败: 文件夹名称为空, username={}", username);
+            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+        }
+
         // 创建文件夹
         File folder = fileService.createFolder(path, name, userId);
-
+        
+        log.info("文件夹创建成功: folderId={}, name={}, username={}", folder.getId(), folder.getName(), username);
         return ApiResponse.success(folder);
     }
 
@@ -161,26 +180,29 @@ public class FileController {
      */
     @PostMapping("/rename")
     public ApiResponse<File> renameFile(@RequestBody Map<String, String> requestBody) {
+        String fileId = requestBody.get("fileId");
+        String newName = requestBody.get("newName");
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+        
+        log.info("接收到文件重命名请求: fileId={}, newName={}, username={}", fileId, newName, username);
+
         try {
-            log.info("重命名文件请求: {}", requestBody);
-            String fileId = requestBody.get("fileId");
-            String newName = requestBody.get("newName");
-
-            log.info("重命名文件: 文件ID={}, 新名称={}", fileId, newName);
-
             if (fileId == null || fileId.trim().isEmpty() || newName == null || newName.trim().isEmpty()) {
+                log.warn("文件重命名失败: 参数错误, fileId={}, newName={}, username={}", 
+                        fileId, newName, username);
                 return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
             }
 
-            // 从安全上下文中获取当前用户
-            String username = SecurityContextHolder.getContext().getAuthentication().getName();
-            Long userId = userService.getUserByName(username).getId();
-
             // 重命名文件
             File renamedFile = fileService.renameFile(Long.parseLong(fileId), newName, userId);
+            
+            log.info("文件重命名成功: fileId={}, newName={}, username={}", 
+                    renamedFile.getId(), renamedFile.getName(), username);
             return ApiResponse.success(renamedFile);
         } catch (Exception e) {
-            log.error("重命名文件请求异常: {}", e.getMessage());
+            log.error("文件重命名异常: fileId={}, newName={}, username={}, error={}", 
+                    fileId, newName, username, e.getMessage());
             return ApiResponse.exception(ExceptionCodeMsg.FILE_RENAME_FAILED);
         }
     }
@@ -191,20 +213,20 @@ public class FileController {
     @PostMapping("/delete")
     public ApiResponse<String> deleteFile(@RequestBody Map<String, String> requestBody) {
         String fileId = requestBody.get("fileId");
-
-        log.info("删除文件: 文件ID={}", fileId);
-
-        if (fileId == null || fileId.trim().isEmpty()) {
-            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
-        }
-
-        // 从安全上下文中获取当前用户
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
 
+        log.info("接收到文件删除请求: fileId={}, username={}", fileId, username);
+
+        if (fileId == null || fileId.trim().isEmpty()) {
+            log.warn("文件删除失败: 文件ID为空, username={}", username);
+            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+        }
+
         // 删除文件
         fileService.deleteFile(Long.parseLong(fileId), userId);
-
+        
+        log.info("文件删除成功(移至回收站): fileId={}, username={}", fileId, username);
         return ApiResponse.success("删除成功");
     }
 
@@ -213,24 +235,26 @@ public class FileController {
      */
     @PostMapping("/trash/delete")
     public ApiResponse<String> deleteTrashFile(@RequestBody Map<String, String> requestBody) {
+        String fileId = requestBody.get("fileId");
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+        
+        log.info("接收到永久删除回收站文件请求: fileId={}, username={}", fileId, username);
+
         try {
-            String fileId = requestBody.get("fileId");
-
-            log.info("删除回收站文件: 文件ID={}", fileId);
-
             if (fileId == null || fileId.trim().isEmpty()) {
+                log.warn("永久删除回收站文件失败: 文件ID为空, username={}", username);
                 return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
             }
 
-            // 从安全上下文中获取当前用户
-            String username = SecurityContextHolder.getContext().getAuthentication().getName();
-            Long userId = userService.getUserByName(username).getId();
-
             // 删除回收站文件
             fileService.deleteTrashFile(Long.parseLong(fileId), userId);
+            
+            log.info("永久删除回收站文件成功: fileId={}, username={}", fileId, username);
             return ApiResponse.success("删除成功");
         } catch (Exception e) {
-            log.error("删除回收站文件请求异常: {}", e.getMessage());
+            log.error("永久删除回收站文件异常: fileId={}, username={}, error={}", 
+                    fileId, username, e.getMessage());
             return ApiResponse.exception(ExceptionCodeMsg.DELETE_FILE_FAIL);
         }
     }
@@ -242,20 +266,21 @@ public class FileController {
     @PostMapping("/trash/restore")
     public ApiResponse<String> restoreTrashFile(@RequestBody Map<String, String> requestBody) {
         String fileId = requestBody.get("fileId");
-
-        log.info("恢复回收站文件: 文件ID={}", fileId);
-
-        if (fileId == null || fileId.trim().isEmpty()) {
-            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
-        }
-
-        // 从安全上下文中获取当前用户
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
 
+        log.info("接收到恢复回收站文件请求: fileId={}, username={}", fileId, username);
+
+        if (fileId == null || fileId.trim().isEmpty()) {
+            log.warn("恢复回收站文件失败: 文件ID为空, username={}", username);
+            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
+        }
+
         // 恢复回收站文件
         fileService.restoreTrashFile(Long.parseLong(fileId), userId);
-        return ApiResponse.success("恢复成功: " + fileId);
+        
+        log.info("恢复回收站文件成功: fileId={}, username={}", fileId, username);
+        return ApiResponse.success("恢复成功");
     }
 
     /**
@@ -263,15 +288,15 @@ public class FileController {
      */
     @GetMapping("/trash")
     public ApiResponse<List<File>> getTrashFiles() {
-        log.info("获取回收站文件列表");
-
-        // 从安全上下文中获取当前用户
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
 
+        log.info("接收到获取回收站文件列表请求: username={}", username);
+
         // 获取回收站文件列表
         List<File> trashFiles = fileService.getTrashFiles(userId);
-
+        
+        log.info("获取回收站文件列表成功: fileCount={}, username={}", trashFiles.size(), username);
         return ApiResponse.success(trashFiles);
     }
 }
