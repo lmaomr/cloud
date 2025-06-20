@@ -149,13 +149,15 @@ public class UserService implements UserDetailsService {
         log.info("成功注销用户ID: {}", userId);
     }
 
-    //更新用户
-    public void updateUser(User user) {
-        log.debug("开始更新用户: {}", user.getUsername());
-        User newUser = new User();
-        newUser.setEmail(user.getEmail());
-        newUser.setPassword(passwordEncoder.encode(user.getPassword()));
-        userRepository.save(newUser);
-        log.info("成功更新用户: {}", user.getUsername());
+    //修改密码
+    public void updatePassword(User user, String oldPassword, String newPassword) {
+        log.debug("开始修改密码: {}", oldPassword);
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            log.warn("修改密码失败: 旧密码错误, username={}", oldPassword);
+            throw new CustomException(ExceptionCodeMsg.PASSWORD_ERROR);
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        log.info("成功修改密码: {}", oldPassword);
     }
 }

@@ -121,7 +121,7 @@ public class FileUtil {
 
         // 分块传输文件
         try (InputStream in = Files.newInputStream(filePath);
-             OutputStream out = response.getOutputStream()) {
+                OutputStream out = response.getOutputStream()) {
             byte[] buffer = new byte[8192];
             int bytesRead;
             long totalBytes = 0;
@@ -231,7 +231,7 @@ public class FileUtil {
         try {
             if (!Files.exists(path)) {
                 log.debug("创建目录: {}", path);
-                Files.createDirectories(path);
+            Files.createDirectories(path);
             }
         } catch (IOException e) {
             log.error("创建目录失败: {}, 错误: {}", path, e.getMessage());
@@ -311,13 +311,13 @@ public class FileUtil {
 
         // 规范化路径
         Path normalizedPath = filePath.normalize();
-        
+
         // 检查路径是否在允许范围内
         if (!normalizedPath.startsWith(Paths.get(uploadRootDir))) {
             log.warn("文件路径验证失败: 路径不在允许范围内: {}", normalizedPath);
             throw new CustomException(ExceptionCodeMsg.FILE_PATH_INVALID);
         }
-        
+
         // 检查是否包含系统关键目录
         String pathStr = normalizedPath.toString().toLowerCase();
         if (pathStr.contains("windows") || pathStr.contains("system32") || 

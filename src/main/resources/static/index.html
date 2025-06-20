@@ -190,6 +190,47 @@
     <!-- 通知容器 -->
     <div class="toast-container" id="toastContainer"></div>
     
+    <!-- 用户信息面板 - 默认隐藏 -->
+    <div class="user-profile-panel" id="userProfilePanel">
+        <div class="user-profile-header">
+            <h3>用户信息</h3>
+            <button class="close-btn" id="closeUserProfileBtn" aria-label="关闭">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="user-profile-content">
+            <div class="user-avatar-large">
+                <span id="userAvatarLarge">U</span>
+            </div>
+            <div class="user-info-details">
+                <div class="info-item">
+                    <span class="info-label">用户名</span>
+                    <span class="info-value" id="profileUsername">用户名</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">邮箱</span>
+                    <span class="info-value" id="profileEmail">user@example.com</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">角色</span>
+                    <span class="info-value" id="profileRole">普通用户</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">注册时间</span>
+                    <span class="info-value" id="profileRegisterTime">2023-01-01 00:00:00</span>
+                </div>
+            </div>
+            <div class="user-actions">
+                <button class="btn btn-secondary" id="changePasswordBtn">
+                    <i class="fas fa-key"></i> 修改密码
+                </button>
+                <button class="btn btn-danger" id="logoutBtnProfile">
+                    <i class="fas fa-sign-out-alt"></i> 退出登录
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- 隐藏的文件输入框 -->
     <input type="file" id="fileInput" multiple>
     <input type="file" id="folderInput" webkitdirectory directory multiple>

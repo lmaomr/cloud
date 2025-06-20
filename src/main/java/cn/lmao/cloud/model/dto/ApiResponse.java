@@ -1,5 +1,6 @@
 package cn.lmao.cloud.model.dto;
 
+import cn.lmao.cloud.exception.CustomException;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import lombok.Getter;
 
@@ -51,6 +52,10 @@ public class ApiResponse<T> {
 
     public static <T> Builder<T> builder() {
         return new Builder<>();
+    }
+
+    public static <T> ApiResponse<T> exception(CustomException e) {
+        return new ApiResponse<>(e.getCode(), e.getMessage(), null);
     }
 
     public static <T> ApiResponse<T> exception(ExceptionCodeMsg e) {

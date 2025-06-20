@@ -48,6 +48,17 @@ class CloudApp {
     this.fileInput = document.getElementById('fileInput');
     this.folderInput = document.getElementById('folderInput');
     this.logoutBtn = document.querySelector('.logout-btn');
+    
+    // 用户信息面板相关元素
+    this.userProfilePanel = document.getElementById('userProfilePanel');
+    this.closeUserProfileBtn = document.getElementById('closeUserProfileBtn');
+    this.changePasswordBtn = document.getElementById('changePasswordBtn');
+    this.logoutBtnProfile = document.getElementById('logoutBtnProfile');
+    this.desktopUserInfo = document.querySelector('.user-info-area.desktop-only');
+    this.mobileUserInfo = document.querySelector('.user-info-area.mobile-only');
+    
+    // 用户数据
+    this.userData = null;
   }
   
   /**
@@ -133,10 +144,12 @@ class CloudApp {
     
     // 文件选择变化事件
     if (this.fileInput) {
+      this.fileInput.addEventListener('click', (e) => e.stopPropagation());
       this.fileInput.addEventListener('change', (e) => uploadManager.handleFileSelect(e));
     }
     
     if (this.folderInput) {
+      this.folderInput.addEventListener('click', (e) => e.stopPropagation());
       this.folderInput.addEventListener('change', (e) => uploadManager.handleFileSelect(e));
     }
     
@@ -156,6 +169,67 @@ class CloudApp {
     if (this.logoutBtn) {
       this.logoutBtn.addEventListener('click', () => this.handleLogout());
     }
+    
+    // 用户信息区域点击事件 - 桌面版
+    if (this.desktopUserInfo) {
+      this.desktopUserInfo.addEventListener('click', (e) => {
+        // 如果点击的是登出按钮，则不显示用户信息面板
+        if (!e.target.closest('.logout-btn')) {
+          this.showUserProfilePanel();
+        }
+      });
+    }
+    
+    // 用户信息区域点击事件 - 移动版
+    if (this.mobileUserInfo) {
+      this.mobileUserInfo.addEventListener('click', () => {
+        this.showUserProfilePanel();
+      });
+    }
+    
+    // 关闭用户信息面板按钮点击事件
+    if (this.closeUserProfileBtn) {
+      this.closeUserProfileBtn.addEventListener('click', () => {
+        this.hideUserProfilePanel();
+      });
+    }
+    
+    // 用户信息面板中的登出按钮点击事件
+    if (this.logoutBtnProfile) {
+      this.logoutBtnProfile.addEventListener('click', () => {
+        this.hideUserProfilePanel();
+        this.handleLogout();
+      });
+    }
+    
+    // 修改密码按钮点击事件
+    if (this.changePasswordBtn) {
+      this.changePasswordBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        this.showChangePasswordModal();
+      });
+    }
+    
+    // 点击用户信息面板外部关闭面板
+    document.addEventListener('click', (e) => {
+      if (this.userProfilePanel && 
+          this.userProfilePanel.classList.contains('active') && 
+          !e.target.closest('#userProfilePanel') && 
+          !e.target.closest('.user-info-area') &&
+          !e.target.closest('.modal') && // 不关闭模态框内的点击
+          !e.target.closest('.modal-overlay')) { // 不关闭模态框遮罩的点击
+        this.hideUserProfilePanel();
+      }
+    });
+    
+    // 按ESC键关闭用户信息面板
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && 
+          this.userProfilePanel && 
+          this.userProfilePanel.classList.contains('active')) {
+        this.hideUserProfilePanel();
+      }
+    });
     
     // 页面卸载前清理资源
     window.addEventListener('beforeunload', () => {
@@ -310,10 +384,29 @@ class CloudApp {
       const userInfo = await CloudAPI.getUserInfo();
       
       if (userInfo && userInfo.data) {
+        // 保存用户数据
+        this.userData = userInfo.data;
+        
         // 更新用户信息
         const username = userInfo.data.username;
         const userRole = userInfo.data.role == 'ADMIN' ? '管理员' : '普通用户';
+        const email = userInfo.data.email || '未设置邮箱';
         const avatar = username.charAt(0).toUpperCase();
+        
+        // 格式化注册时间
+        let registerTime = '未知';
+        if (userInfo.data.createTime) {
+          const date = new Date(userInfo.data.createTime);
+          registerTime = date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+        }
         
         // 更新桌面版用户信息
         const desktopUserInfo = document.querySelector('.user-info-area.desktop-only');
@@ -327,6 +420,15 @@ class CloudApp {
         const mobileUserInfo = document.querySelector('.user-info-area.mobile-only');
         if (mobileUserInfo) {
           mobileUserInfo.querySelector('.avatar span').textContent = avatar;
+        }
+        
+        // 更新用户信息面板
+        if (this.userProfilePanel) {
+          document.getElementById('userAvatarLarge').textContent = avatar;
+          document.getElementById('profileUsername').textContent = username;
+          document.getElementById('profileEmail').textContent = email;
+          document.getElementById('profileRole').textContent = userRole;
+          document.getElementById('profileRegisterTime').textContent = registerTime;
         }
         
         // 根据用户权限控制管理面板选项的显示
@@ -367,6 +469,98 @@ class CloudApp {
       console.error('加载用户信息失败:', error);
       throw error;
     }
+  }
+  
+  /**
+   * 显示用户信息面板
+   */
+  showUserProfilePanel() {
+    if (this.userProfilePanel) {
+      this.userProfilePanel.classList.add('active');
+    }
+  }
+  
+  /**
+   * 隐藏用户信息面板
+   */
+  hideUserProfilePanel() {
+    if (this.userProfilePanel) {
+      this.userProfilePanel.classList.remove('active');
+    }
+  }
+  
+  /**
+   * 显示修改密码模态框
+   */
+  showChangePasswordModal() {
+    // 阻止事件冒泡，防止触发关闭侧边栏
+    const modalElement = UI.Modal.show('changePasswordModal', '<i class="fas fa-key"></i> 修改密码', `
+      <div class="password-form">
+        <div class="form-group">
+          <label for="currentPassword" class="form-label">当前密码</label>
+          <input type="password" id="currentPassword" class="form-input" placeholder="请输入当前密码">
+        </div>
+        <div class="form-group">
+          <label for="newPassword" class="form-label">新密码</label>
+          <input type="password" id="newPassword" class="form-input" placeholder="请输入新密码">
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label">确认新密码</label>
+          <input type="password" id="confirmPassword" class="form-input" placeholder="请再次输入新密码">
+        </div>
+      </div>
+    `, {
+      onConfirm: async () => {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        // 验证输入
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          UI.Toast.show('warning', '修改失败', '请填写所有密码字段');
+          return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+          UI.Toast.show('warning', '修改失败', '两次输入的新密码不一致');
+          return;
+        }
+        
+        try {
+          // 显示加载指示器
+          UI.Toast.show('info', '处理中', '正在修改密码...');
+          
+          // 调用API修改密码
+          await CloudAPI.changePassword(currentPassword, newPassword);
+          
+          // 修改成功
+          UI.Toast.show('success', '修改成功', '密码已成功修改');
+          
+          // 关闭模态框
+          UI.Modal.close('changePasswordModal');
+        } catch (error) {
+          console.error('修改密码失败:', error);
+          UI.Toast.show('error', '修改失败', error.message || '无法修改密码');
+        }
+      },
+      // 取消时不关闭侧边栏
+      onCancel: () => {
+        // 仅关闭模态框，不做其他操作
+      }
+    });
+    
+    // 为模态框添加点击事件，阻止冒泡
+    if (modalElement) {
+      modalElement.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+    
+    // 聚焦到当前密码输入框
+    setTimeout(() => {
+      const input = document.getElementById('currentPassword');
+      if (input) input.focus();
+    }, 100);
   }
   
   /**

@@ -484,6 +484,22 @@ export class CloudAPI {
       body: JSON.stringify({ fileId }),
     });
   }
+
+  /**
+   * 修改用户密码
+   * @param {string} oldPassword - 当前密码
+   * @param {string} newPassword - 新密码
+   * @returns {Promise} - 返回Promise对象
+   */
+  static async changePassword(oldPassword, newPassword) {
+    return await this.request('/user/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        oldPassword,
+        newPassword
+      }),
+    });
+  }
 }
 
 export default CloudAPI; 

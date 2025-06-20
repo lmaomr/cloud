@@ -34,6 +34,8 @@
     transform: translateY(20px);
     transition: transform 0.3s ease;
     border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1101;
 }
 
 .modal-overlay.show .modal {
@@ -339,4 +341,9 @@ body.dark-mode .form-input {
 
 body.dark-mode .share-modal .share-link-input {
     background-color: var(--input-bg);
+}
+
+/* 确保侧边栏在模态框下方 */
+.user-profile-panel {
+    z-index: 1000;
 } 
