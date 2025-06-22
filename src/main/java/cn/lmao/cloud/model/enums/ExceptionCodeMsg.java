@@ -76,6 +76,7 @@ public enum ExceptionCodeMsg {
     FILE_IO_ERROR(10215, "文件读写失败"),
     FILE_PERMISSION_DENIED(10216, "文件访问权限不足"),
     FILE_EXISTS(10217, "文件或目录已存在"),
+    FILE_NOT_IMAGE(10218, "文件不是图片"),
 
     // 系统/数据相关
     DATA_INTEGRITY_VIOLATION(10301, "数据完整性冲突"),

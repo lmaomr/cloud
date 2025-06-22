@@ -121,32 +121,27 @@ class UploadManager {
    * @returns {Promise} - 上传操作的Promise
    */
   async performUpload(formData) {
-    console.log('开始执行文件上传操作');
+    const uploadIds = Object.keys(this.uploadItems)
+      .filter(id => this.uploadItems[id].status === 'pending');
     
-    // 验证FormData参数
-    if (!formData) {
-      console.error('上传失败: FormData对象为空');
-      throw new Error('上传参数无效');
+    if (uploadIds.length === 0) {
+      console.log('没有待上传的文件');
+      return { success: false, count: 0 };
     }
     
     try {
-      // 获取所有上传项ID
-      const uploadIds = Object.keys(this.uploadItems).filter(id => 
-        this.uploadItems[id].status === 'pending');
+      console.log(`开始上传 ${uploadIds.length} 个文件`);
       
-      console.log(`找到${uploadIds.length}个待上传项`);
+      // 显示上传中通知
+      const loadingToastId = UI.Toast.loading('上传中', `正在上传 ${uploadIds.length} 个文件...`);
       
-      if (uploadIds.length === 0) {
-        console.warn('没有待上传的文件');
-        return;
-      }
-      
-      // 更新所有上传项状态为上传中
+      // 更新所有上传项的状态为上传中
       uploadIds.forEach(id => {
         const item = this.uploadItems[id];
-        if (item && item.element) {
-          const statusElement = item.element.querySelector('.upload-item-status');
+        if (item) {
+          const statusElement = item.element.querySelector('.upload-status');
           if (statusElement) {
+            item.status = 'uploading';
             statusElement.textContent = '上传中...';
           }
         }
@@ -182,6 +177,11 @@ class UploadManager {
       
       console.log('CloudAPI.uploadFiles调用成功完成');
       
+      // 隐藏加载通知
+      if (loadingToastId) {
+        UI.Toast.hide(loadingToastId);
+      }
+      
       // 上传成功后更新所有项的状态为成功
       uploadIds.forEach(id => {
         this.updateProgress(id, 100, true); // 明确标记为成功
@@ -196,12 +196,21 @@ class UploadManager {
       await FileManager.refreshFiles();
       
       // 显示成功通知
-      UI.Toast.show('success', '上传成功', `成功上传了 ${uploadIds.length} 个文件`);
+      UI.Toast.success('上传成功', `成功上传了 ${uploadIds.length} 个文件`);
       
       return { success: true, count: uploadIds.length };
       
     } catch(error){
       console.error('上传文件失败:', error);
+      
+      // 隐藏可能存在的加载通知
+      const loadingToasts = document.querySelectorAll('.toast-loading');
+      loadingToasts.forEach(toast => {
+        const toastId = toast.id;
+        if (toastId) {
+          UI.Toast.hide(toastId);
+        }
+      });
       
       // 更新所有上传项为错误状态
       const failedItems = Object.keys(this.uploadItems)
@@ -214,7 +223,7 @@ class UploadManager {
       });
       
       // 显示错误通知
-      UI.Toast.show('error', '上传失败', error.message || '文件上传失败');
+      UI.Toast.error('上传失败', error.message || '文件上传失败');
       
       // 重新抛出错误，让调用者可以处理
       throw error;
@@ -703,23 +712,71 @@ class UploadManager {
   }
   
   /**
-   * 开始上传文件
+   * 上传单个文件
    * @param {string} id - 上传项ID
    * @param {string} name - 文件名
    * @param {Function} uploadFunction - 上传函数
-   * @returns {Promise} - 上传结果
    */
   async uploadFile(id, name, uploadFunction) {
-    // 添加上传项
-    this.addUploadItem(id, name);
-    
     try {
-      // 执行上传，传入进度回调
-      return await uploadFunction(progress => {
-        this.updateProgress(id, progress);
-      });
+      // 显示上传中通知
+      const loadingToastId = UI.Toast.loading('上传中', `正在上传 ${name}...`);
+      
+      // 更新上传项状态
+      const item = this.uploadItems[id];
+      if (item) {
+        item.status = 'uploading';
+        const statusElement = item.element.querySelector('.upload-status');
+        if (statusElement) {
+          statusElement.textContent = '上传中...';
+        }
+      }
+      
+      // 执行上传
+      await uploadFunction();
+      
+      // 隐藏加载通知
+      if (loadingToastId) {
+        UI.Toast.hide(loadingToastId);
+      }
+      
+      // 更新为成功状态
+      this.updateProgress(id, 100, true);
+      
+      // 添加到历史记录
+      this.addToHistory(name, 'success', '上传成功');
+      
+      // 上传成功后更新存储空间信息
+      await this.updateStorageInfo();
+      
+      // 上传成功后刷新文件列表
+      await FileManager.refreshFiles();
+      
+      // 显示成功通知
+      UI.Toast.success('上传成功', `${name} 已上传`);
+      
+      return { success: true };
     } catch (error) {
+      console.error(`上传文件 ${name} 失败:`, error);
+      
+      // 隐藏可能存在的加载通知
+      const loadingToasts = document.querySelectorAll('.toast-loading');
+      loadingToasts.forEach(toast => {
+        const toastId = toast.id;
+        if (toastId) {
+          UI.Toast.hide(toastId);
+        }
+      });
+      
+      // 设置错误状态
       this.setError(id, error.message || '上传失败');
+      
+      // 添加到历史记录
+      this.addToHistory(name, 'error', error.message || '上传失败');
+      
+      // 显示错误通知
+      UI.Toast.error('上传失败', `${name}: ${error.message || '文件上传失败'}`);
+      
       throw error;
     }
   }

@@ -197,16 +197,30 @@ class CloudApp {
     // 用户信息面板中的登出按钮点击事件
     if (this.logoutBtnProfile) {
       this.logoutBtnProfile.addEventListener('click', () => {
-        this.hideUserProfilePanel();
         this.handleLogout();
       });
     }
     
     // 修改密码按钮点击事件
     if (this.changePasswordBtn) {
-      this.changePasswordBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // 阻止事件冒泡
+      this.changePasswordBtn.addEventListener('click', () => {
         this.showChangePasswordModal();
+      });
+    }
+    
+    // 修改头像按钮点击事件
+    const editAvatarBtn = document.getElementById('editAvatarBtn');
+    if (editAvatarBtn) {
+      editAvatarBtn.addEventListener('click', () => {
+        this.showUploadAvatarModal();
+      });
+    }
+    
+    // 修改用户名按钮点击事件
+    const editUsernameBtn = document.getElementById('editUsernameBtn');
+    if (editUsernameBtn) {
+      editUsernameBtn.addEventListener('click', () => {
+        this.showEditUsernameModal();
       });
     }
     
@@ -528,19 +542,33 @@ class CloudApp {
         
         try {
           // 显示加载指示器
-          UI.Toast.show('info', '处理中', '正在修改密码...');
+          const loadingToastId = UI.Toast.loading('处理中', '正在修改密码...');
           
           // 调用API修改密码
           await CloudAPI.changePassword(currentPassword, newPassword);
           
+          // 隐藏加载通知
+          if (loadingToastId) {
+            UI.Toast.hide(loadingToastId);
+          }
+          
           // 修改成功
-          UI.Toast.show('success', '修改成功', '密码已成功修改');
+          UI.Toast.success('修改成功', '密码已成功修改');
           
           // 关闭模态框
           UI.Modal.close('changePasswordModal');
         } catch (error) {
+          // 隐藏可能存在的加载通知
+          const loadingToasts = document.querySelectorAll('.toast-loading');
+          loadingToasts.forEach(toast => {
+            const toastId = toast.id;
+            if (toastId) {
+              UI.Toast.hide(toastId);
+            }
+          });
+          
           console.error('修改密码失败:', error);
-          UI.Toast.show('error', '修改失败', error.message || '无法修改密码');
+          UI.Toast.error('修改失败', error.message || '无法修改密码');
         }
       },
       // 取消时不关闭侧边栏
@@ -561,6 +589,226 @@ class CloudApp {
       const input = document.getElementById('currentPassword');
       if (input) input.focus();
     }, 100);
+  }
+  
+  /**
+   * 显示上传头像模态框
+   */
+  showUploadAvatarModal() {
+    // 创建一个隐藏的文件输入框
+    const avatarInput = document.createElement('input');
+    avatarInput.type = 'file';
+    avatarInput.accept = 'image/*'; // 只接受图片文件
+    avatarInput.style.display = 'none';
+    document.body.appendChild(avatarInput);
+    
+    // 显示模态框
+    UI.Modal.show('uploadAvatarModal', '<i class="fas fa-camera"></i> 上传头像', `
+      <div class="upload-avatar-form">
+        <div class="form-group">
+          <p>请选择一张图片作为您的头像</p>
+          <p class="form-hint">支持 jpg, jpeg, png 格式，大小不超过 2MB</p>
+        </div>
+        <div class="form-group text-center">
+          <button id="selectAvatarBtn" class="btn btn-secondary">
+            <i class="fas fa-file-image"></i> 选择图片
+          </button>
+          <div id="selectedAvatarPreview" class="avatar-preview" style="display: none; margin-top: 15px;">
+            <img id="avatarPreviewImg" src="#" alt="头像预览" style="max-width: 100%; max-height: 200px; border-radius: 5px;">
+            <div style="margin-top: 10px;" id="selectedFileName"></div>
+          </div>
+        </div>
+      </div>
+    `, {
+      onConfirm: async () => {
+        // 检查是否已选择文件
+        if (!avatarInput.files || avatarInput.files.length === 0) {
+          UI.Toast.warning('请选择图片', '请先选择一张图片作为头像');
+          return;
+        }
+        
+        const avatarFile = avatarInput.files[0];
+        
+        // 文件类型验证
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (!validTypes.includes(avatarFile.type)) {
+          UI.Toast.warning('文件类型错误', '请选择 jpg, jpeg 或 png 格式的图片');
+          return;
+        }
+        
+        // 文件大小验证（最大2MB）
+        const maxSize = 2 * 1024 * 1024; // 2MB
+        if (avatarFile.size > maxSize) {
+          UI.Toast.warning('文件过大', '头像图片大小不能超过 2MB');
+          return;
+        }
+        
+        try {
+          // 显示上传中状态
+          const loadingToastId = UI.Toast.loading('上传中', '正在上传头像...');
+          
+          // 调用API上传头像
+          await CloudAPI.uploadAvatar(avatarFile);
+          
+          // 隐藏加载通知
+          if (loadingToastId) {
+            UI.Toast.hide(loadingToastId);
+          }
+          
+          // 关闭模态框
+          UI.Modal.close('uploadAvatarModal');
+          
+          // 重新加载用户信息以更新头像
+          await this.loadUserInfo();
+          
+          // 显示成功通知
+          UI.Toast.success('上传成功', '头像已成功更新');
+        } catch (error) {
+          // 隐藏可能存在的加载通知
+          const loadingToasts = document.querySelectorAll('.toast-loading');
+          loadingToasts.forEach(toast => {
+            const toastId = toast.id;
+            if (toastId) {
+              UI.Toast.hide(toastId);
+            }
+          });
+          
+          console.error('上传头像失败:', error);
+          UI.Toast.error('上传失败', error.message || '无法上传头像');
+        } finally {
+          // 删除临时文件输入框
+          document.body.removeChild(avatarInput);
+        }
+      },
+      onCancel: () => {
+        // 删除临时文件输入框
+        document.body.removeChild(avatarInput);
+      }
+    });
+    
+    // 为"选择图片"按钮添加事件
+    const selectAvatarBtn = document.getElementById('selectAvatarBtn');
+    if (selectAvatarBtn) {
+      selectAvatarBtn.addEventListener('click', () => {
+        avatarInput.click();
+      });
+    }
+    
+    // 监听文件选择变化
+    avatarInput.addEventListener('change', () => {
+      if (avatarInput.files && avatarInput.files.length > 0) {
+        const file = avatarInput.files[0];
+        const preview = document.getElementById('selectedAvatarPreview');
+        const previewImg = document.getElementById('avatarPreviewImg');
+        const fileNameDisplay = document.getElementById('selectedFileName');
+        
+        // 显示预览
+        preview.style.display = 'block';
+        previewImg.src = URL.createObjectURL(file);
+        fileNameDisplay.textContent = `已选择: ${file.name} (${this.formatFileSize(file.size)})`;
+      }
+    });
+  }
+  
+  /**
+   * 显示修改用户名模态框
+   */
+  showEditUsernameModal() {
+    UI.Modal.show('editUsernameModal', '<i class="fas fa-edit"></i> 修改用户名', `
+      <div class="edit-username-form">
+        <div class="form-group">
+          <label for="newUsername" class="form-label">新用户名</label>
+          <input type="text" id="newUsername" class="form-input" placeholder="请输入新用户名" value="${this.userData?.username || ''}">
+          <p class="form-hint">用户名长度为2-20个字符，支持字母、数字、下划线</p>
+        </div>
+      </div>
+    `, {
+      onConfirm: async () => {
+        const newUsername = document.getElementById('newUsername').value.trim();
+        
+        // 验证输入
+        if (!newUsername) {
+          UI.Toast.warning('修改失败', '用户名不能为空');
+          return;
+        }
+        
+        // 验证用户名格式
+        const usernameRegex = /^[a-zA-Z0-9_]{2,20}$/;
+        if (!usernameRegex.test(newUsername)) {
+          UI.Toast.warning('修改失败', '用户名格式不正确，请使用2-20个字母、数字、下划线');
+          return;
+        }
+        
+        // 如果新用户名与当前用户名相同，不进行修改
+        if (newUsername === this.userData?.username) {
+          UI.Toast.info('未修改', '新用户名与当前用户名相同');
+          UI.Modal.close('editUsernameModal');
+          return;
+        }
+        
+        try {
+          // 显示加载指示器
+          const loadingToastId = UI.Toast.loading('处理中', '正在修改用户名...');
+          
+          // 调用API修改用户名
+          await CloudAPI.updateUsername(newUsername);
+          
+          // 隐藏加载通知
+          if (loadingToastId) {
+            UI.Toast.hide(loadingToastId);
+          }
+          
+          // 关闭模态框
+          UI.Modal.close('editUsernameModal');
+          
+          // 更新本地用户数据
+          if (this.userData) {
+            this.userData.username = newUsername;
+          }
+          
+          // 重新加载用户信息以更新界面
+          await this.loadUserInfo();
+          
+          // 显示成功通知
+          UI.Toast.success('修改成功', '用户名已成功更新');
+        } catch (error) {
+          // 隐藏可能存在的加载通知
+          const loadingToasts = document.querySelectorAll('.toast-loading');
+          loadingToasts.forEach(toast => {
+            const toastId = toast.id;
+            if (toastId) {
+              UI.Toast.hide(toastId);
+            }
+          });
+          
+          console.error('修改用户名失败:', error);
+          UI.Toast.error('修改失败', error.message || '无法修改用户名');
+        }
+      }
+    });
+    
+    // 聚焦到用户名输入框
+    setTimeout(() => {
+      const input = document.getElementById('newUsername');
+      if (input) {
+        input.focus();
+        input.select(); // 选中当前文本
+      }
+    }, 100);
+  }
+  
+  /**
+   * 格式化文件大小
+   * @param {number} bytes - 文件大小（字节）
+   * @returns {string} - 格式化后的文件大小
+   */
+  formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + units[i];
   }
   
   /**

@@ -1,5 +1,7 @@
 package cn.lmao.cloud.controller;
 
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,7 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import cn.lmao.cloud.exception.CustomException;
 import cn.lmao.cloud.model.dto.ApiResponse;
-import cn.lmao.cloud.model.dto.PasswordChangeRequest;
 import cn.lmao.cloud.model.entity.User;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import cn.lmao.cloud.services.UserService;
@@ -48,13 +49,33 @@ public class UserController {
         }
     }
 
+    //修改用户名
+    @PostMapping("/change-username")
+    public ApiResponse<String> updateUsername(@RequestHeader("Authorization") String authorization, @RequestBody Map<String, String> requestBody) {
+        log.info("接收到修改用户名请求: authorization={}, username={}", authorization.substring(0, 20) + "...", requestBody.get("username"));
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userService.getUserByName(username);
+        if (user == null) {
+            log.warn("修改用户名失败: 用户不存在, username={}", username);
+            return ApiResponse.exception(ExceptionCodeMsg.USER_NOT_FOUND);
+        }
+        if (user.getNikenName().equals(requestBody.get("username"))) {
+            log.warn("修改用户名失败: 新用户名与旧用户名相同, username={}", username);
+            return ApiResponse.exception(ExceptionCodeMsg.USERNAME_EXISTS);
+        }
+        user.setNikenName(requestBody.get("username"));
+        userService.updateUser(user);
+        log.info("修改用户名成功: username={}", username);
+        return ApiResponse.success("用户名修改成功");   
+    }
+
     @PostMapping("/change-password")
-    public ApiResponse<String> changePassword(@RequestHeader("Authorization") String authorization, @RequestBody PasswordChangeRequest request) {
+    public ApiResponse<String> changePassword(@RequestHeader("Authorization") String authorization, @RequestBody Map<String, String> requestBody) {
         log.info("接收到修改密码请求: authorization={}, oldPassword={}, newPassword={}", authorization.substring(0, 20) + "...");
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userService.getUserByName(username);
-        String oldPassword = request.getOldPassword();
-        String newPassword = request.getNewPassword();
+        String oldPassword = requestBody.get("oldPassword");
+        String newPassword = requestBody.get("newPassword");
         if (user == null) {
             log.warn("修改密码失败: 用户不存在, username={}", username);
             return ApiResponse.exception(ExceptionCodeMsg.USER_NOT_FOUND);

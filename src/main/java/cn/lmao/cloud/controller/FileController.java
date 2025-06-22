@@ -5,6 +5,7 @@ import cn.lmao.cloud.model.dto.ApiResponse;
 import cn.lmao.cloud.model.dto.FileUploadResponse;
 import cn.lmao.cloud.model.entity.Cloud;
 import cn.lmao.cloud.model.entity.File;
+import cn.lmao.cloud.model.entity.User;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
 import cn.lmao.cloud.services.FileService;
 import cn.lmao.cloud.services.UserService;
@@ -33,32 +34,39 @@ public class FileController {
     private final Logger log = LogUtil.getLogger();
 
     /**
-     * 文件上传接口
+     * 头像上传接口
      * 
      * @throws IOException
      */
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<FileUploadResponse> uploadFile(
-            @RequestParam("file") MultipartFile file,
+    @PostMapping(value = "/avatar/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<FileUploadResponse> uploadAvatar(
+            @RequestParam("avatar") MultipartFile avatar,
             @RequestHeader("Authorization") String authorization) throws IOException {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = userService.getUserByName(username).getId();
-        
-        log.info("接收到文件上传请求: fileName={}, size={}, username={}", 
-                file.getOriginalFilename(), file.getSize(), username);
-        
-        if (file.isEmpty()) {
-            log.warn("文件上传失败: 文件为空, username={}", username);
-            return ApiResponse.exception(ExceptionCodeMsg.FILE_EMPTY);
+        User user = userService.getUserByName(username);
+        try {
+            log.info("接收到头像上传请求: fileName={}, size={}, username={}",
+                    avatar.getOriginalFilename(), avatar.getSize(), username);
+
+            if (avatar.isEmpty()) {
+                log.warn("文件上传失败: 文件为空, username={}", username);
+                return ApiResponse.exception(ExceptionCodeMsg.FILE_EMPTY);
+            }
+
+            // 处理文件上传
+            FileUploadResponse response = fileService.uploadAvatar(avatar, user);
+            log.info("头像上传请求处理完成: fileName={}, fileId={}, username={}",
+                    avatar.getOriginalFilename(), response.getFileId(), username);
+            return ApiResponse.success(response);
+        } catch (CustomException e) {
+            log.error("头像上传失败: username={}, error={}", username, e.getMessage());
+            return ApiResponse.exception(e);
+        } catch (Exception e) {
+            log.error("头像上传失败: username={}, error={}", username, e.getMessage());
+            return ApiResponse.exception(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
         }
-        
-        // 处理文件上传
-        FileUploadResponse response = fileService.uploadFile(file, userId);
-        log.info("文件上传请求处理完成: fileName={}, fileId={}, username={}", 
-                file.getOriginalFilename(), response.getFileId(), username);
-        return ApiResponse.success(response);
     }
-    
+
     /**
      * 多文件上传接口
      * 
@@ -70,11 +78,11 @@ public class FileController {
             @RequestHeader("Authorization") String authorization) throws IOException {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        
+
         log.info("接收到批量文件上传请求: fileCount={}, username={}", files.length, username);
-        
+
         List<FileUploadResponse> responses = new ArrayList<>();
-        
+
         int requestCount = 0;
         int successCount = 0;
         int failCount = 0;
@@ -86,18 +94,18 @@ public class FileController {
                     FileUploadResponse response = fileService.uploadFile(file, userId);
                     responses.add(response);
                     successCount++;
-                    log.debug("批量上传-单个文件成功: fileName={}, fileId={}", 
+                    log.debug("批量上传-单个文件成功: fileName={}, fileId={}",
                             file.getOriginalFilename(), response.getFileId());
                 } catch (Exception e) {
-                    log.error("批量上传-单个文件失败: fileName={}, error={}", 
+                    log.error("批量上传-单个文件失败: fileName={}, error={}",
                             file.getOriginalFilename(), e.getMessage());
                     failCount++;
                     return ApiResponse.exception(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
                 }
             }
         }
-        
-        log.info("文件上传所有请求处理完成: 总共处理请求数量={}, 成功数量={}, 失败数量={}, username={}", 
+
+        log.info("文件上传所有请求处理完成: 总共处理请求数量={}, 成功数量={}, 失败数量={}, username={}",
                 requestCount, successCount, failCount, username);
         return ApiResponse.success(responses);
     }
@@ -112,7 +120,7 @@ public class FileController {
     public void downloadFile(@PathVariable String fileId, HttpServletResponse response) throws IOException {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        
+
         log.info("接收到文件下载请求: fileId={}, username={}", fileId, username);
 
         if (fileId == null || fileId.trim().isEmpty()) {
@@ -138,12 +146,12 @@ public class FileController {
             @RequestParam(value = "sort", defaultValue = "name-asc") String sort) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        
+
         log.info("接收到获取文件列表请求: path={}, sort={}, username={}", path, sort, username);
 
         Cloud userCloud = userService.getCloud(userId);
         List<File> files = fileService.getFileList(userCloud, path, sort);
-        
+
         log.info("文件列表获取成功: path={}, fileCount={}, username={}", path, files.size(), username);
         return ApiResponse.success(files);
     }
@@ -170,7 +178,7 @@ public class FileController {
 
         // 创建文件夹
         File folder = fileService.createFolder(path, name, userId);
-        
+
         log.info("文件夹创建成功: folderId={}, name={}, username={}", folder.getId(), folder.getName(), username);
         return ApiResponse.success(folder);
     }
@@ -184,24 +192,24 @@ public class FileController {
         String newName = requestBody.get("newName");
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        
+
         log.info("接收到文件重命名请求: fileId={}, newName={}, username={}", fileId, newName, username);
 
         try {
             if (fileId == null || fileId.trim().isEmpty() || newName == null || newName.trim().isEmpty()) {
-                log.warn("文件重命名失败: 参数错误, fileId={}, newName={}, username={}", 
+                log.warn("文件重命名失败: 参数错误, fileId={}, newName={}, username={}",
                         fileId, newName, username);
                 return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
             }
 
             // 重命名文件
             File renamedFile = fileService.renameFile(Long.parseLong(fileId), newName, userId);
-            
-            log.info("文件重命名成功: fileId={}, newName={}, username={}", 
+
+            log.info("文件重命名成功: fileId={}, newName={}, username={}",
                     renamedFile.getId(), renamedFile.getName(), username);
             return ApiResponse.success(renamedFile);
         } catch (Exception e) {
-            log.error("文件重命名异常: fileId={}, newName={}, username={}, error={}", 
+            log.error("文件重命名异常: fileId={}, newName={}, username={}, error={}",
                     fileId, newName, username, e.getMessage());
             return ApiResponse.exception(ExceptionCodeMsg.FILE_RENAME_FAILED);
         }
@@ -225,7 +233,7 @@ public class FileController {
 
         // 删除文件
         fileService.deleteFile(Long.parseLong(fileId), userId);
-        
+
         log.info("文件删除成功(移至回收站): fileId={}, username={}", fileId, username);
         return ApiResponse.success("删除成功");
     }
@@ -238,7 +246,7 @@ public class FileController {
         String fileId = requestBody.get("fileId");
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
-        
+
         log.info("接收到永久删除回收站文件请求: fileId={}, username={}", fileId, username);
 
         try {
@@ -249,11 +257,11 @@ public class FileController {
 
             // 删除回收站文件
             fileService.deleteTrashFile(Long.parseLong(fileId), userId);
-            
+
             log.info("永久删除回收站文件成功: fileId={}, username={}", fileId, username);
             return ApiResponse.success("删除成功");
         } catch (Exception e) {
-            log.error("永久删除回收站文件异常: fileId={}, username={}, error={}", 
+            log.error("永久删除回收站文件异常: fileId={}, username={}, error={}",
                     fileId, username, e.getMessage());
             return ApiResponse.exception(ExceptionCodeMsg.DELETE_FILE_FAIL);
         }
@@ -261,6 +269,7 @@ public class FileController {
 
     /**
      * 恢复回收站文件
+     * 
      * @return
      */
     @PostMapping("/trash/restore")
@@ -278,7 +287,7 @@ public class FileController {
 
         // 恢复回收站文件
         fileService.restoreTrashFile(Long.parseLong(fileId), userId);
-        
+
         log.info("恢复回收站文件成功: fileId={}, username={}", fileId, username);
         return ApiResponse.success("恢复成功");
     }
@@ -295,7 +304,7 @@ public class FileController {
 
         // 获取回收站文件列表
         List<File> trashFiles = fileService.getTrashFiles(userId);
-        
+
         log.info("获取回收站文件列表成功: fileCount={}, username={}", trashFiles.size(), username);
         return ApiResponse.success(trashFiles);
     }

@@ -160,4 +160,8 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
         log.info("成功修改密码: {}", oldPassword);
     }
+
+    public void updateUser(User user) {
+        userRepository.save(user);
+    }
 }

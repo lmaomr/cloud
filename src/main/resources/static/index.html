@@ -199,13 +199,25 @@
             </button>
         </div>
         <div class="user-profile-content">
-            <div class="user-avatar-large">
-                <span id="userAvatarLarge">U</span>
+            <div class="avatar-wrapper">
+                <div class="user-avatar-large">
+                    <span id="userAvatarLarge">U</span>
+                </div>
+                <button class="edit-avatar-btn" id="editAvatarBtn" title="修改头像">
+                    <i class="fas fa-camera"></i>
+                </button>
             </div>
             <div class="user-info-details">
-                <div class="info-item">
-                    <span class="info-label">用户名</span>
-                    <span class="info-value" id="profileUsername">用户名</span>
+                <div class="info-item info-item-editable">
+                    <div>
+                        <span class="info-label">用户名</span>
+                        <div class="info-value-container">
+                            <span class="info-value" id="profileUsername">用户名</span>
+                            <button class="edit-username-btn" id="editUsernameBtn" title="修改用户名">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="info-item">
                     <span class="info-label">邮箱</span>

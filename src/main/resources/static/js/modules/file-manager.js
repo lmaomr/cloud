@@ -2311,9 +2311,9 @@ export const FileManager = {
   },
 
   /**
-  * 下载文件 - 兼容iOS Safari
-  * @param {string} fileName - 文件名
-  */
+   * 下载文件
+   * @param {string} fileName - 文件名
+   */
   async downloadFile(fileName) {
     try {
       // 获取文件项
@@ -2333,21 +2333,42 @@ export const FileManager = {
 
       // 获取下载链接
       const downloadUrl = CloudAPI.getFileDownloadUrl(fileId);
-
+      
       // 获取认证令牌
       const token = CloudAPI.getAuthToken();
-
-      // 检测是否为iOS设备
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-      if (isIOS || isSafari) {
-        // iOS Safari 特殊处理
-        await this.downloadFileForIOS(downloadUrl, token, fileName);
-      } else {
-        // 其他浏览器使用标准方法
-        await this.downloadFileStandard(downloadUrl, token, fileName);
+      
+      // 使用fetch API下载文件，确保包含认证信息
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': token || '',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`下载失败: ${response.statusText}`);
       }
+      
+      // 将响应转换为blob
+      const blob = await response.blob();
+      
+      // 创建blob URL
+      const objectUrl = URL.createObjectURL(blob);
+      
+      // 使用a标签下载文件
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      
+      // 清理
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(objectUrl); // 释放blob URL
+      }, 100);
 
       UI.Toast.success('下载开始', `文件 ${fileName} 开始下载`, 3000);
 
@@ -2358,163 +2379,39 @@ export const FileManager = {
   },
 
   /**
-   * iOS Safari 专用下载方法
-   * @param {string} downloadUrl - 下载链接
-   * @param {string} token - 认证令牌
-   * @param {string} fileName - 文件名
+   * 批量下载文件
+   * @param {Array<string>} fileNames - 文件名数组
    */
-  async downloadFileForIOS(downloadUrl, token, fileName) {
+  async downloadFiles(fileNames) {
+    if (!fileNames || fileNames.length === 0) {
+      UI.Toast.warning('未选择文件', '请先选择要下载的文件', 3000);
+      return;
+    }
+
+    UI.Toast.info('准备下载', `正在准备下载 ${fileNames.length} 个文件...`, 3000);
+
     try {
-      // 方法1: 尝试直接跳转下载（适用于支持直接下载的文件类型）
-      const directDownloadUrl = `${downloadUrl}${downloadUrl.includes('?') ? '&' : '?'}download=1`;
-
-      // 创建一个隐藏的iframe来处理下载
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = directDownloadUrl;
-      document.body.appendChild(iframe);
-
-      // 设置超时清理iframe
-      setTimeout(() => {
-        if (iframe.parentNode) {
-          document.body.removeChild(iframe);
-        }
-      }, 3000);
-
-      // 同时尝试新窗口打开（作为备选方案）
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = directDownloadUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-
-        // 尝试触发下载
-        if (token) {
-          // 如果需要认证，构造包含token的URL
-          const urlWithAuth = `${directDownloadUrl}&token=${encodeURIComponent(token)}`;
-          link.href = urlWithAuth;
-        }
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }, 500);
-
-    } catch (error) {
-      // 如果直接下载失败，尝试blob方法
-      await this.downloadFileStandard(downloadUrl, token, fileName);
-    }
-  },
-
-  /**
-   * 标准浏览器下载方法
-   * @param {string} downloadUrl - 下载链接
-   * @param {string} token - 认证令牌
-   * @param {string} fileName - 文件名
-   */
-  async downloadFileStandard(downloadUrl, token, fileName) {
-    // 使用fetch API下载文件，确保包含认证信息
-    const response = await fetch(downloadUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': token || '',
-        'Content-Type': 'application/octet-stream',
-      },
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new Error(`下载失败: ${response.statusText}`);
-    }
-
-    // 将响应转换为blob
-    const blob = await response.blob();
-
-    // 检测浏览器支持情况
-    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
-      // IE浏览器
-      window.navigator.msSaveOrOpenBlob(blob, fileName);
-    } else {
-      // 现代浏览器
-      const objectUrl = URL.createObjectURL(blob);
-
-      // 使用a标签下载文件
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = fileName;
-      a.style.display = 'none';
-
-      // 添加到DOM并触发点击
-      document.body.appendChild(a);
-
-      // 使用用户交互事件触发点击（重要：iOS需要）
-      const clickEvent = new MouseEvent('click', {
-        view: window,
-        bubbles: true,
-        cancelable: true
-      });
-
-      a.dispatchEvent(clickEvent);
-
-      // 延迟清理，给iOS更多时间处理
-      setTimeout(() => {
-        try {
-          if (a.parentNode) {
-            document.body.removeChild(a);
-          }
-          URL.revokeObjectURL(objectUrl);
-        } catch (cleanupError) {
-          console.warn('清理下载元素时出错:', cleanupError);
-        }
-      }, 1000); // 增加延迟时间
-    }
-  },
-
-  /**
-   * 备选下载方法 - 打开新窗口
-   * @param {string} fileName - 文件名
-   */
-  openDownloadInNewWindow(fileName) {
-    try {
-      const fileItem = this.findFileItemByName(fileName);
-      if (!fileItem) {
-        throw new Error(`找不到文件: ${fileName}`);
+      // 如果只有一个文件，直接调用单文件下载
+      if (fileNames.length === 1) {
+        await this.downloadFile(fileNames[0]);
+        return;
       }
 
-      const fileId = fileItem.dataset.id;
-      if (!fileId) {
-        throw new Error(`无效的文件ID: ${fileName}`);
-      }
+      // 多个文件，逐个下载并添加延迟
+      for (let i = 0; i < fileNames.length; i++) {
+        const fileName = fileNames[i];
 
-      const downloadUrl = CloudAPI.getFileDownloadUrl(fileId);
-      const token = CloudAPI.getAuthToken();
-
-      // 构造包含认证信息的URL
-      let finalUrl = downloadUrl;
-      if (token) {
-        const separator = downloadUrl.includes('?') ? '&' : '?';
-        finalUrl = `${downloadUrl}${separator}token=${encodeURIComponent(token)}&download=1`;
-      }
-
-      // 在新窗口中打开下载链接
-      const newWindow = window.open(finalUrl, '_blank', 'noopener,noreferrer');
-
-      if (!newWindow) {
-        UI.Toast.warning('弹窗被阻止', '请允许弹窗后重试，或手动复制链接下载', 5000);
-
-        // 提供复制链接的选项
-        if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(finalUrl).then(() => {
-            UI.Toast.info('链接已复制', '下载链接已复制到剪贴板', 3000);
-          }).catch(() => {
-            console.warn('复制到剪贴板失败');
+        // 使用setTimeout添加延迟，避免浏览器阻止多个下载
+        setTimeout(() => {
+          this.downloadFile(fileName).catch(error => {
+            console.error(`下载文件 ${fileName} 失败:`, error);
           });
-        }
+        }, i * 1000); // 每个文件间隔1秒
       }
 
     } catch (error) {
-      console.error('新窗口下载失败:', error);
-      UI.Toast.error('下载失败', error.message || '打开下载链接时出错', 5000);
+      console.error('批量下载文件失败:', error);
+      UI.Toast.error('下载失败', error.message || '批量下载文件时出错', 5000);
     }
   },
 
@@ -2610,43 +2507,6 @@ export const FileManager = {
     const exitSearchBtn = breadcrumb.querySelector('.exit-search');
     if (exitSearchBtn) {
       exitSearchBtn.addEventListener('click', () => this.exitSearchMode());
-    }
-  },
-
-  /**
-   * 批量下载文件
-   * @param {Array<string>} fileNames - 文件名数组
-   */
-  async downloadFiles(fileNames) {
-    if (!fileNames || fileNames.length === 0) {
-      UI.Toast.warning('未选择文件', '请先选择要下载的文件', 3000);
-      return;
-    }
-
-    UI.Toast.info('准备下载', `正在准备下载 ${fileNames.length} 个文件...`, 3000);
-
-    try {
-      // 如果只有一个文件，直接调用单文件下载
-      if (fileNames.length === 1) {
-        await this.downloadFile(fileNames[0]);
-        return;
-      }
-
-      // 多个文件，逐个下载并添加延迟
-      for (let i = 0; i < fileNames.length; i++) {
-        const fileName = fileNames[i];
-
-        // 使用setTimeout添加延迟，避免浏览器阻止多个下载
-        setTimeout(() => {
-          this.downloadFile(fileName).catch(error => {
-            console.error(`下载文件 ${fileName} 失败:`, error);
-          });
-        }, i * 1000); // 每个文件间隔1秒
-      }
-
-    } catch (error) {
-      console.error('批量下载文件失败:', error);
-      UI.Toast.error('下载失败', error.message || '批量下载文件时出错', 5000);
     }
   },
 

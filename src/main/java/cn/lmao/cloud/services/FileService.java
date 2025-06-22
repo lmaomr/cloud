@@ -7,7 +7,9 @@ import cn.lmao.cloud.exception.CustomException;
 import cn.lmao.cloud.model.dto.FileUploadResponse;
 import cn.lmao.cloud.model.entity.Cloud;
 import cn.lmao.cloud.model.entity.File;
+import cn.lmao.cloud.model.entity.User;
 import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
+import cn.lmao.cloud.model.enums.FileSizeUnit;
 import cn.lmao.cloud.repository.FileRepository;
 import cn.lmao.cloud.util.FileHashUtil;
 import cn.lmao.cloud.util.FileUtil;
@@ -130,6 +132,41 @@ public class FileService {
         } finally {
             fileLock.unlock(); // 释放锁
         }
+    }
+
+    /**
+     * 上传头像
+     * 
+     * @param avatar 头像文件
+     * @param userId 用户ID
+     * @return 头像上传响应DTO
+     */
+    @Transactional
+    public FileUploadResponse uploadAvatar(MultipartFile avatar, User user) {
+        log.info("开始上传头像: fileName={}, size={}, userId={}", 
+                avatar.getOriginalFilename(), avatar.getSize(), user.getId());
+        
+        // 2. 验证头像文件是否为图片
+        if (!avatar.getContentType().startsWith("image/")) {
+            log.warn("上传头像失败: 头像文件不是图片, userId={}", user.getUsername());
+            throw new CustomException(ExceptionCodeMsg.FILE_NOT_IMAGE);
+        }
+
+        //判断图片大小是否超过2MB
+        if (avatar.getSize() > FileSizeUnit.MB.getBytes() * 2) {
+            log.warn("上传头像失败: 头像文件大小超过2MB, userId={}", user.getUsername());
+            throw new CustomException(ExceptionCodeMsg.FILE_SIZE_EXCEEDED);
+        }
+
+        String avatarPath = fileUtil.storeFile(avatar, user.getId());
+        if (avatarPath == null) {
+            log.error("上传头像失败: 存储物理文件失败, userId={}", user.getUsername());
+            throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAILED);
+        }
+        
+        user.setAvatarUrl(avatarPath);
+        userService.updateUser(user);
+        return new FileUploadResponse(avatarPath);
     }
 
     /**
@@ -566,5 +603,6 @@ public class FileService {
         log.info("回收站文件列表获取成功: userId={}, fileCount={}", userId, trashFiles.size());
         return trashFiles;
     }
+    
 
 }

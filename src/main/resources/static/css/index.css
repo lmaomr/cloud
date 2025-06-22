@@ -597,11 +597,6 @@ nav {
     color: var(--danger-color);
 }
 
-/* 文件列表为空时的提示 */
-.fa-box-open, .fa-exclamation-triangle {
-    font-size: 35px;
-}
-
 /* 文件列表容器 */
 .file-container {
     position: relative;
@@ -2508,5 +2503,67 @@ body.dark-mode .menu-item:hover {
 
 .password-form .form-group {
     margin-bottom: 0;
+}
+
+/* 头像编辑按钮 */
+.avatar-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.edit-avatar-btn {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 28px;
+    height: 28px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--card-bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.edit-avatar-btn:hover {
+    background-color: var(--primary-color-dark, #1565c0);
+    transform: scale(1.05);
+}
+
+/* 用户名编辑按钮 */
+.info-item-editable {
+    display: flex;
+    justify-content: space-between;
+}
+
+.edit-username-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary-color);
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.edit-username-btn:hover {
+    background-color: rgba(25, 118, 210, 0.1);
+}
+
+.info-value-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
  

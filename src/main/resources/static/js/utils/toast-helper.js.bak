@@ -1,0 +1,106 @@
+/**
+ * Toast通知辅助函数
+ * 用于简化处理通知流程，特别是处理中到完成的过渡
+ */
+
+/**
+ * 处理带有加载和结果通知的操作
+ * @param {Function} operation - 返回Promise的操作函数
+ * @param {Object} options - 配置选项
+ * @param {string} options.loadingTitle - 加载中通知的标题
+ * @param {string} options.loadingMessage - 加载中通知的消息
+ * @param {string} options.successTitle - 成功通知的标题
+ * @param {string} options.successMessage - 成功通知的消息
+ * @param {string} options.errorTitle - 错误通知的标题
+ * @param {string} options.errorMessage - 错误通知的消息，可以是函数，接收错误对象作为参数
+ * @param {string} options.group - 通知组名，用于管理相关通知
+ * @returns {Promise} 返回原始操作的Promise结果
+ */
+function processWithToast(operation, options = {}) {
+  // 确保UI.Toast可用
+  if (!window.UI || !window.UI.Toast) {
+    console.error('UI.Toast未定义，无法显示通知');
+    return operation();
+  }
+
+  // 默认选项
+  const defaultOptions = {
+    loadingTitle: '处理中',
+    loadingMessage: '请稍候...',
+    successTitle: '成功',
+    successMessage: '操作已完成',
+    errorTitle: '错误',
+    errorMessage: (err) => `操作失败: ${err.message || '未知错误'}`,
+    group: `toast-process-${Date.now()}`
+  };
+
+  // 合并选项
+  const config = { ...defaultOptions, ...options };
+  
+  // 显示加载通知
+  const toastId = UI.Toast.loading(
+    config.loadingTitle,
+    config.loadingMessage,
+    { group: config.group }
+  );
+  
+  // 执行操作
+  return operation()
+    .then(result => {
+      // 操作成功，隐藏加载通知并显示成功通知
+      if (toastId) {
+        UI.Toast.hide(toastId);
+      }
+      
+      UI.Toast.success(
+        config.successTitle,
+        config.successMessage,
+        5000,
+        { group: config.group }
+      );
+      
+      return result;
+    })
+    .catch(error => {
+      // 操作失败，隐藏加载通知并显示错误通知
+      if (toastId) {
+        UI.Toast.hide(toastId);
+      }
+      
+      const errorMsg = typeof config.errorMessage === 'function' 
+        ? config.errorMessage(error)
+        : config.errorMessage;
+      
+      UI.Toast.error(
+        config.errorTitle,
+        errorMsg,
+        8000,
+        { group: config.group }
+      );
+      
+      // 重新抛出错误以便调用者处理
+      throw error;
+    });
+}
+
+/**
+ * 创建带有刷新通知的操作
+ * @param {Function} operation - 返回Promise的操作函数
+ * @param {Object} options - 配置选项
+ * @returns {Promise} 返回原始操作的Promise结果
+ */
+function refreshWithToast(operation, options = {}) {
+  return processWithToast(operation, {
+    loadingTitle: '刷新中',
+    loadingMessage: '正在获取最新数据...',
+    successTitle: '已刷新',
+    successMessage: '数据已更新',
+    errorTitle: '刷新失败',
+    errorMessage: (err) => `无法刷新数据: ${err.message || '未知错误'}`,
+    ...options
+  });
+}
+
+// 导出工具函数
+window.processWithToast = processWithToast;
+window.refreshWithToast = refreshWithToast; 

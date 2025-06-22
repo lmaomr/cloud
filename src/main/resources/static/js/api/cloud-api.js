@@ -500,6 +500,36 @@ export class CloudAPI {
       }),
     });
   }
+
+  /**
+   * 修改用户名
+   * @param {string} newUsername - 新用户名
+   * @returns {Promise} - 返回Promise对象
+   */
+  static async updateUsername(newUsername) {
+    return this.request('/user/change-username', {
+      method: 'POST',
+      body: JSON.stringify({ username: newUsername }),
+    });
+  }
+
+  /**
+   * 上传用户头像
+   * @param {File} avatarFile - 头像文件
+   * @returns {Promise} - 返回Promise对象
+   */
+  static async uploadAvatar(avatarFile) {
+    const formData = new FormData();
+    formData.append('avatar', avatarFile);
+    
+    return this.request('/file/avatar/upload', {
+      method: 'POST',
+      headers: {
+        // 不设置Content-Type，让浏览器自动设置正确的multipart/form-data和boundary
+      },
+      body: formData,
+    });
+  }
 }
 
 export default CloudAPI; 
