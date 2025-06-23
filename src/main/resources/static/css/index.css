@@ -1478,6 +1478,18 @@ nav {
     background: #555;
 }
 
+.dark-mode .btn-secondary {
+    background: #444;
+    color: #eee;
+}
+
+.dark-mode .btn-secondary:hover {
+    background: #444444de;
+    color: #eeeeeeda;
+}
+
+
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .sidebar {

@@ -403,6 +403,7 @@ class CloudApp {
         
         // 更新用户信息
         const nickname = userInfo.data.nickname;
+        const username = userInfo.data.username;
         const userRole = userInfo.data.role == 'ADMIN' ? '管理员' : '普通用户';
         const email = userInfo.data.email || '未设置邮箱';
         const avatar = nickname.charAt(0).toUpperCase();
@@ -440,6 +441,7 @@ class CloudApp {
         if (this.userProfilePanel) {
           document.getElementById('userAvatarLarge').textContent = avatar;
           document.getElementById('profileNickname').textContent = nickname;
+          document.getElementById('profileUsername').textContent = username;
           document.getElementById('profileEmail').textContent = email;
           document.getElementById('profileRole').textContent = userRole;
           document.getElementById('profileRegisterTime').textContent = registerTime;
@@ -458,7 +460,7 @@ class CloudApp {
         }
         
         // 获取用户云盘信息
-        const cloudInfo = await CloudAPI.getUserCloud(this.userData.username);
+        const cloudInfo = await CloudAPI.getUserCloud(username);
         
         if (cloudInfo && cloudInfo.data) {
           // 更新存储空间信息
@@ -733,9 +735,9 @@ class CloudApp {
         }
         
         // 验证昵称格式
-        const usernameRegex = /^[a-zA-Z0-9_]{2,20}$/;
+        const usernameRegex = /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,20}$/;
         if (!usernameRegex.test(newNickname)) {
-          UI.Toast.warning('修改失败', '昵称格式不正确，请使用2-20个字母、数字、下划线');
+          UI.Toast.warning('修改失败', '昵称格式不正确，请使用2-20个中文、字母、数字、下划线');
           return;
         }
         

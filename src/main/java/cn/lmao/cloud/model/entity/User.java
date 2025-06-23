@@ -46,6 +46,9 @@ public class User {
     @Column(name = "update_time", nullable = false, columnDefinition = "TIMESTAMP(0)")
     private LocalDateTime updateTime;
 
+    @Column(name = "last_login_time", columnDefinition = "TIMESTAMP(0)")
+    private LocalDateTime lastLoginTime;
+
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "user")
     @JsonManagedReference
     private Cloud cloud;

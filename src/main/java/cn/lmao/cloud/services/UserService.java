@@ -40,6 +40,10 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException(ExceptionCodeMsg.USER_NOT_FOUND.getMsg());
         }
         
+        log.info("身份验证成功: {}", user.getUsername());
+        user.setLastLoginTime(java.time.LocalDateTime.now());
+        userRepository.save(user); // 更新最后登录时间
+        
         return new org.springframework.security.core.userdetails.User(
             user.getUsername(),
             user.getPassword(),
