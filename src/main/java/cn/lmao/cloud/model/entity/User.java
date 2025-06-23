@@ -30,7 +30,7 @@ public class User {
     private String email;
 
     @Column(name = "nick_name", nullable = false)
-    private String nikenName;
+    private String nickname;
 
     //头像
     @Column(name = "avatar_url")
@@ -52,8 +52,8 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
-        this.nikenName = this.nikenName == null ? 
-            this.username.substring(0, 1) : this.nikenName;
+        this.nickname = this.nickname == null ? 
+            this.username : "user";
         createTime = LocalDateTime.now();
         updateTime = createTime;
     }

@@ -216,11 +216,11 @@ class CloudApp {
       });
     }
     
-    // 修改用户名按钮点击事件
-    const editUsernameBtn = document.getElementById('editUsernameBtn');
-    if (editUsernameBtn) {
-      editUsernameBtn.addEventListener('click', () => {
-        this.showEditUsernameModal();
+    // 修改昵称按钮点击事件
+    const editNicknameBtn = document.getElementById('editNicknameBtn');
+    if (editNicknameBtn) {
+      editNicknameBtn.addEventListener('click', () => {
+        this.showEditNicknameModal();
       });
     }
     
@@ -402,10 +402,10 @@ class CloudApp {
         this.userData = userInfo.data;
         
         // 更新用户信息
-        const username = userInfo.data.username;
+        const nickname = userInfo.data.nickname;
         const userRole = userInfo.data.role == 'ADMIN' ? '管理员' : '普通用户';
         const email = userInfo.data.email || '未设置邮箱';
-        const avatar = username.charAt(0).toUpperCase();
+        const avatar = nickname.charAt(0).toUpperCase();
         
         // 格式化注册时间
         let registerTime = '未知';
@@ -421,12 +421,12 @@ class CloudApp {
             hour12: false
           });
         }
-        
+
         // 更新桌面版用户信息
         const desktopUserInfo = document.querySelector('.user-info-area.desktop-only');
         if (desktopUserInfo) {
           desktopUserInfo.querySelector('.avatar span').textContent = avatar;
-          desktopUserInfo.querySelector('.username').textContent = username;
+          desktopUserInfo.querySelector('.nickname').textContent = nickname;
           desktopUserInfo.querySelector('.user-role').textContent = userRole;
         }
         
@@ -439,7 +439,7 @@ class CloudApp {
         // 更新用户信息面板
         if (this.userProfilePanel) {
           document.getElementById('userAvatarLarge').textContent = avatar;
-          document.getElementById('profileUsername').textContent = username;
+          document.getElementById('profileNickname').textContent = nickname;
           document.getElementById('profileEmail').textContent = email;
           document.getElementById('profileRole').textContent = userRole;
           document.getElementById('profileRegisterTime').textContent = registerTime;
@@ -458,7 +458,7 @@ class CloudApp {
         }
         
         // 获取用户云盘信息
-        const cloudInfo = await CloudAPI.getUserCloud(username);
+        const cloudInfo = await CloudAPI.getUserCloud(this.userData.username);
         
         if (cloudInfo && cloudInfo.data) {
           // 更新存储空间信息
@@ -711,47 +711,47 @@ class CloudApp {
   }
   
   /**
-   * 显示修改用户名模态框
+   * 显示修改昵称模态框
    */
-  showEditUsernameModal() {
-    UI.Modal.show('editUsernameModal', '<i class="fas fa-edit"></i> 修改用户名', `
-      <div class="edit-username-form">
+  showEditNicknameModal() {
+    UI.Modal.show('editNicknameModal', '<i class="fas fa-edit"></i> 修改昵称', `
+      <div class="edit-nickname-form">
         <div class="form-group">
-          <label for="newUsername" class="form-label">新用户名</label>
-          <input type="text" id="newUsername" class="form-input" placeholder="请输入新用户名" value="${this.userData?.username || ''}">
-          <p class="form-hint">用户名长度为2-20个字符，支持字母、数字、下划线</p>
+          <label for="newNickname" class="form-label">新昵称</label>
+          <input type="text" id="newNickname" class="form-input" placeholder="请输入新昵称" value="${this.userData?.nickname || ''}">
+          <p class="form-hint">昵称长度为2-20个字符，支持字母、数字、下划线</p>
         </div>
       </div>
     `, {
       onConfirm: async () => {
-        const newUsername = document.getElementById('newUsername').value.trim();
+        const newNickname = document.getElementById('newNickname').value.trim();
         
         // 验证输入
-        if (!newUsername) {
-          UI.Toast.warning('修改失败', '用户名不能为空');
+        if (!newNickname) {
+          UI.Toast.warning('修改失败', '昵称不能为空');
           return;
         }
         
-        // 验证用户名格式
+        // 验证昵称格式
         const usernameRegex = /^[a-zA-Z0-9_]{2,20}$/;
-        if (!usernameRegex.test(newUsername)) {
-          UI.Toast.warning('修改失败', '用户名格式不正确，请使用2-20个字母、数字、下划线');
+        if (!usernameRegex.test(newNickname)) {
+          UI.Toast.warning('修改失败', '昵称格式不正确，请使用2-20个字母、数字、下划线');
           return;
         }
         
-        // 如果新用户名与当前用户名相同，不进行修改
-        if (newUsername === this.userData?.username) {
-          UI.Toast.info('未修改', '新用户名与当前用户名相同');
-          UI.Modal.close('editUsernameModal');
+        // 如果新昵称与当前昵称相同，不进行修改
+        if (newNickname === this.userData?.nickname) {
+          UI.Toast.info('未修改', '新昵称与当前昵称相同');
+          UI.Modal.close('editnicknameModal');
           return;
         }
         
         try {
           // 显示加载指示器
-          const loadingToastId = UI.Toast.loading('处理中', '正在修改用户名...');
+          const loadingToastId = UI.Toast.loading('处理中', '正在修改昵称...');
           
-          // 调用API修改用户名
-          await CloudAPI.updateUsername(newUsername);
+          // 调用API修改昵称
+          await CloudAPI.updateNickname(newNickname);
           
           // 隐藏加载通知
           if (loadingToastId) {
@@ -759,18 +759,18 @@ class CloudApp {
           }
           
           // 关闭模态框
-          UI.Modal.close('editUsernameModal');
+          UI.Modal.close('editNicknameModal');
           
           // 更新本地用户数据
           if (this.userData) {
-            this.userData.username = newUsername;
+            this.userData.nickname = newNickname;
           }
           
           // 重新加载用户信息以更新界面
           await this.loadUserInfo();
           
           // 显示成功通知
-          UI.Toast.success('修改成功', '用户名已成功更新');
+          UI.Toast.success('修改成功', '昵称已成功修改');
         } catch (error) {
           // 隐藏可能存在的加载通知
           const loadingToasts = document.querySelectorAll('.toast-loading');
@@ -781,15 +781,15 @@ class CloudApp {
             }
           });
           
-          console.error('修改用户名失败:', error);
-          UI.Toast.error('修改失败', error.message || '无法修改用户名');
+          console.error('修改昵称失败:', error);
+          UI.Toast.error('修改失败', error.message || '无法修改昵称');
         }
       }
     });
     
-    // 聚焦到用户名输入框
+    // 聚焦到昵称输入框
     setTimeout(() => {
-      const input = document.getElementById('newUsername');
+      const input = document.getElementById('newNickname');
       if (input) {
         input.focus();
         input.select(); // 选中当前文本

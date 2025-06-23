@@ -59,14 +59,14 @@ public class UserController {
             log.warn("修改用户名失败: 用户不存在, username={}", username);
             return ApiResponse.exception(ExceptionCodeMsg.USER_NOT_FOUND);
         }
-        if (user.getNikenName().equals(requestBody.get("username"))) {
+        if (user.getNickname().equals(requestBody.get("nickname"))) {
             log.warn("修改用户名失败: 新用户名与旧用户名相同, username={}", username);
             return ApiResponse.exception(ExceptionCodeMsg.USERNAME_EXISTS);
         }
-        user.setNikenName(requestBody.get("username"));
+        user.setNickname(requestBody.get("nickname"));
         userService.updateUser(user);
-        log.info("修改用户名成功: username={}", username);
-        return ApiResponse.success("用户名修改成功");   
+        log.info("修改昵称成功: nickname={}", user.getNickname());
+        return ApiResponse.success("昵称修改成功");   
     }
 
     @PostMapping("/change-password")

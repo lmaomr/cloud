@@ -299,7 +299,7 @@ nav {
     overflow: hidden;
 }
 
-.username {
+.nickname {
     font-weight: 500;
     font-size: 14px;
     color: var(--text-color);
@@ -2541,7 +2541,7 @@ body.dark-mode .menu-item:hover {
     justify-content: space-between;
 }
 
-.edit-username-btn {
+.edit-nickname-btn {
     background: transparent;
     border: none;
     color: var(--primary-color);
@@ -2557,7 +2557,7 @@ body.dark-mode .menu-item:hover {
     min-height: 24px;
 }
 
-.edit-username-btn:hover {
+.edit-nickname-btn:hover {
     background-color: rgba(25, 118, 210, 0.1);
 }
 

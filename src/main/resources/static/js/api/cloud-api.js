@@ -506,10 +506,10 @@ export class CloudAPI {
    * @param {string} newUsername - 新用户名
    * @returns {Promise} - 返回Promise对象
    */
-  static async updateUsername(newUsername) {
+  static async updateNickname(newNickname) {
     return this.request('/user/change-username', {
       method: 'POST',
-      body: JSON.stringify({ username: newUsername }),
+      body: JSON.stringify({ nickname: newNickname }),
     });
   }
 
