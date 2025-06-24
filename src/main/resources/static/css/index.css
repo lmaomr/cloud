@@ -5,22 +5,6 @@
     box-sizing: border-box;
 }
 
-:root {
-    --primary-color: #1976d2;
-    --primary-hover: #1565c0;
-    --secondary-color: #f5f6fa;
-    --text-color: #2b3e51;
-    --text-secondary: #8a8f99;
-    --border-color: #e5e6eb;
-    --card-bg: #fff;
-    --danger-color: #f44336;
-    --success-color: #4caf50;
-    --warning-color: #ff9800;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md: 0 2px 4px rgba(0,0,0,0.1);
-    --transition-speed: 0.3s;
-}
-
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: var(--secondary-color);
@@ -1021,6 +1005,7 @@ nav {
 
 .upload-item.error {
     background-color: rgba(var(--danger-color-rgb), 0.1);
+    /* 使用了themes.css中定义的--danger-color-rgb变量 */
 }
 
 /* 上传标签页样式 */
@@ -1868,14 +1853,6 @@ nav {
 }
 
 /* 暗黑模式样式 */
-body.dark-mode {
-    --secondary-color: #1a1c23;
-    --text-color: #e4e6eb;
-    --text-secondary: #9aa0a6;
-    --border-color: #2d3748;
-    --card-bg: #282a36;
-}
-
 body.dark-mode .nav-group li.active, 
 body.dark-mode .nav-group li:hover {
     background: rgba(25, 118, 210, 0.2);
@@ -2577,5 +2554,25 @@ body.dark-mode .menu-item:hover {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+/* 头像图片样式 */
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.avatar-img-large {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* 确保头像图片容器正确显示 */
+.avatar, .user-avatar-large {
+    overflow: hidden;
 }
  

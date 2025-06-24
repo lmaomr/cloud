@@ -50,9 +50,9 @@ public class UserController {
     }
 
     //修改用户名
-    @PostMapping("/change-username")
-    public ApiResponse<String> updateUsername(@RequestHeader("Authorization") String authorization, @RequestBody Map<String, String> requestBody) {
-        log.info("接收到修改用户名请求: authorization={}, username={}", authorization.substring(0, 20) + "...", requestBody.get("username"));
+    @PostMapping("/change-nickname")
+    public ApiResponse<String> updateNickname(@RequestHeader("Authorization") String authorization, @RequestBody Map<String, String> requestBody) {
+        log.info("接收到修改昵称请求: authorization={}, nickname={}", authorization.substring(0, 20) + "...", requestBody.get("nickname"));
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userService.getUserByName(username);
         if (user == null) {

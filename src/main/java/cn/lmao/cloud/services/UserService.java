@@ -40,7 +40,7 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException(ExceptionCodeMsg.USER_NOT_FOUND.getMsg());
         }
         
-        log.info("身份验证成功: {}", user.getUsername());
+        log.debug("开始身份验证: {}", user.getUsername());
         user.setLastLoginTime(java.time.LocalDateTime.now());
         userRepository.save(user); // 更新最后登录时间
         
@@ -118,13 +118,13 @@ public class UserService implements UserDetailsService {
         
         // 检查用户名是否已存在
         if (getUserByName(user.getUsername()) != null) {
-            log.debug("用户名[{}]已存在，注册失败", user.getUsername());
+            log.warn("用户名[{}]已存在，注册失败", user.getUsername());
             throw new CustomException(ExceptionCodeMsg.USERNAME_EXISTS);
         }
         
         // 检查邮箱是否已存在
         if (getUserByEmail(user.getEmail()) != null) {
-            log.debug("邮箱[{}]已被注册，注册失败", user.getEmail());
+            log.warn("邮箱[{}]已被注册，注册失败", user.getEmail());
             throw new CustomException(ExceptionCodeMsg.EMAIL_EXISTS);
         }
         
@@ -133,7 +133,7 @@ public class UserService implements UserDetailsService {
         
         // 保存用户
         User savedUser = userRepository.save(user);
-        log.info("用户[{}]注册成功", savedUser.getUsername());
+        log.debug("用户[{}]注册成功", savedUser.getUsername());
         
         return savedUser;
     }

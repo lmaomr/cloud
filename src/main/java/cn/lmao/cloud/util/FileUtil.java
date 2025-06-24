@@ -37,6 +37,15 @@ public class FileUtil {
     @Value("${spring.servlet.multipart.max-request-size}")
     public String maxRequestSize;
 
+    public String toLocalhostUrl(String absolutePath) {
+        // 替换路径分隔符并移除基础路径
+        String relativePath = absolutePath
+                .replace("\\", "/")
+                .replace("D:/Cloud/upload", "");
+        
+        return "http://localhost:8080/local-upload" + relativePath;
+    }
+
     /**
      * 存储上传的文件，并返回相对路径
      *

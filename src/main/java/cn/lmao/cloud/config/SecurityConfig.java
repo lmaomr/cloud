@@ -30,6 +30,7 @@ public class SecurityConfig {
         private static final String[] PUBLIC_URLS = {
                         "/",
                         "/api/auth/**",
+                        "/local-upload/**",
                         "/login.html",
                         "/index.html",
                         "/js/**",

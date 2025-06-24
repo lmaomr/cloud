@@ -169,12 +169,14 @@ class LoginController {
         
         // 获取表单数据
         const username = document.getElementById('registerUsername').value.trim();
+        const nickname = document.getElementById('registerNickname').value.trim();
         const email = document.getElementById('registerEmail').value.trim();
         const password = document.getElementById('registerPassword').value;
         const confirmPassword = document.getElementById('registerConfirmPassword').value;
         
         // 清除错误提示
         document.getElementById('registerUsernameError').textContent = '';
+        document.getElementById('registerNicknameError').textContent = '';
         document.getElementById('registerEmailError').textContent = '';
         document.getElementById('registerPasswordError').textContent = '';
         document.getElementById('registerConfirmPasswordError').textContent = '';
@@ -221,9 +223,9 @@ class LoginController {
         registerButton.textContent = '注册中...';
         
         try {
-            console.log(username, password, email);
+            console.log(username, nickname, email, password);
             // 调用注册API
-            await CloudAPI.register(username, password, email);
+            await CloudAPI.register(username, nickname, email, password);
             
             // 注册成功
             this.showToast('success', '注册成功', '请登录');

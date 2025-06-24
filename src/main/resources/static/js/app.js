@@ -407,6 +407,7 @@ class CloudApp {
         const userRole = userInfo.data.role == 'ADMIN' ? '管理员' : '普通用户';
         const email = userInfo.data.email || '未设置邮箱';
         const avatar = nickname.charAt(0).toUpperCase();
+        const avatarUrl = userInfo.data.avatarUrl ? CloudAPI.getAvatarUrl(userInfo.data.avatarUrl) : null;
         
         // 格式化注册时间
         let registerTime = '未知';
@@ -426,7 +427,29 @@ class CloudApp {
         // 更新桌面版用户信息
         const desktopUserInfo = document.querySelector('.user-info-area.desktop-only');
         if (desktopUserInfo) {
-          desktopUserInfo.querySelector('.avatar span').textContent = avatar;
+          const avatarElement = desktopUserInfo.querySelector('.avatar');
+          const avatarSpan = avatarElement.querySelector('span');
+          
+          if (avatarUrl) {
+            // 有头像URL时，显示图片
+            avatarSpan.style.display = 'none';
+            if (!avatarElement.querySelector('img')) {
+              const img = document.createElement('img');
+              img.src = avatarUrl;
+              img.alt = nickname;
+              img.classList.add('avatar-img');
+              avatarElement.appendChild(img);
+            } else {
+              avatarElement.querySelector('img').src = avatarUrl;
+            }
+          } else {
+            // 无头像URL时，显示昵称首字母
+            avatarSpan.style.display = '';
+            avatarSpan.textContent = avatar;
+            const img = avatarElement.querySelector('img');
+            if (img) img.remove();
+          }
+          
           desktopUserInfo.querySelector('.nickname').textContent = nickname;
           desktopUserInfo.querySelector('.user-role').textContent = userRole;
         }
@@ -434,12 +457,55 @@ class CloudApp {
         // 更新移动版用户信息
         const mobileUserInfo = document.querySelector('.user-info-area.mobile-only');
         if (mobileUserInfo) {
-          mobileUserInfo.querySelector('.avatar span').textContent = avatar;
+          const avatarElement = mobileUserInfo.querySelector('.avatar');
+          const avatarSpan = avatarElement.querySelector('span');
+          
+          if (avatarUrl) {
+            // 有头像URL时，显示图片
+            avatarSpan.style.display = 'none';
+            if (!avatarElement.querySelector('img')) {
+              const img = document.createElement('img');
+              img.src = avatarUrl;
+              img.alt = nickname;
+              img.classList.add('avatar-img');
+              avatarElement.appendChild(img);
+            } else {
+              avatarElement.querySelector('img').src = avatarUrl;
+            }
+          } else {
+            // 无头像URL时，显示昵称首字母
+            avatarSpan.style.display = '';
+            avatarSpan.textContent = avatar;
+            const img = avatarElement.querySelector('img');
+            if (img) img.remove();
+          }
         }
         
         // 更新用户信息面板
         if (this.userProfilePanel) {
-          document.getElementById('userAvatarLarge').textContent = avatar;
+          const userAvatarLarge = document.getElementById('userAvatarLarge');
+          const userAvatarWrapper = document.querySelector('.user-avatar-large');
+          
+          if (avatarUrl) {
+            // 有头像URL时，显示图片
+            userAvatarLarge.style.display = 'none';
+            if (!userAvatarWrapper.querySelector('img')) {
+              const img = document.createElement('img');
+              img.src = avatarUrl;
+              img.alt = nickname;
+              img.classList.add('avatar-img-large');
+              userAvatarWrapper.appendChild(img);
+            } else {
+              userAvatarWrapper.querySelector('img').src = avatarUrl;
+            }
+          } else {
+            // 无头像URL时，显示昵称首字母
+            userAvatarLarge.style.display = '';
+            userAvatarLarge.textContent = avatar;
+            const img = userAvatarWrapper.querySelector('img');
+            if (img) img.remove();
+          }
+          
           document.getElementById('profileNickname').textContent = nickname;
           document.getElementById('profileUsername').textContent = username;
           document.getElementById('profileEmail').textContent = email;

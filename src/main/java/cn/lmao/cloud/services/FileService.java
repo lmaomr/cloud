@@ -163,8 +163,8 @@ public class FileService {
             log.error("上传头像失败: 存储物理文件失败, userId={}", user.getUsername());
             throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAILED);
         }
-        
-        user.setAvatarUrl(avatarPath);
+
+        user.setAvatarUrl(fileUtil.toLocalhostUrl(avatarPath));
         userService.updateUser(user);
         return new FileUploadResponse(avatarPath);
     }

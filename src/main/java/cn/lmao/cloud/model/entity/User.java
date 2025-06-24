@@ -55,8 +55,6 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
-        this.nickname = this.nickname == null ? 
-            this.username : "user";
         createTime = LocalDateTime.now();
         updateTime = createTime;
     }

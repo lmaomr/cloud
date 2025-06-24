@@ -13,6 +13,8 @@
     <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" onerror="this.onerror=null;this.href='css/all.min.css';">
     <!-- 预加载脚本 -->
     <link rel="preload" href="js/login.js" as="script" crossorigin="anonymous">
+    <!-- 主题样式表 -->
+    <link rel="stylesheet" href="css/themes.css">
     <!-- 样式表 -->
     <link rel="stylesheet" href="css/login.css">
     <!-- 禁止选择文本 -->
@@ -34,56 +36,84 @@
             
             <!-- 登录表单 -->
             <div class="login-form visible" id="loginForm">
-                <h2 class="form-title">登录</h2>
+                <h2 class="form-title">账号登录</h2>
                 <form id="loginFormElement">
                     <div class="form-group">
-                        <label for="loginUsername" class="form-label">用户名</label>
+                        <label for="loginUsername" class="form-label">
+                            <i class="fas fa-user"></i> 用户名
+                        </label>
                         <input type="text" id="loginUsername" class="form-input" placeholder="请输入用户名" required>
                         <div class="form-error" id="loginUsernameError"></div>
                     </div>
                     <div class="form-group">
-                        <label for="loginPassword" class="form-label">密码</label>
+                        <label for="loginPassword" class="form-label">
+                            <i class="fas fa-lock"></i> 密码
+                        </label>
                         <input type="password" id="loginPassword" class="form-input" placeholder="请输入密码" required>
                         <div class="form-error" id="loginPasswordError"></div>
                     </div>
                     <div class="form-group">
-                        <button type="submit" class="btn btn-primary" id="loginButton">登录</button>
+                        <button type="submit" class="btn btn-primary" id="loginButton">
+                            <i class="fas fa-sign-in-alt"></i> 登录
+                        </button>
                     </div>
                 </form>
                 <div class="form-switch">
-                    没有账号？<a id="showRegister">立即注册</a>
+                    还没有账号？<a id="showRegister">立即注册</a>
                 </div>
             </div>
             
             <!-- 注册表单 -->
             <div class="register-form hidden" id="registerForm">
-                <h2 class="form-title">注册</h2>
+                <h2 class="form-title">创建账号</h2>
                 <form id="registerFormElement">
-                    <div class="form-group">
-                        <label for="registerUsername" class="form-label">用户名</label>
+                    <div class="form-row">
+                        <div class="form-group half-width">
+                            <label for="registerUsername" class="form-label">
+                                <i class="fas fa-user"></i> 用户名
+                            </label>
                         <input type="text" id="registerUsername" class="form-input" placeholder="请输入用户名" required>
-                        <div class="form-hint">用户名长度为3-20个字符，只能包含字母、数字和下划线</div>
+                            <div class="form-hint">长度为3-20个字符，只能包含字母、数字和下划线</div>
                         <div class="form-error" id="registerUsernameError"></div>
+                        </div>
+                        <div class="form-group half-width">
+                            <label for="registerNickname" class="form-label">
+                                <i class="fas fa-id-card"></i> 昵称
+                            </label>
+                            <input type="text" id="registerNickname" class="form-input" placeholder="请输入昵称">
+                            <div class="form-hint">昵称可以包含中文、字母、数字等</div>
+                            <div class="form-error" id="registerNicknameError"></div>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label for="registerEmail" class="form-label">邮箱</label>
+                        <label for="registerEmail" class="form-label">
+                            <i class="fas fa-envelope"></i> 邮箱
+                        </label>
                         <input type="email" id="registerEmail" class="form-input" placeholder="请输入邮箱" required>
                         <div class="form-error" id="registerEmailError"></div>
                     </div>
                     <div class="form-group">
-                        <label for="registerPassword" class="form-label">密码</label>
+                        <label for="registerPassword" class="form-label">
+                            <i class="fas fa-lock"></i> 密码
+                        </label>
                         <input type="password" id="registerPassword" class="form-input" placeholder="请输入密码" required>
                         <div class="form-hint">密码长度至少为6位，包含字母和数字</div>
                         <div class="form-error" id="registerPasswordError"></div>
                     </div>
                     <div class="form-group">
-                        <label for="registerConfirmPassword" class="form-label">确认密码</label>
+                        <label for="registerConfirmPassword" class="form-label">
+                            <i class="fas fa-check-circle"></i> 确认密码
+                        </label>
                         <input type="password" id="registerConfirmPassword" class="form-input" placeholder="请再次输入密码" required>
                         <div class="form-error" id="registerConfirmPasswordError"></div>
                     </div>
                     <div class="form-group">
-                        <button type="submit" class="btn btn-primary" id="registerButton">注册</button>
-                        <button type="button" class="btn btn-secondary" id="backToLogin">返回登录</button>
+                        <button type="submit" class="btn btn-primary" id="registerButton">
+                            <i class="fas fa-user-plus"></i> 注册
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="backToLogin">
+                            <i class="fas fa-arrow-left"></i> 返回登录
+                        </button>
                     </div>
                 </form>
             </div>
