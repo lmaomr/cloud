@@ -57,33 +57,64 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+
+        // 获取请求URI
+        String requestURI = request.getRequestURI();
+        log.info("JWT过滤器处理请求: {}, 方法: {}", requestURI, request.getMethod());
+        
         try {
             // 1. 获取并验证 JWT token
             String authHeader = request.getHeader("Authorization");
-            if (authHeader != null) {
+            log.info("处理请求: {}, Authorization: {}", requestURI, authHeader != null ? "存在" : "不存在");
+            
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                log.info("请求没有Authorization头或格式不正确，直接放行: {}", requestURI);
+                filterChain.doFilter(request, response);
+                return;
+            }
+            
+            try {
                 // 2. 验证 token 并设置认证信息
                 String username = jwtUtil.getUsernameFromHeader(authHeader);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-                // 3. 设置认证信息
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                
+                if (username != null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    
+                    // 3. 设置认证信息
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    
+                    log.info("认证成功: 用户 {} 访问 {}", username, requestURI);
+                    // 4. 继续执行过滤器链
+                    filterChain.doFilter(request, response);
+                } else {
+                    log.warn("认证失败: 无法从token中获取用户名: {}", requestURI);
+                    handleAuthenticationFailure(response, "无效的认证令牌");
+                }
+            } catch (JwtException e) {
+                log.error("处理请求异常，JwtException: {}, 路径: {}", e.getMessage(), requestURI);
+                handleAuthenticationFailure(response, "认证令牌验证失败: " + e.getMessage());
             }
-            // 4. 继续执行过滤器链
-            filterChain.doFilter(request, response);
-        } catch (JwtException e) {
-            log.error("处理请求异常，JwtException:{}", e.getMessage());
-            // 5. 如果发生异常，不调用 doFilter，直接返回错误响应
-            response.setContentType("application/json;charset=UTF-8");
-            response.setCharacterEncoding("UTF-8");
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write(JsonUtil.toJson(ApiResponse.exception(ExceptionCodeMsg.TOKEN_FORMAT_ERROR)));
-            // 注意：这里没有调用 filterChain.doFilter，因为已经返回了错误响应
-        }finally {
+        } catch (Exception e) {
+            log.error("处理请求异常: {}, 路径: {}", e.getMessage(), requestURI);
+            handleAuthenticationFailure(response, "认证过程发生错误");
+        } finally {
             // 记录请求ID
             requestIds.add(requestId);
         }
+    }
+
+    private void handleAuthenticationFailure(HttpServletResponse response, String message) throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        
+        ApiResponse<?> errorResponse = ApiResponse.exception(ExceptionCodeMsg.TOKEN_FORMAT_ERROR);
+        // 在日志中记录详细错误信息
+        log.error("认证失败: {}", message);
+        
+        response.getWriter().write(JsonUtil.toJson(errorResponse));
     }
 }

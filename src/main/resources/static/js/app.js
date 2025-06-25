@@ -72,7 +72,7 @@ class CloudApp {
       const token = CloudAPI.getAuthToken();
       if (!token) {
         // 未登录，跳转到登录页面
-        window.location.href = 'login.html';
+        window.location.href = 'login';
         return;
       }
       
@@ -122,7 +122,7 @@ class CloudApp {
         CloudAPI.clearAuthToken();
         
         // 跳转到登录页面
-        window.location.href = 'login.html';
+        window.location.href = 'login';
         return;
       }
       
@@ -407,7 +407,7 @@ class CloudApp {
         const userRole = userInfo.data.role == 'ADMIN' ? '管理员' : '普通用户';
         const email = userInfo.data.email || '未设置邮箱';
         const avatar = nickname.charAt(0).toUpperCase();
-        const avatarUrl = userInfo.data.avatarUrl ? CloudAPI.getAvatarUrl(userInfo.data.avatarUrl) : null;
+        const avatarUrl = userInfo.data?.avatarUrl;
         
         // 格式化注册时间
         let registerTime = '未知';
@@ -895,7 +895,7 @@ class CloudApp {
       
       // 跳转到登录页面
       setTimeout(() => {
-        window.location.href = 'login.html';
+        window.location.href = 'login';
       }, 1000);
     });
   }

@@ -41,9 +41,10 @@ public class FileUtil {
         // 替换路径分隔符并移除基础路径
         String relativePath = absolutePath
                 .replace("\\", "/")
-                .replace("D:/Cloud/upload", "");
+                .replace(uploadRootDir, "");
         
-        return "http://localhost:8080/local-upload" + relativePath;
+        // 返回相对URL而不是绝对URL，这样在不同环境中都能正常工作
+        return "/upload" + relativePath;
     }
 
     /**

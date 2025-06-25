@@ -531,33 +531,6 @@ export class CloudAPI {
       body: formData,
     });
   }
-
-  /**
-   * 获取头像URL
-   * @param {string} avatarPath - 头像路径
-   * @returns {string} - 头像URL
-   */
-  static getAvatarUrl(avatarPath) {
-    if (!avatarPath) return null;
-    
-    // 如果是完整的URL，直接返回
-    if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
-      return avatarPath;
-    }
-    
-    // 如果是本地文件路径，转换为API URL
-    // 假设后端提供了/api/file/avatar/{userId}接口来获取用户头像
-    const userId = avatarPath.includes('user_') 
-      ? avatarPath.match(/user_(\d+)/)?.[1] 
-      : null;
-      
-    if (userId) {
-      return `${API_BASE_URL}/file/avatar/${userId}`;
-    }
-    
-    // 如果无法解析用户ID，使用通用的头像API
-    return `${API_BASE_URL}/file/avatar/view?path=${encodeURIComponent(avatarPath)}`;
-  }
 }
 
 export default CloudAPI; 

@@ -15,6 +15,13 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import cn.lmao.cloud.model.dto.ApiResponse;
+import cn.lmao.cloud.model.enums.ExceptionCodeMsg;
+import cn.lmao.cloud.util.LogUtil;
+
+import org.slf4j.Logger;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -26,16 +33,20 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
+        private final Logger log = LogUtil.getLogger();
+
         // 公共路径常量
         private static final String[] PUBLIC_URLS = {
                         "/",
-                        "/api/auth/**",
-                        "/local-upload/**",
-                        "/login.html",
                         "/index.html",
+                        "/upload/**",
+                        "/login",
+                        "/login.html",
+                        "/api/auth/**",
                         "/js/**",
                         "/css/**",
                         "/image/**",
+                        "/favicon.ico",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html"
@@ -55,6 +66,8 @@ public class SecurityConfig {
                         JwtAuthenticationFilter jwtAuthenticationFilter,
                         TraceIdFilter traceIdFilter) throws Exception {
 
+                log.info("配置安全过滤器链");
+
                 http
                 // 禁用CSRF保护（因为使用JWT无状态认证）
                 .csrf(csrf -> csrf.disable())
@@ -67,20 +80,24 @@ public class SecurityConfig {
                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // 配置请求授权规则
-                .authorizeHttpRequests(auth -> auth
-                                // 允许公共路径无需认证
-                                .requestMatchers(PUBLIC_URLS).permitAll()
-                                // 其他所有请求需要认证
-                                .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                        log.info("配置请求授权规则");
+                        auth
+                        // 允许公共路径无需认证
+                        .requestMatchers(PUBLIC_URLS).permitAll()
+                        // 其他所有请求需要认证
+                        .anyRequest().authenticated();
+                })
 
-                // .exceptionHandling(exception -> exception
-                // .authenticationEntryPoint((request, response, authException) -> {
-                // response.setContentType("application/json"); // 设置响应类型为JSON
-                // response.setCharacterEncoding("UTF-8"); // 设置字符编码为UTF-8
-                // response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 设置HTTP状态码为401
-                // response.getWriter().write( // 写入响应内容
-                // ApiResponse.exception(ExceptionCodeMsg.TOKEN_FORMAT_ERROR).toString());
-                // }))
+                .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    log.error("认证失败: {}, 路径: {}", authException.getMessage(), request.getRequestURI());
+                    response.setContentType("application/json"); 
+                    response.setCharacterEncoding("UTF-8"); 
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write(
+                        ApiResponse.exception(ExceptionCodeMsg.TOKEN_FORMAT_ERROR).getMsg().toString());
+                }))
 
                 // 添加TraceID过滤器（最先执行）
                 .addFilterBefore(traceIdFilter, UsernamePasswordAuthenticationFilter.class)
