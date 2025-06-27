@@ -3,6 +3,9 @@ package cn.lmao.cloud.model.enums;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+/**
+ * 异常代码和消息枚举
+ */
 @Getter
 @AllArgsConstructor
 public enum ExceptionCodeMsg {
@@ -82,7 +85,40 @@ public enum ExceptionCodeMsg {
     DATA_INTEGRITY_VIOLATION(10301, "数据完整性冲突"),
     OPTIMISTIC_LOCK_CONFLICT(10302, "数据版本冲突，请重试"),
     SERVICE_UNAVAILABLE(10303, "服务暂时不可用"),
-    ;
+
+    // 成功
+    SUCCESS(200, "操作成功"),
+
+    // 通用错误
+    UNKNOWN_ERROR(500, "未知错误"),
+    NOT_FOUND(404, "资源不存在"),
+    FORBIDDEN(403, "无权访问"),
+    UNAUTHORIZED(401, "未授权"),
+    
+    // 用户相关错误
+    USER_DISABLED(1005, "用户已禁用"),
+    LOGIN_FAILED(1006, "登录失败"),
+    REGISTER_FAILED(1007, "注册失败"),
+    INVALID_TOKEN(1008, "无效的令牌"),
+    NICKNAME_EXISTS(1011, "昵称已存在"),
+    PASSWORD_TOO_SIMPLE(1013, "密码太简单"),
+    NICKNAME_TOO_LONG(1014, "昵称太长"),
+    LOGIN_ATTEMPTS_EXCEEDED(1015, "登录尝试次数过多，请稍后再试"),
+    
+    // 文件相关错误
+    FILE_DOWNLOAD_FAIL(2003, "文件下载失败"),
+    FILE_DELETE_FAIL(2004, "文件删除失败"),
+    FILE_TOO_LARGE(2007, "文件太大"),
+    FILE_MOVE_FAILED(2010, "文件移动失败"),
+    
+    // 云存储相关错误
+    CLOUD_CAPACITY_NOT_ENOUGH(3002, "云存储空间不足"),
+    CLOUD_INIT_FAILED(3003, "云存储空间初始化失败"),
+    
+    // 其他错误
+    SYSTEM_ERROR(9001, "系统错误"),
+    IO_ERROR(9003, "IO错误"),
+    NETWORK_ERROR(9004, "网络错误");
     
 
     private final int code;

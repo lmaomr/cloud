@@ -890,27 +890,30 @@ nav {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 320px;
+    width: 350px;
     max-height: 400px;
     background-color: var(--card-bg);
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-lg);
     z-index: 1000;
     overflow: hidden;
     display: none;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
 }
 
 .upload-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 15px;
+    padding: 12px 16px;
     background-color: var(--primary-color);
     color: white;
 }
 
 .upload-title {
     font-weight: 500;
+    font-size: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -921,39 +924,39 @@ nav {
     border: none;
     color: white;
     cursor: pointer;
-    padding: 0;
     font-size: 16px;
-    opacity: 0.8;
-    transition: opacity 0.2s;
-}
-
-.upload-close:hover {
-    opacity: 1;
-}
-
-.upload-items {
-    padding: 10px;
-    max-height: 320px;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.upload-item {
-    padding: 8px;
-    margin-bottom: 8px;
-    border-radius: 4px;
-    background-color: var(--hover-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
     transition: background-color 0.2s;
 }
 
-.upload-item:last-child {
-    margin-bottom: 0;
+.upload-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
-.upload-item-info {
+.upload-items {
+    overflow-y: auto;
+    max-height: 350px;
+    padding: 8px;
+}
+
+.upload-item {
+    background-color: var(--bg-gradient-start);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    position: relative;
+    border: 1px solid var(--border-color);
+}
+
+.upload-item-header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .upload-item-name {
@@ -965,47 +968,79 @@ nav {
     max-width: 200px;
 }
 
-.upload-item-status {
-    font-size: 12px;
-    color: var(--text-secondary);
+.upload-item-actions {
+    display: flex;
+    gap: 8px;
 }
 
-.upload-item-status.success {
-    color: var(--success-color);
-}
-
-.upload-item-status.error {
+.upload-cancel {
+    background: transparent;
+    border: none;
     color: var(--danger-color);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
 }
 
-.upload-item-progress {
+.upload-cancel:hover {
+    background-color: rgba(var(--danger-color-rgb), 0.1);
+}
+
+.upload-progress-bar {
+    height: 6px;
+    background-color: var(--progress-bg);
+    border-radius: 3px;
+    overflow: hidden;
     margin-bottom: 6px;
 }
 
-.upload-item-actions {
+.upload-progress-bar-inner {
+    height: 100%;
+    background: var(--progress-color);
+    width: 0;
+    transition: width 0.3s ease;
+}
+
+.upload-progress-bar-inner.success {
+    background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
+}
+
+.upload-progress-bar-inner.error {
+    background: linear-gradient(90deg, #f44336 0%, #e57373 100%);
+}
+
+.upload-item-footer {
     display: flex;
-    justify-content: flex-end;
-}
-
-.upload-item-cancel {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 2px 6px;
+    justify-content: space-between;
+    align-items: center;
     font-size: 12px;
-    opacity: 0.8;
-    transition: opacity 0.2s;
+    color: var(--text-secondary);
 }
 
-.upload-item-cancel:hover {
-    opacity: 1;
-    color: var(--danger-color);
+.progress-text {
+    font-weight: 500;
 }
 
-.upload-item.error {
-    background-color: rgba(var(--danger-color-rgb), 0.1);
-    /* 使用了themes.css中定义的--danger-color-rgb变量 */
+.upload-status {
+    font-size: 12px;
+}
+
+.upload-status.success {
+    color: #4caf50;
+}
+
+.upload-status.error {
+    color: #f44336;
+}
+
+.upload-status.cancelled {
+    color: #ff9800;
 }
 
 /* 上传标签页样式 */

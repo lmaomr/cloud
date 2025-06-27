@@ -531,6 +531,108 @@ export class CloudAPI {
       body: formData,
     });
   }
+
+  /**
+   * 初始化分片上传
+   * @param {string} fileName - 文件名
+   * @param {number} fileSize - 文件大小
+   * @param {number} chunkSize - 分片大小
+   * @param {string} path - 上传路径
+   * @returns {Promise} - 返回Promise对象
+   */
+  static async initChunkedUpload(fileName, fileSize, chunkSize, path = '/') {
+    return await this.request('/file/upload/init', {
+      method: 'POST',
+      body: JSON.stringify({
+        fileName,
+        fileSize,
+        chunkSize,
+        path
+      }),
+    });
+  }
+
+  /**
+   * 上传文件分片
+   * @param {string} uploadId - 上传ID
+   * @param {number} chunkIndex - 分片索引
+   * @param {Blob} chunk - 分片数据
+   * @param {Function} onProgress - 进度回调函数
+   * @returns {Promise} - 返回Promise对象
+   */
+  static async uploadChunk(uploadId, chunkIndex, chunk, onProgress) {
+    return new Promise((resolve, reject) => {
+      // 创建FormData对象
+      const formData = new FormData();
+      formData.append('file', chunk);
+      
+      // 使用XMLHttpRequest以支持进度监控
+      const xhr = new XMLHttpRequest();
+      
+      // 监听上传进度
+      if (typeof onProgress === 'function') {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100;
+            onProgress(percentComplete, event);
+          }
+        });
+      }
+      
+      // 监听请求完成
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            
+            // 检查业务状态码
+            if (result.code !== 200) {
+              reject(new Error(result.msg || '上传分片失败'));
+              return;
+            }
+            
+            resolve(result);
+          } catch (error) {
+            reject(new Error('解析响应失败'));
+          }
+        } else {
+          reject(new Error(`HTTP错误: ${xhr.status}`));
+        }
+      });
+      
+      // 监听错误
+      xhr.addEventListener('error', () => {
+        reject(new Error('网络错误'));
+      });
+      
+      // 监听中止
+      xhr.addEventListener('abort', () => {
+        reject(new Error('上传已取消'));
+      });
+      
+      // 发送请求
+      xhr.open('POST', `${API_BASE_URL}/file/upload/chunk/${uploadId}/${chunkIndex}`);
+      
+      // 设置请求头
+      const token = this.getAuthToken();
+      if (token) xhr.setRequestHeader('Authorization', token);
+      xhr.setRequestHeader('X-Request-ID', generateUUID());
+      
+      xhr.send(formData);
+    });
+  }
+
+  /**
+   * 完成分片上传
+   * @param {string} uploadId - 上传ID
+   * @returns {Promise} - 返回Promise对象
+   */
+  static async completeChunkedUpload(uploadId) {
+    return await this.request('/file/upload/complete', {
+      method: 'POST',
+      body: JSON.stringify({ uploadId }),
+    });
+  }
 }
 
 export default CloudAPI; 

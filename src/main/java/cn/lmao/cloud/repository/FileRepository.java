@@ -16,6 +16,9 @@ public interface FileRepository extends JpaRepository<File, Long> {
     // 根据哈希值查找文件
     // 自动实现只返回第一个结果
     Optional<File> findFirstByHashOrderByIdDesc(String hash);
+    
+    // 根据哈希值查找文件
+    File findByHash(String hash);
 
     @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END " +
             "FROM File f " +

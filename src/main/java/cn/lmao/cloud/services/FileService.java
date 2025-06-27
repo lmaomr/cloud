@@ -2,9 +2,12 @@ package cn.lmao.cloud.services;
 
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import cn.lmao.cloud.exception.CustomException;
 import cn.lmao.cloud.model.dto.FileUploadResponse;
+import cn.lmao.cloud.model.dto.ChunkInfo;
+import cn.lmao.cloud.model.dto.InitUploadResponse;
 import cn.lmao.cloud.model.entity.Cloud;
 import cn.lmao.cloud.model.entity.File;
 import cn.lmao.cloud.model.entity.User;
@@ -26,6 +29,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.Files;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -36,9 +44,23 @@ public class FileService {
     private final UserService userService;
     private final CloudService cloudService;
     private final FileUtil fileUtil;
+    private final FileHashUtil fileHashUtil;
 
     // 可重入锁，用于保证文件操作的线程安全
     private final ReentrantLock fileLock = new ReentrantLock();
+
+    /**
+     * 存储分片上传的临时信息
+     */
+    private final ConcurrentHashMap<String, InitUploadResponse> uploadTasks = new ConcurrentHashMap<>();
+    
+    /**
+     * 存储已上传分片信息
+     */
+    private final ConcurrentHashMap<String, ConcurrentHashMap<Integer, Boolean>> uploadedChunks = new ConcurrentHashMap<>();
+
+    @Value("${file.upload.path}")
+    private String uploadPath;
 
     /**
      * 文件上传方法
@@ -604,5 +626,337 @@ public class FileService {
         return trashFiles;
     }
     
+    /**
+     * 初始化分片上传
+     * 
+     * @param fileName 文件名
+     * @param fileSize 文件大小
+     * @param chunkSize 分片大小
+     * @param path 上传路径
+     * @param userId 用户ID
+     * @return 初始化上传响应
+     */
+    public InitUploadResponse initChunkedUpload(String fileName, Long fileSize, Integer chunkSize, String path, Long userId) {
+        log.info("初始化分片上传: fileName={}, fileSize={}, chunkSize={}, path={}, userId={}",
+                fileName, fileSize, chunkSize, path, userId);
+        
+        // 检查用户存储空间是否足够
+        Cloud userCloud = userService.getCloud(userId);
+        if (userCloud.getUsedCapacity() + fileSize > userCloud.getTotalCapacity()) {
+            log.warn("存储空间不足: userId={}, fileSize={}, usedCapacity={}, totalCapacity={}",
+                    userId, fileSize, userCloud.getUsedCapacity(), userCloud.getTotalCapacity());
+            throw new CustomException(ExceptionCodeMsg.CLOUD_CAPACITY_NOT_ENOUGH);
+        }
+        
+        // 生成唯一的上传ID
+        String uploadId = UUID.randomUUID().toString();
+        
+        // 计算总分片数
+        int totalChunks = (int) Math.ceil((double) fileSize / chunkSize);
+        
+        // 创建上传任务信息
+        InitUploadResponse uploadInfo = new InitUploadResponse(
+                uploadId, fileName, fileSize, chunkSize, totalChunks, path);
+        
+        // 存储上传任务信息
+        uploadTasks.put(uploadId, uploadInfo);
+        
+        // 初始化分片记录
+        uploadedChunks.put(uploadId, new ConcurrentHashMap<>());
+        
+        // 创建临时目录
+        try {
+            java.io.File tempDir = new java.io.File(uploadPath, "temp/" + uploadId);
+            if (!tempDir.exists()) {
+                tempDir.mkdirs();
+            }
+        } catch (Exception e) {
+            log.error("创建临时目录失败: uploadId={}, error={}", uploadId, e.getMessage(), e);
+            throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+        
+        log.info("初始化分片上传成功: uploadId={}, totalChunks={}", uploadId, totalChunks);
+        return uploadInfo;
+    }
+    
+    /**
+     * 上传分片
+     * 
+     * @param uploadId 上传ID
+     * @param chunkIndex 分片索引
+     * @param file 分片文件
+     * @param userId 用户ID
+     * @return 分片信息
+     */
+    public ChunkInfo uploadChunk(String uploadId, Integer chunkIndex, MultipartFile file, Long userId) throws IOException {
+        log.info("上传分片: uploadId={}, chunkIndex={}, fileSize={}, userId={}",
+                uploadId, chunkIndex, file.getSize(), userId);
+        
+        // 检查上传任务是否存在
+        InitUploadResponse uploadInfo = uploadTasks.get(uploadId);
+        if (uploadInfo == null) {
+            log.warn("上传任务不存在: uploadId={}", uploadId);
+            throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+        
+        // 检查分片索引是否有效
+        if (chunkIndex < 0 || chunkIndex >= uploadInfo.getTotalChunks()) {
+            log.warn("分片索引无效: uploadId={}, chunkIndex={}, totalChunks={}",
+                    uploadId, chunkIndex, uploadInfo.getTotalChunks());
+            throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+        
+        // 获取分片记录
+        ConcurrentHashMap<Integer, Boolean> chunks = uploadedChunks.get(uploadId);
+        
+        // 检查分片是否已上传
+        if (chunks.containsKey(chunkIndex) && chunks.get(chunkIndex)) {
+            log.warn("分片已上传: uploadId={}, chunkIndex={}", uploadId, chunkIndex);
+            
+            // 返回已上传分片数量
+            int uploadedCount = chunks.size();
+            return new ChunkInfo(uploadId, chunkIndex, uploadInfo.getTotalChunks(), uploadedCount, file.getSize());
+        }
+        
+        // 保存分片文件
+        try {
+            // 创建临时文件路径
+            String tempDirPath = uploadPath + "/temp/" + uploadId;
+            Path chunkPath = Paths.get(tempDirPath, String.format("%d", chunkIndex));
+            
+            // 保存分片
+            Files.copy(file.getInputStream(), chunkPath, StandardCopyOption.REPLACE_EXISTING);
+            
+            // 标记分片已上传
+            chunks.put(chunkIndex, true);
+            
+            // 返回已上传分片数量
+            int uploadedCount = chunks.size();
+            log.info("分片上传成功: uploadId={}, chunkIndex={}, uploadedChunks={}/{}",
+                    uploadId, chunkIndex, uploadedCount, uploadInfo.getTotalChunks());
+            
+            return new ChunkInfo(uploadId, chunkIndex, uploadInfo.getTotalChunks(), uploadedCount, file.getSize());
+        } catch (IOException e) {
+            log.error("保存分片失败: uploadId={}, chunkIndex={}, error={}", uploadId, chunkIndex, e.getMessage(), e);
+            throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+    }
+    
+    /**
+     * 完成分片上传
+     * 
+     * @param uploadId 上传ID
+     * @param userId 用户ID
+     * @return 文件上传响应
+     */
+    public FileUploadResponse completeChunkedUpload(String uploadId, Long userId) throws IOException {
+        log.info("完成分片上传: uploadId={}, userId={}", uploadId, userId);
+        
+        // 检查上传任务是否存在
+        InitUploadResponse uploadInfo = uploadTasks.get(uploadId);
+        if (uploadInfo == null) {
+            log.warn("上传任务不存在: uploadId={}", uploadId);
+            throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+        
+        // 获取分片记录
+        ConcurrentHashMap<Integer, Boolean> chunks = uploadedChunks.get(uploadId);
+        
+        // 检查是否所有分片都已上传
+        if (chunks.size() != uploadInfo.getTotalChunks()) {
+            log.warn("分片上传不完整: uploadId={}, uploadedChunks={}, totalChunks={}",
+                    uploadId, chunks.size(), uploadInfo.getTotalChunks());
+            throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+        
+        try {
+            // 合并分片
+            String tempDirPath = uploadPath + "/temp/" + uploadId;
+            String finalFilePath = getFinalFilePath(uploadInfo.getFileName(), uploadInfo.getPath());
+            
+            // 确保目标目录存在
+            java.io.File targetDir = new java.io.File(finalFilePath).getParentFile();
+            if (!targetDir.exists()) {
+                targetDir.mkdirs();
+            }
+            
+            // 创建目标文件
+            java.io.File targetFile = new java.io.File(finalFilePath);
+            
+            // 使用NIO合并文件
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(targetFile)) {
+                for (int i = 0; i < uploadInfo.getTotalChunks(); i++) {
+                    Path chunkPath = Paths.get(tempDirPath, String.format("%d", i));
+                    Files.copy(chunkPath, fos);
+                }
+            }
+            
+            // 计算文件哈希
+            String fileHash = fileHashUtil.calculateSha256(targetFile);
+            
+            // 检查文件是否已存在（通过哈希值）
+            File existingFile = fileRepository.findByHash(fileHash);
+            if (existingFile != null) {
+                log.info("文件已存在，使用现有文件: hash={}, existingFileId={}", fileHash, existingFile.getId());
+                
+                // 删除临时文件
+                cleanupTempFiles(uploadId);
+                
+                // 更新用户云存储空间
+                updateCloudStorage(userId, existingFile.getSize());
+                
+                // 返回现有文件信息
+                return new FileUploadResponse(existingFile, true);
+            }
+            
+            // 创建新文件记录
+            File newFile = new File();
+            newFile.setName(uploadInfo.getFileName());
+            newFile.setPath(finalFilePath);
+            newFile.setRelativePath(uploadInfo.getPath());
+            newFile.setSize(uploadInfo.getFileSize());
+            newFile.setHash(fileHash);
+            
+            // 设置文件类型
+            String fileExtension = getFileExtension(uploadInfo.getFileName());
+            newFile.setType(determineFileType(fileExtension));
+            
+            // 设置文件所属的云存储空间
+            Cloud userCloud = userService.getCloud(userId);
+            newFile.setCloud(userCloud);
+            
+            // 保存文件记录
+            File savedFile = fileRepository.save(newFile);
+            
+            // 更新用户云存储空间
+            updateCloudStorage(userId, savedFile.getSize());
+            
+            // 删除临时文件
+            cleanupTempFiles(uploadId);
+            
+            // 从上传任务列表中移除
+            uploadTasks.remove(uploadId);
+            uploadedChunks.remove(uploadId);
+            
+            log.info("完成分片上传成功: uploadId={}, fileId={}, fileName={}, fileSize={}",
+                    uploadId, savedFile.getId(), savedFile.getName(), savedFile.getSize());
+            
+            return new FileUploadResponse(savedFile, false);
+        } catch (IOException e) {
+            log.error("合并分片失败: uploadId={}, error={}", uploadId, e.getMessage(), e);
+            
+            // 清理临时文件
+            cleanupTempFiles(uploadId);
+            
+            throw new CustomException(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+    }
+    
+    /**
+     * 获取最终文件路径
+     * 
+     * @param fileName 文件名
+     * @param relativePath 相对路径
+     * @return 最终文件路径
+     */
+    private String getFinalFilePath(String fileName, String relativePath) {
+        String baseDir = uploadPath;
+        String path = relativePath.endsWith("/") ? relativePath : relativePath + "/";
+        return baseDir + path + fileName;
+    }
+    
+    /**
+     * 获取文件扩展名
+     * 
+     * @param fileName 文件名
+     * @return 文件扩展名
+     */
+    private String getFileExtension(String fileName) {
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            return fileName.substring(lastDotIndex + 1).toLowerCase();
+        }
+        return "";
+    }
+    
+    /**
+     * 根据文件扩展名确定文件类型
+     * 
+     * @param extension 文件扩展名
+     * @return 文件类型
+     */
+    private String determineFileType(String extension) {
+        if (extension.isEmpty()) {
+            return "other";
+        }
+        
+        switch (extension.toLowerCase()) {
+            case "jpg":
+            case "jpeg":
+            case "png":
+            case "gif":
+            case "bmp":
+                return "image/" + extension;
+            case "doc":
+            case "docx":
+                return "application/msword";
+            case "xls":
+            case "xlsx":
+                return "application/vnd.ms-excel";
+            case "pdf":
+                return "application/pdf";
+            case "txt":
+                return "text/plain";
+            case "mp3":
+            case "wav":
+                return "audio/" + extension;
+            case "mp4":
+            case "avi":
+            case "mkv":
+                return "video/" + extension;
+            default:
+                return "application/octet-stream";
+        }
+    }
+    
+    /**
+     * 更新云存储空间使用量
+     * 
+     * @param userId 用户ID
+     * @param fileSize 文件大小
+     */
+    private void updateCloudStorage(Long userId, Long fileSize) {
+        Cloud cloud = userService.getCloud(userId);
+        if (cloud != null) {
+            cloudService.updateCloudCapacity(cloud.getId(), fileSize, true);
+        }
+    }
+
+    /**
+     * 清理临时文件
+     * 
+     * @param uploadId 上传ID
+     */
+    private void cleanupTempFiles(String uploadId) {
+        try {
+            String tempDirPath = uploadPath + "/temp/" + uploadId;
+            java.io.File tempDir = new java.io.File(tempDirPath);
+            
+            if (tempDir.exists() && tempDir.isDirectory()) {
+                // 删除所有分片文件
+                java.io.File[] files = tempDir.listFiles();
+                if (files != null) {
+                    for (java.io.File file : files) {
+                        file.delete();
+                    }
+                }
+                
+                // 删除临时目录
+                tempDir.delete();
+            }
+        } catch (Exception e) {
+            log.warn("清理临时文件失败: uploadId={}, error={}", uploadId, e.getMessage());
+        }
+    }
 
 }

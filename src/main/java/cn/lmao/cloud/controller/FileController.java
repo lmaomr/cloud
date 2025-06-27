@@ -3,6 +3,8 @@ package cn.lmao.cloud.controller;
 import cn.lmao.cloud.exception.CustomException;
 import cn.lmao.cloud.model.dto.ApiResponse;
 import cn.lmao.cloud.model.dto.FileUploadResponse;
+import cn.lmao.cloud.model.dto.ChunkInfo;
+import cn.lmao.cloud.model.dto.InitUploadResponse;
 import cn.lmao.cloud.model.entity.Cloud;
 import cn.lmao.cloud.model.entity.File;
 import cn.lmao.cloud.model.entity.User;
@@ -108,6 +110,109 @@ public class FileController {
         log.info("文件上传所有请求处理完成: 总共处理请求数量={}, 成功数量={}, 失败数量={}, username={}",
                 requestCount, successCount, failCount, username);
         return ApiResponse.success(responses);
+    }
+
+    /**
+     * 初始化分片上传
+     * 
+     * @param requestBody 包含文件名、文件大小、分片大小等信息
+     * @return 初始化上传响应，包含上传ID等信息
+     */
+    @PostMapping("/upload/init")
+    public ApiResponse<InitUploadResponse> initUpload(@RequestBody Map<String, Object> requestBody) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+        
+        String fileName = (String) requestBody.get("fileName");
+        Long fileSize = Long.valueOf(requestBody.get("fileSize").toString());
+        Integer chunkSize = Integer.valueOf(requestBody.get("chunkSize").toString());
+        String path = (String) requestBody.getOrDefault("path", "/");
+        
+        log.info("接收到初始化分片上传请求: fileName={}, fileSize={}, chunkSize={}, path={}, username={}", 
+                fileName, fileSize, chunkSize, path, username);
+        
+        try {
+            // 初始化上传
+            InitUploadResponse response = fileService.initChunkedUpload(fileName, fileSize, chunkSize, path, userId);
+            
+            log.info("初始化分片上传成功: fileName={}, uploadId={}, totalChunks={}, username={}", 
+                    fileName, response.getUploadId(), response.getTotalChunks(), username);
+            
+            return ApiResponse.success(response);
+        } catch (Exception e) {
+            log.error("初始化分片上传失败: fileName={}, error={}", fileName, e.getMessage(), e);
+            return ApiResponse.exception(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+    }
+    
+    /**
+     * 上传文件分片
+     * 
+     * @param uploadId 上传ID
+     * @param chunkIndex 分片索引
+     * @param file 分片文件
+     * @return 上传结果
+     */
+    @PostMapping(value = "/upload/chunk/{uploadId}/{chunkIndex}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ChunkInfo> uploadChunk(
+            @PathVariable String uploadId,
+            @PathVariable Integer chunkIndex,
+            @RequestParam("file") MultipartFile file) {
+        
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+        
+        log.info("接收到分片上传请求: uploadId={}, chunkIndex={}, chunkSize={}, username={}", 
+                uploadId, chunkIndex, file.getSize(), username);
+        
+        try {
+            if (file.isEmpty()) {
+                log.warn("分片上传失败: 分片为空, uploadId={}, chunkIndex={}, username={}", 
+                        uploadId, chunkIndex, username);
+                return ApiResponse.exception(ExceptionCodeMsg.FILE_EMPTY);
+            }
+            
+            // 上传分片
+            ChunkInfo chunkInfo = fileService.uploadChunk(uploadId, chunkIndex, file, userId);
+            
+            log.info("分片上传成功: uploadId={}, chunkIndex={}/{}, username={}", 
+                    uploadId, chunkIndex, chunkInfo.getTotalChunks(), username);
+            
+            return ApiResponse.success(chunkInfo);
+        } catch (Exception e) {
+            log.error("分片上传失败: uploadId={}, chunkIndex={}, error={}", 
+                    uploadId, chunkIndex, e.getMessage(), e);
+            return ApiResponse.exception(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
+    }
+    
+    /**
+     * 完成分片上传
+     * 
+     * @param requestBody 包含上传ID等信息
+     * @return 文件上传响应
+     */
+    @PostMapping("/upload/complete")
+    public ApiResponse<FileUploadResponse> completeUpload(@RequestBody Map<String, String> requestBody) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = userService.getUserByName(username).getId();
+        
+        String uploadId = requestBody.get("uploadId");
+        
+        log.info("接收到完成分片上传请求: uploadId={}, username={}", uploadId, username);
+        
+        try {
+            // 完成上传
+            FileUploadResponse response = fileService.completeChunkedUpload(uploadId, userId);
+            
+            log.info("完成分片上传成功: uploadId={}, fileId={}, fileName={}, username={}", 
+                    uploadId, response.getFileId(), response.getFileName(), username);
+            
+            return ApiResponse.success(response);
+        } catch (Exception e) {
+            log.error("完成分片上传失败: uploadId={}, error={}", uploadId, e.getMessage(), e);
+            return ApiResponse.exception(ExceptionCodeMsg.FILE_UPLOAD_FAIL);
+        }
     }
 
     /**
@@ -247,30 +352,22 @@ public class FileController {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Long userId = userService.getUserByName(username).getId();
 
-        log.info("接收到永久删除回收站文件请求: fileId={}, username={}", fileId, username);
+        log.info("接收到永久删除文件请求: fileId={}, username={}", fileId, username);
 
-        try {
-            if (fileId == null || fileId.trim().isEmpty()) {
-                log.warn("永久删除回收站文件失败: 文件ID为空, username={}", username);
-                return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
-            }
-
-            // 删除回收站文件
-            fileService.deleteTrashFile(Long.parseLong(fileId), userId);
-
-            log.info("永久删除回收站文件成功: fileId={}, username={}", fileId, username);
-            return ApiResponse.success("删除成功");
-        } catch (Exception e) {
-            log.error("永久删除回收站文件异常: fileId={}, username={}, error={}",
-                    fileId, username, e.getMessage());
-            return ApiResponse.exception(ExceptionCodeMsg.DELETE_FILE_FAIL);
+        if (fileId == null || fileId.trim().isEmpty()) {
+            log.warn("永久删除文件失败: 文件ID为空, username={}", username);
+            return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
         }
+
+        // 永久删除文件
+        fileService.deleteTrashFile(Long.parseLong(fileId), userId);
+
+        log.info("永久删除文件成功: fileId={}, username={}", fileId, username);
+        return ApiResponse.success("删除成功");
     }
 
     /**
      * 恢复回收站文件
-     * 
-     * @return
      */
     @PostMapping("/trash/restore")
     public ApiResponse<String> restoreTrashFile(@RequestBody Map<String, String> requestBody) {
@@ -281,14 +378,14 @@ public class FileController {
         log.info("接收到恢复回收站文件请求: fileId={}, username={}", fileId, username);
 
         if (fileId == null || fileId.trim().isEmpty()) {
-            log.warn("恢复回收站文件失败: 文件ID为空, username={}", username);
+            log.warn("恢复文件失败: 文件ID为空, username={}", username);
             return ApiResponse.exception(ExceptionCodeMsg.PARAM_ERROR);
         }
 
-        // 恢复回收站文件
+        // 恢复文件
         fileService.restoreTrashFile(Long.parseLong(fileId), userId);
 
-        log.info("恢复回收站文件成功: fileId={}, username={}", fileId, username);
+        log.info("恢复文件成功: fileId={}, username={}", fileId, username);
         return ApiResponse.success("恢复成功");
     }
 
@@ -303,9 +400,9 @@ public class FileController {
         log.info("接收到获取回收站文件列表请求: username={}", username);
 
         // 获取回收站文件列表
-        List<File> trashFiles = fileService.getTrashFiles(userId);
+        List<File> files = fileService.getTrashFiles(userId);
 
-        log.info("获取回收站文件列表成功: fileCount={}, username={}", trashFiles.size(), username);
-        return ApiResponse.success(trashFiles);
+        log.info("获取回收站文件列表成功: fileCount={}, username={}", files.size(), username);
+        return ApiResponse.success(files);
     }
 }
